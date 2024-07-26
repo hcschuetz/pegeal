@@ -1,42 +1,14 @@
 import { Algebra } from "./Algebra";
-import { Context, AlgebraImpl } from "./WebGLAlgebra";
+import { WebGLContext } from "./generateWebGL";
 
-// -----------------------------------------------------------------------------
-// Setting up the algebra
-
-class ContextImpl implements Context {
-  count = 0;
-  text = "";
-
-  uniqueIdentifier(base: string) {
-    return `${base}_${this.count++}`;
-  }
-  emit(newText: string) {
-    this.text += newText + "\n";
-  }
-}
-
-const ctx = new ContextImpl();
-
-const coordNames = ["x", "y", "z"];
-function mkCoord(bm: number) {
-  if (bm === 0) return "1";
-  let coord = "";
-  for (let i = 0; i < coordNames.length; i++) {
-    if (bm & (1 << i)) {
-      coord += coordNames[i];
-    }
-  }
-  return coord;
-}
-
-const alg: Algebra = new AlgebraImpl(ctx, coordNames.length, mkCoord);
+const ctx = new WebGLContext(["x", "y", "z", "w"]);
+const alg = new Algebra([1, 2.222, 3.3, 0], ctx);
 
 // -----------------------------------------------------------------------------
 // Usage Examples
 
 const zero = alg.zero(), one = alg.one();
-const [ex, ey, ez] = alg.basis();
+const [ex, ey, ez] = alg.basisVectors();
 const I = alg.pseudoScalar();
 const Iinv = alg.pseudoScalarInv();
 const Iinv2 = alg.pseudoScalarInv();
@@ -45,63 +17,75 @@ ctx.emit("// " + (Iinv === Iinv2 ? "identical" : "not identical"));
 ctx.emit("\n// ---------------");
 const mv =
   true
-  ? alg.mv({
+  ? ctx.mv("foo", {
       "1": "foo_scalar",
       x: "foo_x", y: "foo_y", z: "foo_z",
-      xy: "foo_xy", xz: "foo_xz", yz: "foo_x",
+      xy: "foo_xy", xz: "foo_xz", yz: "foo_yx",
       xyz: "foo_xyz",
     })
-  : alg.mv({1: "S", x: "X", yz: "YZ", xyz: "PS"});
+  : ctx.mv("bar", {1: "S", x: "X", yz: "YZ", xyz: "PS"});
 
 alg.gradeInvolution(mv);
 alg.reverse(mv);
 alg.dual(mv);
-for (let i = 0; i <= alg.dimension; i++) {
+for (let i = 0; i <= alg.nDimensions; i++) {
   alg.extractGrade(i, mv);
 }
 
 const result =
-  alg.contract(
-    alg.wedge(ey, one),
-    alg.wedge(
-      alg.plus(alg.scale("2.0", ex), ey, I, zero, alg.plus()),
-      alg.negate(alg.mv({y: "1.0", x: "4.0", z: "3.0"})),
-      alg.wedge(),
+  alg.contractLeft(
+    alg.wedgeProduct(ey, one),
+    alg.wedgeProduct(
+      alg.plus(alg.scale("2.0", ex), ex, ey, I, zero, alg.plus()),
+      alg.negate(ctx.mv("myVec", {y: "1.0", x: "4.0", z: "3.0"})),
+      alg.wedgeProduct(),
     )
   );
 
 ctx.emit(`\n// result: ${result}`);
 
 ctx.emit("\n// (ex ^ ez) _| mv")
-alg.contract(alg.wedge(ex, ez), mv);
+alg.contractLeft(alg.wedgeProduct(ex, ez), mv);
 ctx.emit("\n// ex _| (ez _| mv)")
-alg.contract(ex, alg.contract(ez, mv));
+alg.contractLeft(ex, alg.contractLeft(ez, mv));
 
 const X = 1, Y = 2, Z = 4;
-ctx.emit(`\n// extracted: ${mv.get(X|Y)}, ${mv.get("xy")}`);
+ctx.emit(`\n// extracted: ${mv.get(X|Y)}`);
 
-const mv2 = alg.mv({x: "3", z: "2"});
-const mv3 = alg.mv({xy: "3", xz: "2"});
+const mv2 = ctx.mv("mv2", {x: "3", z: "2"});
+const mv3 = ctx.mv("mv3", {xy: "3", xz: "2", zw: "8"});
 
-ctx.emit(`\n// contractions`);
-alg.contract(mv2, mv2);
-alg.contract(mv3, mv3);
-alg.contract(mv2, mv3);
+ctx.emit(`\n// contractLeft`);
+alg.contractLeft(mv2, mv2);
+alg.contractLeft(mv3, mv3);
+alg.contractLeft(mv2, mv3);
+alg.contractLeft(mv3, mv2);
+
+ctx.emit(`\n// contractRight`);
+alg.contractRight(mv2, mv2);
+alg.contractRight(mv3, mv3);
+alg.contractRight(mv2, mv3);
+alg.contractRight(mv3, mv2);
 
 ctx.emit(`\n// scalarProd`);
-alg.scalarProd(mv2, mv2);
-alg.scalarProd(mv3, mv3);
-ctx.emit(`\n// empty: ${alg.scalarProd(mv2, mv3)}`);
+alg.scalarProduct(mv2, mv2);
+alg.scalarProduct(mv3, mv3);
+ctx.emit(`\n// empty: ${alg.scalarProduct(mv2, mv3)}`);
+
+ctx.emit(`\n// dotProd`);
+alg.dotProduct(mv2, mv2);
+alg.dotProduct(mv3, mv3);
+ctx.emit(`\n// empty: ${alg.dotProduct(mv2, mv3)}`);
 
 ctx.emit(`\n// geomProd`);
-alg.geomProd(mv2, mv2);
-alg.geomProd(mv3, mv3);
-ctx.emit(`\n// empty: ${alg.geomProd(mv2, mv3)}`);
+alg.geometricProduct(mv2, mv2);
+alg.geometricProduct(mv3, mv3);
+ctx.emit(`\n// ${alg.geometricProduct(mv2, mv3)}`);
 
 ctx.emit(`\n// wedge`);
-alg.wedge(mv2, mv2);
-alg.wedge(mv3, mv3);
-ctx.emit(`\n// empty: ${alg.wedge(mv2, mv3)}`);
+alg.wedgeProduct(mv2, mv2);
+alg.wedgeProduct(mv3, mv3);
+ctx.emit(`\n// ${alg.wedgeProduct(mv2, mv3)}`);
 
 console.log("Generated Code:\n" + ctx.text);
 
