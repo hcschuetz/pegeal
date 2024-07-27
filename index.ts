@@ -1,5 +1,6 @@
 import { Algebra } from "./Algebra";
 import { WebGLContext } from "./generateWebGL";
+import { EvalContext } from "./evalExpr";
 
 const ctx = new WebGLContext(["x", "y", "z", "w"]);
 const alg = new Algebra([1, 2.222, 3.3, 0], ctx);
@@ -97,3 +98,55 @@ and the value is usable after the paths have joined.
 (After the join the variable has the union of the components from each path.
 components missing in a path must be set to 0.0 explicitly in that path.)
 */
+
+// -----------------------------------------------------------------------------
+
+{
+  const ctx = new EvalContext(["x", "y", "z"]);
+  const alg = new Algebra([1,2,3], ctx);
+
+  const v = ctx.mv({x: 4, y: 11});
+  console.log("geomProd(v, v) = " + alg.geometricProduct(v, v));
+  console.log("contractRight(v, v) = " + alg.contractRight(v, v));
+
+  const bv = ctx.mv({xy: 3, yz: 5});
+  console.log("geomProd(bv, v) = " + alg.geometricProduct(bv, v));
+  console.log("geomProd(bv, bv) = " + alg.geometricProduct(bv, bv));
+  console.log(`
+It is not a coincidence that the xz component of the latter product is 0.
+It comes from using bv twice:
+
+  geometricProduct(bv, bv).xz
+  = bv.xy * bv.yz + bv.yz * bv.xy
+  = bv.xy * bv.yz - bv.xy * bv.yz
+  = 0
+
+But the compiler does not understand this and does therefore not remove the
+xz component from the result.
+
+Same for
+
+  geometricProduct(v, v).xy
+  = v.x * v.y + v.y * v.x 
+  = v.x * v.y - v.x * v.y
+  = 0 
+
+Even simpler (but less realistic) examples where the compiler does not
+recognize that components will always be zero are the subtraction expressions
+
+  bv - bv = ${alg.plus(bv, alg.negate(bv))}
+
+and
+
+  v - v = ${alg.plus(v, alg.negate(v))}.
+
+----
+`);
+
+  console.log("scalarProd(v, v): " + alg.scalarProduct(v, v));
+  console.log("scalarProd(bv, bv): " + alg.scalarProduct(bv, bv));
+  console.log("contractLeft(v, bv): " + alg.contractLeft(v, bv));
+  console.log("contractRight(bv, v): " + alg.contractRight(bv, v));
+  console.log("dotProduct(v, v): " + alg.dotProduct(v, v));
+  console.log("dotProduct(bv, bv): " + alg.dotProduct(bv, bv));
+}
