@@ -75,15 +75,7 @@ function productFlips(bitmapA: number, bitmapB: number): number {
   return flips;
 }
 
-const flipSign = (doFlip: number) => doFlip ? -1 : 1;
-
-function addTerm<T>(mv: MultiVector<T>, bm: number, term: Term<T>): MultiVector<T> {
-  if (term.every(f => f !== 0)) {
-    mv.add(bm, term.filter(f => f !== 1)); // remove 1s just for readability
-    // TODO multiply the numeric factors?
-  }
-  return mv;
-}
+const flipSign = (doFlip: number) => doFlip ? [-1] : [];
 
 export class Algebra<T> {
   readonly nDimensions: number;
@@ -107,9 +99,9 @@ export class Algebra<T> {
     return this.ctx.makeMultiVector("ps").add(this.fullBitmap, []);
   }
   pseudoScalarInv(): MultiVector<T> {
-    return this.ctx.makeMultiVector("psInv").add(this.fullBitmap, [
+    return this.ctx.makeMultiVector("psInv").add(this.fullBitmap,
       flipSign(this.nDimensions & 2) // TODO check if this is correct
-    ]);
+    );
   }
   basisVectors(): MultiVector<T>[] {
     return this.metric.map((_, i) =>
@@ -121,26 +113,32 @@ export class Algebra<T> {
 
   /** The scalar `alpha` should be given as a target-code expression. */
   scale(alpha: Factor<T>, mv: MultiVector<T>): MultiVector<T> {
-    const result = this.ctx.makeMultiVector("scale");
-    mv.forComponents((bm, val) => addTerm(result, bm, [alpha, val]));
-    return result;
+    switch (alpha) {
+      case 0: return this.ctx.makeMultiVector("scale0");
+      case 1: return mv;
+      default: {
+        const result = this.ctx.makeMultiVector("scale");
+        mv.forComponents((bm, val) => result.add(bm, [alpha, val]));
+        return result;
+      }
+    }
   }
 
   negate(mv: MultiVector<T>): MultiVector<T> {
-    const result = this.ctx.makeMultiVector("scale");
+    const result = this.ctx.makeMultiVector("negate");
     mv.forComponents((bm, val) => result.add(bm, [-1, val]));
     return result;
   }
 
   gradeInvolution(mv: MultiVector<T>): MultiVector<T> {
-    const result = this.ctx.makeMultiVector("scale");
-    mv.forComponents((bm, val) => result.add(bm, [flipSign(bm & 1), val]));
+    const result = this.ctx.makeMultiVector("gradeInvolution");
+    mv.forComponents((bm, val) => result.add(bm, [...flipSign(bm & 1), val]));
     return result;
   }
 
   reverse(mv: MultiVector<T>): MultiVector<T> {
     const result = this.ctx.makeMultiVector("reverse");
-    mv.forComponents((bm, val) => result.add(bm, [flipSign(bm & 2), val]));
+    mv.forComponents((bm, val) => result.add(bm, [...flipSign(bm & 2), val]));
     return result;
   }
 
@@ -171,10 +169,12 @@ export class Algebra<T> {
   private product2(kind: ProductKind, a: MultiVector<T>, b: MultiVector<T>): MultiVector<T> {
     const result = this.ctx.makeMultiVector(kind + "Prod");
     a.forComponents((bmA, valA) => b.forComponents((bmB, valB) => {
-      if (!productSkip[kind](bmA, bmB)) {
-        addTerm(result, bmA ^ bmB, [
-          flipSign(productFlips(bmA, bmB) & 1),
-          ...bitList(bmA & bmB).map(i => this.metric[i]),
+      const metricFactors =
+        bitList(bmA & bmB).map(i => this.metric[i]).filter(f => f !== 1);
+      if (!productSkip[kind](bmA, bmB) && !metricFactors.some(f => f === 0)) {
+        result.add(bmA ^ bmB, [
+          ...flipSign(productFlips(bmA, bmB) & 1),
+          ...metricFactors,
           valA,
           valB,
         ]);

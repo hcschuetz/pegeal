@@ -1,5 +1,10 @@
 import { MultiVector, Term, Context, bitList } from "./Algebra";
 
+function formatFloat(x: number) {
+  const s = x.toString();
+  return s + (/\.|e/i.test(s) ? "" : ".0");
+}
+
 class MultiVectorImpl implements MultiVector<string> {
   /**
    * A sparse array mapping each possibly non-zero component (expressed as a
@@ -16,7 +21,10 @@ class MultiVectorImpl implements MultiVector<string> {
   }
 
   add(bm: number, term: Term<string>): this {
-    const termString = term.join(" * "); // Todo create nicer code?
+    const termString =
+      term.length === 0
+      ? "1.0" 
+      : term.map(f => typeof f === "number" ? formatFloat(f) : f).join(" * ");
     let component = this.components[bm];
     if (!component) {
       this.components[bm] = component =
