@@ -111,6 +111,7 @@ components missing in a path must be set to 0.0 explicitly in that path.)
 
   const bv = ctx.mv({xy: 3, yz: 5});
   console.log("geomProd(bv, v) = " + alg.geometricProduct(bv, v));
+  console.log("geomProd(v, bv) = " + alg.geometricProduct(v, bv));
   console.log("geomProd(bv, bv) = " + alg.geometricProduct(bv, bv));
   console.log(`
 It is not a coincidence that the xz component of the latter product is 0.
