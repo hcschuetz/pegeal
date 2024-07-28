@@ -58,8 +58,8 @@ const productSkip: Record<ProductKind, (bmA: number, bmB: number) => number> = {
 };
 
 /**
- * Get the number of adjacent transpositions for the wedge product or
- * geometric product of two base blades.
+ * The number of adjacent transpositions needed for the product of
+ * two basis blades (represented as bitmaps).
  */
 function productFlips(bitmapA: number, bitmapB: number): number {
   let flips = 0;
@@ -183,7 +183,7 @@ export class Algebra<T> {
     return result;
   }
 
-  /** Like `product2`, but with an arbitrary number of inputs */
+  /** Like `product2`, but for an arbitrary number of multivectors */
   private product(kind: ProductKind, mvs: MultiVector<T>[]): MultiVector<T> {
     return mvs.length === 0
       ? this.ctx.makeMultiVector(kind + "1").add(0, [])
