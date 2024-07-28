@@ -144,6 +144,13 @@ and
 ----
 `);
 
+  console.log(""+v, ""+alg.reverse(v));
+  console.log(""+bv, ""+alg.reverse(bv));
+  console.log("geometricProd(v, ~v): " + alg.geometricProduct(v, alg.reverse(v)));
+  console.log("geometricProd(bv, ~bv): " + alg.geometricProduct(bv, alg.reverse(bv)));
+  console.log("scalarProd(v, ~v): " + alg.scalarProduct(v, alg.reverse(v)));
+  console.log("scalarProd(bv, ~bv): " + alg.scalarProduct(bv, alg.reverse(bv)));
+  console.log("-----");
   console.log("scalarProd(v, v): " + alg.scalarProduct(v, v));
   console.log("scalarProd(bv, bv): " + alg.scalarProduct(bv, bv));
   console.log("contractLeft(v, bv): " + alg.contractLeft(v, bv));

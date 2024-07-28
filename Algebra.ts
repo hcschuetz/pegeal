@@ -132,13 +132,13 @@ export class Algebra<T> {
 
   gradeInvolution(mv: MultiVector<T>): MultiVector<T> {
     const result = this.ctx.makeMultiVector("gradeInvolution");
-    mv.forComponents((bm, val) => result.add(bm, [...flipSign(bm & 1), val]));
+    mv.forComponents((bm, val) => result.add(bm, [...flipSign(getGrade(bm) & 1), val]));
     return result;
   }
 
   reverse(mv: MultiVector<T>): MultiVector<T> {
     const result = this.ctx.makeMultiVector("reverse");
-    mv.forComponents((bm, val) => result.add(bm, [...flipSign(bm & 2), val]));
+    mv.forComponents((bm, val) => result.add(bm, [...flipSign(getGrade(bm) & 2), val]));
     return result;
   }
 
