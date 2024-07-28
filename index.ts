@@ -3,7 +3,7 @@ import { WebGLContext } from "./generateWebGL";
 import { EvalContext } from "./evalExpr";
 
 const ctx = new WebGLContext(["x", "y", "z", "w"]);
-const alg = new Algebra([1, 2.222, 3.3, 0], ctx);
+const alg = new Algebra([1, 2.222, 3, 0], ctx);
 
 // -----------------------------------------------------------------------------
 // Usage Examples
