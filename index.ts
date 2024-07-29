@@ -11,9 +11,11 @@ const alg = new Algebra([1, 2.222, 3, 0], ctx);
 const zero = alg.zero(), one = alg.one();
 const [ex, ey, ez] = alg.basisVectors();
 const I = alg.pseudoScalar();
-const Iinv = alg.pseudoScalarInv();
-const Iinv2 = alg.pseudoScalarInv();
-ctx.emit("// " + (Iinv === Iinv2 ? "identical" : "not identical"));
+
+// This does not work with a null vector in the basis:
+// const Iinv = alg.pseudoScalarInv();
+// const Iinv2 = alg.pseudoScalarInv();
+// ctx.emit("// " + (Iinv === Iinv2 ? "identical" : "not identical"));
 
 ctx.emit("\n// ---------------");
 const mv =
@@ -28,7 +30,7 @@ const mv =
 
 alg.gradeInvolution(mv);
 alg.reverse(mv);
-alg.dual(mv);
+// alg.dual(mv); // does not work with null vector in the basis
 for (let i = 0; i <= alg.nDimensions; i++) {
   alg.extractGrade(i, mv);
 }
@@ -171,4 +173,9 @@ and
   console.log("normSquared(bv): " + alg.normSquared(bv));
   console.log("inv(v): " + alg.inverse(v));
   console.log("inv(bv): " + alg.inverse(bv));
+  console.log("-----");
+  console.log("ps: " + alg.pseudoScalar());
+  console.log("psi: " + alg.pseudoScalarInv());
+  console.log("dual(v): " + alg.dual(v));
+  console.log("dual(bv): " + alg.dual(bv));
 }

@@ -92,6 +92,20 @@ export class Algebra<T> {
     this.fullBitmap = (1 << metric.length) - 1;
   }
 
+  /** Return a term for the metric or `undefined` if the term is always 0. */
+  metricFactors(bm: number): Term<T> | undefined {
+    const result = [];
+    for (const i of bitList(bm)) {
+      const f = this.metric[i];
+      switch (f) {
+        case 0: return undefined;
+        case 1: break;
+        default: result.push(f);
+      }
+    }
+    return result;
+  }
+
   zero(): MultiVector<T> {
     return this.ctx.makeMultiVector("zero");
   };
@@ -99,16 +113,16 @@ export class Algebra<T> {
     return this.ctx.makeMultiVector("one").add(0, []);
   }
   pseudoScalar(): MultiVector<T> {
+    // return this.wedgeProduct(...this.basisVectors());
     return this.ctx.makeMultiVector("ps").add(this.fullBitmap, []);
   }
   pseudoScalarInv(): MultiVector<T> {
-    return this.ctx.makeMultiVector("psInv").add(this.fullBitmap,
-      flipSign(this.nDimensions & 2) // TODO check if this is correct
-    );
+    // TODO implement directly?
+    return this.inverse(this.pseudoScalar());
   }
   basisVectors(): MultiVector<T>[] {
     return this.metric.map((_, i) =>
-      this.ctx.makeMultiVector("basis" + i). add(1 << i, [])
+      this.ctx.makeMultiVector("basis" + i).add(1 << i, [])
     )
   }
 
@@ -147,31 +161,26 @@ export class Algebra<T> {
 
   dual(mv: MultiVector<T>): MultiVector<T> {
     return this.contractLeft(mv, this.pseudoScalarInv());
-    // TODO implement directly
+    // TODO Implement directly.
   }
 
   /** Short for `this.scalarProduct(mv, this.reverse(mv))` */
   normSquared(mv: MultiVector<T>): MultiVector<T> {
     const result = this.ctx.makeMultiVector("normSquared");
     mv.forComponents((bm, val) =>{
-      const metricFactors =
-        bitList(bm).map(i => this.metric[i]).filter(f => f !== 1);
-      if (!metricFactors.some(f => f === 0)) {
-        result.add(0, [
-          // TODO Check the following discussion on signs:
-          // normSquared(mv) is defined as "scalarProduct(mv, reverse(mv))".
-          // - "reverse" introduces a sign expression
-          //   "flipSign(getGrade(bm)) & 2".
-          // - "scalarProd" introduces "flipSign(productFlips(bm, bm)) & 1
-          //   = flipSign(getGrade(bm)) & 2".
-          // These two cancel each other out, so we do not provide a sign here.
-          // (It actually looks like the reversion of one argument has been
-          // added to the definition of normSquared precisely for the purpose
-          // of cancelling the signs from the scalar product.)
-          ...metricFactors,
-          val,
-          val
-        ]);
+      const mf = this.metricFactors(bm);
+      if (mf !== undefined) {
+        // TODO Check the following discussion on signs:
+        // normSquared(mv) is defined as "scalarProduct(mv, reverse(mv))".
+        // - "reverse" introduces a sign expression
+        //   "flipSign(getGrade(bm)) & 2".
+        // - "scalarProd" introduces "flipSign(productFlips(bm, bm)) & 1
+        //   = flipSign(getGrade(bm)) & 2".
+        // These two cancel each other out, so there is no sign flip here.
+        // (It actually looks like the reversion of one argument has been
+        // added to the definition of normSquared precisely for the purpose
+        // of cancelling the signs from the scalar product.)
+        result.add(0, [...mf, val, val]);
       }
     });
     return result;
@@ -180,7 +189,7 @@ export class Algebra<T> {
   inverse(mv: MultiVector<T>): MultiVector<T> {
     const nSq = this.normSquared(mv).get(0);
     if (nSq === undefined || nSq === 0) {
-      throw "trying to invert vector that is always null";
+      throw `trying to invert vector ${mv} that is always null`;
     }
     return this.scale(this.ctx.invertFactor(nSq), mv);
   }
@@ -207,12 +216,11 @@ export class Algebra<T> {
   private product2(kind: ProductKind, a: MultiVector<T>, b: MultiVector<T>): MultiVector<T> {
     const result = this.ctx.makeMultiVector(kind + "Prod");
     a.forComponents((bmA, valA) => b.forComponents((bmB, valB) => {
-      const metricFactors =
-        bitList(bmA & bmB).map(i => this.metric[i]).filter(f => f !== 1);
-      if (!productSkip[kind](bmA, bmB) && !metricFactors.some(f => f === 0)) {
+      const mf = this.metricFactors(bmA & bmB);
+      if (!productSkip[kind](bmA, bmB) && mf !== undefined) {
         result.add(bmA ^ bmB, [
           ...flipSign(productFlips(bmA, bmB) & 1),
-          ...metricFactors,
+          ...mf,
           valA,
           valB,
         ]);
