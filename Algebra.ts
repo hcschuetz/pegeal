@@ -165,17 +165,19 @@ export class Algebra<T> {
   }
 
   /** Short for `this.scalarProduct(mv, this.reverse(mv))` */
+  // TODO This should return something like Scalar<T>.
+  // But that requires support from the context.
   normSquared(mv: MultiVector<T>): MultiVector<T> {
     const result = this.ctx.makeMultiVector("normSquared");
-    mv.forComponents((bm, val) =>{
+    mv.forComponents((bm, val) => {
       const mf = this.metricFactors(bm);
       if (mf !== undefined) {
         // TODO Check the following discussion on signs:
         // normSquared(mv) is defined as "scalarProduct(mv, reverse(mv))".
         // - "reverse" introduces a sign expression
         //   "flipSign(getGrade(bm)) & 2".
-        // - "scalarProd" introduces "flipSign(productFlips(bm, bm)) & 1
-        //   = flipSign(getGrade(bm)) & 2".
+        // - "scalarProd" introduces "flipSign(productFlips(bm, bm)) & 1",
+        //   which has the same truthiness as "flipSign(getGrade(bm)) & 2".
         // These two cancel each other out, so there is no sign flip here.
         // (It actually looks like the reversion of one argument has been
         // added to the definition of normSquared precisely for the purpose
