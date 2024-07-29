@@ -1,8 +1,13 @@
-import { MultiVector, Term, Context, bitList } from "./Algebra";
+import { MultiVector, Term, Context, bitList, Factor } from "./Algebra";
 
-function formatFloat(x: number) {
-  const s = x.toString();
-  return s + (/\.|e/i.test(s) ? "" : ".0");
+function formatFactor(f: Factor<string>) {
+  switch (typeof f) {
+    case "number": {
+      const s = f.toString();
+      return s + (/\.|e/i.test(s) ? "" : ".0");  
+    }
+    case "string": return f;
+  }
 }
 
 class MultiVectorImpl implements MultiVector<string> {
@@ -22,9 +27,7 @@ class MultiVectorImpl implements MultiVector<string> {
 
   add(bm: number, term: Term<string>): this {
     const termString =
-      term.length === 0
-      ? "1.0" 
-      : term.map(f => typeof f === "number" ? formatFloat(f) : f).join(" * ");
+      term.length === 0 ? "1.0" : term.map(formatFactor).join(" * ");
     let component = this.components[bm];
     if (!component) {
       this.components[bm] = component =
@@ -40,7 +43,7 @@ class MultiVectorImpl implements MultiVector<string> {
     this.components.forEach((val, bm) => callback(bm, val));
   }
 
-  get(bm: number): string { return this.components[bm]; }
+  get(bm: number) { return this.components[bm]; }
 
   toString() {
     return `${this.name}{${
@@ -72,9 +75,11 @@ export class WebGLContext implements Context<string> {
   emit(newText: string) {
     this.text += newText + "\n";
   }
+
   makeMultiVector(nameHint: string): MultiVector<string> {
     return new MultiVectorImpl(this, `${nameHint}_${this.count++}`);
   }
+
   mv(nameHint: string, obj: Record<string, string>): MultiVector<string> {
     const result = this.makeMultiVector(nameHint);
     Object.entries(obj).forEach(([key, val]) => {
@@ -85,5 +90,12 @@ export class WebGLContext implements Context<string> {
       result.add(bm, [val]);
     })
     return result;
+  }
+
+  invertFactor(f: Factor<string>): Factor<string> {
+    const varName: string = `inv_${this.count++}`;
+    this.emit(`\n// ${varName}:`);
+    this.emit(`float ${varName} = 1.0 / ${formatFactor(f)};`);
+    return varName;
   }
 }

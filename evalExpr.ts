@@ -62,4 +62,8 @@ export class EvalContext implements Context<never> {
     })
     return result;
   }
+
+  invertFactor(f: number): Factor<never> {
+    return 1 / f;
+  }
 }

@@ -4,11 +4,13 @@ export type Term<T> = Factor<T>[];
 export interface MultiVector<T> {
   add(bm: number, term: Term<T>): this;
   forComponents(callback: (bitmap: number, value: Factor<T>) => unknown): unknown;
-  get(bm: number): Factor<T>;
+  get(bitmap: number): Factor<T> | undefined;
 }
 
 export interface Context<T> {
   makeMultiVector(nameHint: string): MultiVector<T>;
+  invertFactor(f: Factor<T>): Factor<T>;
+  // TODO more operations on scalars such as sqrt, trig functions, ...
 }
 
 
@@ -75,7 +77,8 @@ function productFlips(bitmapA: number, bitmapB: number): number {
   return flips;
 }
 
-const flipSign = (doFlip: number) => doFlip ? [-1] : [];
+/** Provide factor -1 if argument is truthy. */
+const flipSign = (doFlip: number): Term<never> => doFlip ? [-1] : [];
 
 export class Algebra<T> {
   readonly nDimensions: number;
@@ -145,6 +148,41 @@ export class Algebra<T> {
   dual(mv: MultiVector<T>): MultiVector<T> {
     return this.contractLeft(mv, this.pseudoScalarInv());
     // TODO implement directly
+  }
+
+  /** Short for `this.scalarProduct(mv, this.reverse(mv))` */
+  normSquared(mv: MultiVector<T>): MultiVector<T> {
+    const result = this.ctx.makeMultiVector("normSquared");
+    mv.forComponents((bm, val) =>{
+      const metricFactors =
+        bitList(bm).map(i => this.metric[i]).filter(f => f !== 1);
+      if (!metricFactors.some(f => f === 0)) {
+        result.add(0, [
+          // TODO Check the following discussion on signs:
+          // normSquared(mv) is defined as "scalarProduct(mv, reverse(mv))".
+          // - "reverse" introduces a sign expression
+          //   "flipSign(getGrade(bm)) & 2".
+          // - "scalarProd" introduces "flipSign(productFlips(bm, bm)) & 1
+          //   = flipSign(getGrade(bm)) & 2".
+          // These two cancel each other out, so we do not provide a sign here.
+          // (It actually looks like the reversion of one argument has been
+          // added to the definition of normSquared precisely for the purpose
+          // of cancelling the signs from the scalar product.)
+          ...metricFactors,
+          val,
+          val
+        ]);
+      }
+    });
+    return result;
+  }
+
+  inverse(mv: MultiVector<T>): MultiVector<T> {
+    const nSq = this.normSquared(mv).get(0);
+    if (nSq === undefined || nSq === 0) {
+      throw "trying to invert vector that is always null";
+    }
+    return this.scale(this.ctx.invertFactor(nSq), mv);
   }
 
   extractGrade(grade: number, mv: MultiVector<T>): MultiVector<T> {

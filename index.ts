@@ -88,6 +88,13 @@ alg.wedgeProduct(mv2, mv2);
 alg.wedgeProduct(mv3, mv3);
 ctx.emit(`\n// ${alg.wedgeProduct(mv2, mv3)}`);
 
+ctx.emit(`\n// norm, inverse (mv2):`);
+alg.scalarProduct(mv2, alg.reverse(mv2));
+alg.inverse(mv2);
+ctx.emit(`\n// norm, inverse (mv3):`);
+alg.scalarProduct(mv3, alg.reverse(mv3));
+alg.inverse(mv3);
+
 console.log("Generated Code:\n" + ctx.text);
 
 /*
@@ -99,7 +106,9 @@ and the value is usable after the paths have joined.
 components missing in a path must be set to 0.0 explicitly in that path.)
 */
 
-// -----------------------------------------------------------------------------
+console.log(`
+================================================================================
+`);
 
 {
   const ctx = new EvalContext(["x", "y", "z"]);
@@ -157,4 +166,9 @@ and
   console.log("contractRight(bv, v): " + alg.contractRight(bv, v));
   console.log("dotProduct(v, v): " + alg.dotProduct(v, v));
   console.log("dotProduct(bv, bv): " + alg.dotProduct(bv, bv));
+  console.log("-----");
+  console.log("normSquared(v): " + alg.normSquared(v));
+  console.log("normSquared(bv): " + alg.normSquared(bv));
+  console.log("inv(v): " + alg.inverse(v));
+  console.log("inv(bv): " + alg.inverse(bv));
 }
