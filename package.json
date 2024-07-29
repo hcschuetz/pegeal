@@ -3,7 +3,7 @@
   "version": "0.0.1",
   "main": "index.js",
   "scripts": {
-    "test": "sh -c 'rm *.js; tsc -p .; node index.js'"
+    "test": "sh -c 'rm *.js; tsc -p .; node --trace-uncaught --enable-source-maps index.js'"
   },
   "author": "Heribert Schütz",
   "license": "MIT",
