@@ -218,14 +218,16 @@ export class Algebra<T> {
   private product2(kind: ProductKind, a: MultiVector<T>, b: MultiVector<T>): MultiVector<T> {
     const result = this.ctx.makeMultiVector(kind + "Prod");
     a.forComponents((bmA, valA) => b.forComponents((bmB, valB) => {
-      const mf = this.metricFactors(bmA & bmB);
-      if (!productSkip[kind](bmA, bmB) && mf !== undefined) {
-        result.add(bmA ^ bmB, [
-          ...flipSign(productFlips(bmA, bmB) & 1),
-          ...mf,
-          valA,
-          valB,
-        ]);
+      if (!productSkip[kind](bmA, bmB)) {
+        const mf = this.metricFactors(bmA & bmB);
+        if (mf !== undefined) {
+          result.add(bmA ^ bmB, [
+            ...flipSign(productFlips(bmA, bmB) & 1),
+            ...mf,
+            valA,
+            valB,
+          ]);
+        }
       }
     }));
     return result;
