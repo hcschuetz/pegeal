@@ -72,7 +72,9 @@ alg.contractRight(mv3, mv2);
 
 ctx.emit(`\n// scalarProd`);
 alg.scalarProduct(mv2, mv2);
+alg.scalarProductMV(mv2, mv2);
 alg.scalarProduct(mv3, mv3);
+alg.scalarProductMV(mv3, mv3);
 ctx.emit(`\n// empty: ${alg.scalarProduct(mv2, mv3)}`);
 
 ctx.emit(`\n// dotProd`);

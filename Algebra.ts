@@ -7,7 +7,43 @@ export interface MultiVector<T> {
   get(bitmap: number): Factor<T> | undefined;
 }
 
+/**
+ * Not sure if we need this.  We could just use a MultiVector having (at most)
+ * the scalar component.  But using `Scalar` makes it clear in the TS/JS code
+ * that no other components are present.
+ */
+// Should we also have special types for other grades such as 1 and n?
+export interface Scalar<T> extends MultiVector<T> {
+  add0(term: Term<T>): this;
+  get0(): Factor<T> | undefined;
+}
+
+export abstract class AbstractScalar<T> implements Scalar<T> {
+  abstract add0(term: Term<T>): this;
+  abstract get0(): Factor<T> | undefined;
+
+  add(bm: number, term: Term<T>): this {
+    if (bm !== 0) {
+      throw "Cannot add to non-scalar component of scalar";
+    }
+    this.add0(term);
+    return this;
+  }
+
+  get(bm: number) {
+    return (bm === 0) ? this.get0() : undefined;
+  }
+
+  forComponents(callback: (bitmap: number, value: Factor<T>) => unknown) {
+    const value = this.get0();
+    if (value !== undefined) {
+      callback(0, value);
+    }
+  }
+}
+
 export interface Context<T> {
+  makeScalar(nameHint: string): Scalar<T>;
   makeMultiVector(nameHint: string): MultiVector<T>;
   invertFactor(f: Factor<T>): Factor<T>;
   // TODO more operations on scalars such as sqrt, trig functions, ...
@@ -106,11 +142,11 @@ export class Algebra<T> {
     return result;
   }
 
-  zero(): MultiVector<T> {
-    return this.ctx.makeMultiVector("zero");
+  zero(): Scalar<T> {
+    return this.ctx.makeScalar("zero");
   };
-  one(): MultiVector<T> {
-    return this.ctx.makeMultiVector("one").add(0, []);
+  one(): Scalar<T> {
+    return this.ctx.makeScalar("one").add0([]);
   }
   pseudoScalar(): MultiVector<T> {
     // return this.wedgeProduct(...this.basisVectors());
@@ -165,10 +201,8 @@ export class Algebra<T> {
   }
 
   /** Short for `this.scalarProduct(mv, this.reverse(mv))` */
-  // TODO This should return something like Scalar<T>.
-  // But that requires support from the context.
-  normSquared(mv: MultiVector<T>): MultiVector<T> {
-    const result = this.ctx.makeMultiVector("normSquared");
+  normSquared(mv: MultiVector<T>): Scalar<T> {
+    const result = this.ctx.makeScalar("normSquared");
     mv.forComponents((bm, val) => {
       const mf = this.metricFactors(bm);
       if (mf !== undefined) {
@@ -176,20 +210,21 @@ export class Algebra<T> {
         // normSquared(mv) is defined as "scalarProduct(mv, reverse(mv))".
         // - "reverse" introduces a sign expression
         //   "flipSign(getGrade(bm)) & 2".
-        // - "scalarProd" introduces "flipSign(productFlips(bm, bm)) & 1",
-        //   which has the same truthiness as "flipSign(getGrade(bm)) & 2".
+        // - "scalarProductMV" introduces "flipSign(productFlips(bm, bm)) & 1",
+        //   which has the same truthiness as "flipSign(getGrade(bm)) & 2" in
+        //   "scalarProduct".
         // These two cancel each other out, so there is no sign flip here.
         // (It actually looks like the reversion of one argument has been
         // added to the definition of normSquared precisely for the purpose
         // of cancelling the signs from the scalar product.)
-        result.add(0, [...mf, val, val]);
+        result.add0([...mf, val, val]);
       }
     });
     return result;
   }
 
   inverse(mv: MultiVector<T>): MultiVector<T> {
-    const nSq = this.normSquared(mv).get(0);
+    const nSq = this.normSquared(mv).get0();
     if (nSq === undefined || nSq === 0) {
       throw `trying to invert vector ${mv} that is always null`;
     }
@@ -221,12 +256,8 @@ export class Algebra<T> {
       if (!productSkip[kind](bmA, bmB)) {
         const mf = this.metricFactors(bmA & bmB);
         if (mf !== undefined) {
-          result.add(bmA ^ bmB, [
-            ...flipSign(productFlips(bmA, bmB) & 1),
-            ...mf,
-            valA,
-            valB,
-          ]);
+          const sign = flipSign(productFlips(bmA, bmB) & 1);
+          result.add(bmA ^ bmB, [...sign, ...mf, valA, valB]);
         }
       }
     }));
@@ -260,7 +291,27 @@ export class Algebra<T> {
     return this.product2("dot", a, b);
   }
 
-  scalarProduct(a: MultiVector<T>, b: MultiVector<T>): MultiVector<T> {
+  /**
+   * Implementation returning a multivector that is actually a scalar.
+   * (At most the scalar component is filled.)
+   */
+  scalarProductMV(a: MultiVector<T>, b: MultiVector<T>): MultiVector<T> {
     return this.product2("scalar", a, b);
+  }
+
+  /** Implementation returning an object of scalar type. */
+  scalarProduct(a: MultiVector<T>, b: MultiVector<T>): Scalar<T> {
+    const result = this.ctx.makeScalar("scalarProd");
+    a.forComponents((bm, valA) => {
+      const valB = b.get(bm);
+      if (valB !== undefined) {
+        const mf = this.metricFactors(bm);
+        if (mf !== undefined) {
+          const sign = flipSign(getGrade(bm) & 2);
+          result.add0([...sign, ...mf, valA, valB]);
+        }
+      }
+    });
+    return result;
   }
 }

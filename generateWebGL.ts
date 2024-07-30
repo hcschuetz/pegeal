@@ -1,4 +1,4 @@
-import { MultiVector, Term, Context, bitList, Factor } from "./Algebra";
+import { MultiVector, Term, Context, bitList, Factor, Scalar, AbstractScalar } from "./Algebra";
 
 function formatFactor(f: Factor<string>) {
   switch (typeof f) {
@@ -8,6 +8,36 @@ function formatFactor(f: Factor<string>) {
     }
     case "string": return f;
   }
+}
+
+class ScalarImpl extends AbstractScalar<string> {
+  haveVariable = false;
+
+  constructor(
+    readonly context: WebGLContext,
+    readonly name: string,
+  ) {
+    super();
+    context.emit(`\n// ${name}:`);
+  }
+
+  add0(term: Term<string>): this {
+    const termString =
+      term.length === 0 ? "1.0" : term.map(formatFactor).join(" * ");
+    if (!this.haveVariable) {
+      this.context.emit(`float ${this.name}  = ${termString};`);
+      this.haveVariable = true;
+    } else {
+      this.context.emit(`      ${this.name} += ${termString};`);
+    }
+    return this;
+  }
+
+  get0(): Factor<string> | undefined {
+    return this.haveVariable ? this.name : undefined;
+  }
+
+  toString() { return `${this.get0()}`; }
 }
 
 class MultiVectorImpl implements MultiVector<string> {
@@ -74,6 +104,10 @@ export class WebGLContext implements Context<string> {
 
   emit(newText: string) {
     this.text += newText + "\n";
+  }
+
+  makeScalar(nameHint: string): Scalar<string> {
+    return new ScalarImpl(this, `${nameHint}_${this.count++}`);
   }
 
   makeMultiVector(nameHint: string): MultiVector<string> {

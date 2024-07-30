@@ -1,4 +1,24 @@
-import { MultiVector, Term, Context, bitList, Factor } from "./Algebra";
+import { MultiVector, Term, Context, bitList, Factor, Scalar, AbstractScalar } from "./Algebra";
+
+class ScalarImpl extends AbstractScalar<never> {
+  value: number | undefined = undefined;
+
+  constructor(
+    readonly context: EvalContext,
+  ) {
+    super();
+  }
+
+  add0(term: Term<never>): this {
+    this.value = (this.value ?? 0) + term.reduce((x, y) => x*y, 1);
+    return this;
+  }
+
+  get0(): Factor<never> | undefined { return this.value; }
+
+  toJSON() { return this.value; }
+  toString() { return JSON.stringify(this); }
+}
 
 class MultiVectorImpl implements MultiVector<never> {
   /**
@@ -8,7 +28,7 @@ class MultiVectorImpl implements MultiVector<never> {
   components: number[] = [];
 
   constructor(
-    readonly bitmapToString: string[],
+    readonly context: EvalContext
   ) {}
 
   add(bm: number, term: Term<never>): this {
@@ -20,17 +40,15 @@ class MultiVectorImpl implements MultiVector<never> {
     this.components.forEach((val, bm) => callback(bm, val));
   }
 
-  get(bm: number): number { return this.components[bm]; }
+  get(bm: number): number | undefined { return this.components[bm]; }
 
   toJSON(): Record<string, number> {
     const result: Record<string, number> = {};
-    this.forComponents((bm, val) => result[this.bitmapToString[bm]] = val);
+    this.forComponents((bm, val) => result[this.context.bitmapToString[bm]] = val);
     return result;
   }
 
-  toString() {
-    return JSON.stringify(this);
-  }
+  toString() { return JSON.stringify(this); }
 }
 
 export class EvalContext implements Context<never> {
@@ -48,8 +66,12 @@ export class EvalContext implements Context<never> {
     }
   }
 
+  makeScalar(nameHint: string): Scalar<never> {
+    return new ScalarImpl(this);
+  }
+
   makeMultiVector(): MultiVector<never> {
-    return new MultiVectorImpl(this.bitmapToString);
+    return new MultiVectorImpl(this);
   }
   mv(obj: Record<string, number>): MultiVector<never> {
     const result = this.makeMultiVector();
