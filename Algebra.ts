@@ -7,12 +7,51 @@ export interface MultiVector<T> {
   get(bitmap: number): Factor<T> | undefined;
 }
 
+/*
+TODO Should we also have special types for other grades such as 1 and n?
+
+It probably makes most sense to have a subclass for unit multivectors:
+- Operations creating unit vectors by construction should return such a vector:
+  - normalization
+  - basis vectors if the corresponding metric component is 1
+  - more?
+- normSquared(mv) then simply returns the constant scalar 1.
+  (That should suffice for optimization in the subsequent compilation.)
+- inverse(mv) simply returns its argument.
+To solve this in an object-oriented way (inheritance + selective overriding)
+we would have to implement normSquared(mv) and inverse(mv) as methods of
+the multivector, not the algebra.
+
+Alternatively we could just add a boolean "definitelyUnit" to MultiVector<T>
+without subclassing.  It is false by default and can be set using a method
+mv.markAsUnit().  Then we can optimize after checking this flag.
+
+CAUTION: Norm and unitness depend on the metric and thus on the algebra.
+They are NOT properties of just the Multivector seen as a mapping from bitmaps
+to numbers.  So it might make sense to re-introduce the algebra pointer
+(or at least a metric pointer) in multivectors and checkMine(mv).
+(We need the algebra/metric pointer anyway for implementing mv.normSquared().)
+
+BTW, is the geometric product of two unit mvs again a unit mv?
+More generally:  Does the norm (or equivalently the squared norm) commute
+with the geometric product?
+In the Euclidean case probably yes.  Otherwise ???
+Other products of units are not unit because their norm involves the angle
+between the two arguments.
+
+And would a flag or subclass for invertible MVs help?
+
+A specialized type for versors might help.  Only versors support
+normSquared(...) and inverse(...), at least with their current efficient
+implementation.  General multivectors get no support or less efficient code.
+(See section 21.2 of Dorst/Fontijne/Mann.)
+*/
+
 /**
  * Not sure if we need this.  We could just use a MultiVector having (at most)
  * the scalar component.  But using `Scalar` makes it clear in the TS/JS code
  * that no other components are present.
  */
-// Should we also have special types for other grades such as 1 and n?
 export interface Scalar<T> extends MultiVector<T> {
   add0(term: Term<T>): this;
   get0(): Factor<T> | undefined;
