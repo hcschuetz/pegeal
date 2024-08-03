@@ -88,9 +88,8 @@ export interface Context<T> {
   // TODO more operations on scalars such as sqrt, trig functions, ...
 }
 
-
 /** For each 1 bit in the bitmap, invoke the callback with the bit position. */
-function forBitmap(bm: number, callback: (direction: number) => unknown): void {
+export function forBitmap(bm: number, callback: (direction: number) => unknown): void {
   for (let i = 0, bit = 1; bit <= bm; i++, bit <<= 1) {
     if (bm & bit) {
       callback(i);
@@ -106,7 +105,7 @@ export function bitList(bm: number): number[] {
 
 // See https://graphics.stanford.edu/%7Eseander/bithacks.html#CountBitsSetNaive
 // and subsequent solutions for alternative implementations.
-function getGrade(bitmap: number) {
+export function getGrade(bitmap: number) {
   let result = 0;
   // Kernighan method:
   while (bitmap) {
@@ -138,7 +137,7 @@ const productSkip: Record<ProductKind, (bmA: number, bmB: number) => number> = {
  * The number of adjacent transpositions needed for the product of
  * two basis blades (represented as bitmaps).
  */
-function productFlips(bitmapA: number, bitmapB: number): number {
+export function productFlips(bitmapA: number, bitmapB: number): number {
   let flips = 0;
   let bCount = 0;
   for (let bit = 1; bit <= bitmapA; bit <<= 1) {
@@ -239,7 +238,10 @@ export class Algebra<T> {
     // TODO Implement directly.
   }
 
-  /** Short for `this.scalarProduct(mv, this.reverse(mv))` */
+  /**
+   * Short for `this.scalarProduct(mv, this.reverse(mv))`.
+   * **This is only correct for versors!**
+   */
   normSquared(mv: MultiVector<T>): Scalar<T> {
     const result = this.ctx.makeScalar("normSquared");
     mv.forComponents((bm, val) => {
@@ -262,6 +264,7 @@ export class Algebra<T> {
     return result;
   }
 
+  /** **This is only correct for versors!** */
   inverse(mv: MultiVector<T>): MultiVector<T> {
     const nSq = this.normSquared(mv).get0();
     if (nSq === undefined || nSq === 0) {

@@ -1,4 +1,5 @@
-import { MultiVector, Term, Context, bitList, Factor, Scalar, AbstractScalar } from "./Algebra";
+import { MultiVector, Term, Factor, Scalar, AbstractScalar } from "./Algebra";
+import { AbstractContext } from "./ContextUtils";
 
 class ScalarImpl extends AbstractScalar<never> {
   value: number | undefined = undefined;
@@ -51,21 +52,7 @@ class MultiVectorImpl implements MultiVector<never> {
   toString() { return JSON.stringify(this); }
 }
 
-export class EvalContext implements Context<never> {
-  readonly bitmapToString: string[] = [];
-  readonly stringToBitmap: Record<string, number> = {};
-
-  constructor(
-    readonly coordinates: string[],
-  ) {
-    const nMultiDimensions = 1 << coordinates.length;
-    for (let bm = 0; bm < nMultiDimensions; bm++) {
-      const name = bitList(bm).map(i => this.coordinates[i]).join("") || "1";
-      this.bitmapToString[bm] = name;
-      this.stringToBitmap[name] = bm;
-    }
-  }
-
+export class EvalContext extends AbstractContext<never> {
   makeScalar(nameHint: string): Scalar<never> {
     return new ScalarImpl(this);
   }

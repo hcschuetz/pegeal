@@ -1,8 +1,9 @@
-import { Algebra } from "./Algebra";
+import { Algebra, getGrade, MultiVector, productFlips } from "./Algebra";
+import { makeLetterNames, makeNumberedNames } from "./ContextUtils";
 import { WebGLContext } from "./generateWebGL";
 import { EvalContext } from "./evalExpr";
 
-const ctx = new WebGLContext(["x", "y", "z", "w"]);
+const ctx = new WebGLContext(makeLetterNames(["x", "y", "z", "w"]));
 const alg = new Algebra([1, 2.222, 3, 0], ctx);
 
 // -----------------------------------------------------------------------------
@@ -115,7 +116,7 @@ console.log(`
 `);
 
 {
-  const ctx = new EvalContext(["x", "y", "z"]);
+  const ctx = new EvalContext(makeLetterNames(["x", "y", "z"]));
   const alg = new Algebra([1,2,3], ctx);
 
   const v = ctx.mv({x: 4, y: 11});
@@ -180,4 +181,86 @@ and
   console.log("psi: " + alg.pseudoScalarInv());
   console.log("dual(v): " + alg.dual(v));
   console.log("dual(bv): " + alg.dual(bv));
+}
+
+{
+  console.log(`
+// --------------------------------------
+// An example where my simple normalizability test fails:
+// (See doc/unsorted/normalisierbarkeit-von-multivektoren.md)
+`);
+
+  function isNormalizable(m: MultiVector<never>): boolean {
+    const nonScalars: number[] = [];
+    m.forComponents((bmA, valA) => m.forComponents((bmB, valB) => {
+      // Test only needed for bmA !== bmB and even in that case we need it only
+      // for (A, B) or (B, A), not for both:
+      if (bmA >= bmB) return;
+
+      const bm = bmA ^ bmB;
+      if (!(getGrade(bm) & 2)) { // <--- The simple test
+        // Actually the non-scalar component is twice the product,
+        // but for our refined test we can omit the factor 2.
+        const product = (productFlips(bmA, bmB) & 1 ? -1 : 1) * valA * valB;
+        console.log(
+          "record simple-test failure", bmA, bmB,
+          ":", productFlips(bmA, bmB) & 1 ? -1 : 1, valA, valB,
+          ":", product
+        );
+        nonScalars[bm] = (nonScalars[bm] ?? 0) + product;
+      }
+    }))
+    console.log("non-scalars:", nonScalars);
+    return nonScalars.every(val => val === 0); // <--- The refined test
+    // The refined test should allow for roundoff errors.
+  }
+
+  const ctx = new EvalContext(makeLetterNames(["x", "y", "z", "w"]));
+  const alg = new Algebra([1,1,1,1], ctx);
+
+  const a = ctx.mv({x: 2, y: 3})
+  const b = ctx.mv({z: 5, w: 7});
+
+  const m = alg.geometricProduct(a, b);
+  const mrev = alg.reverse(m);
+
+  console.log("m: " + m);
+  console.log("normalizable: ", isNormalizable(m));
+  console.log("m~: " + mrev);
+  console.log("mm~: " + alg.geometricProduct(m, mrev));
+  console.log(
+`// Notice that the simple normalizability test skipped
+// some term combinations that became 0 in mm~,
+// but not the component for "xyzw" (bitmap 15).`)
+  console.log("|m|**2: " + alg.normSquared(m));
+}
+{
+  console.log(
+`
+// --------------------------------------
+// A context using component names like "e013"
+`
+  );
+
+  const ctx = new EvalContext(makeNumberedNames(4));
+  const alg = new Algebra([1, 1, 1, 1], ctx);
+
+  const m = ctx.mv({1: 7, e01: 3, e23: 5});
+  console.log("m: " + m);
+  console.log("mm~: " + alg.geometricProduct(m, alg.reverse(m)));
+}
+{
+  console.log(
+`
+// --------------------------------------
+// A context using component names like "e1_8_11"
+`
+  );
+
+  const ctx = new EvalContext(makeNumberedNames(13, {scalar: "scalar", start: 1}));
+  const alg = new Algebra([1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1], ctx);
+
+  const m = ctx.mv({scalar: 7, e1_11: 3, e2_13: 5});
+  console.log("m: " + m);
+  console.log("mm~: " + alg.geometricProduct(m, alg.reverse(m)));
 }

@@ -1,4 +1,5 @@
-import { MultiVector, Term, Context, bitList, Factor, Scalar, AbstractScalar } from "./Algebra";
+import { MultiVector, Term, Factor, Scalar, AbstractScalar } from "./Algebra";
+import { AbstractContext } from "./ContextUtils";
 
 function formatFactor(f: Factor<string>) {
   switch (typeof f) {
@@ -85,22 +86,9 @@ class MultiVectorImpl implements MultiVector<string> {
   }
 }
 
-export class WebGLContext implements Context<string> {
+export class WebGLContext extends AbstractContext<string> {
   private count = 0;
   public text = "";
-  readonly bitmapToString: string[] = [];
-  readonly stringToBitmap: Record<string, number> = {};
-
-  constructor(
-    readonly coordinates: string[],
-  ) {
-    const nMultiDimensions = 1 << coordinates.length;
-    for (let bm = 0; bm < nMultiDimensions; bm++) {
-      const name = bitList(bm).map(i => this.coordinates[i]).join("") || "1";
-      this.bitmapToString[bm] = name;
-      this.stringToBitmap[name] = bm;
-    }
-  }
 
   emit(newText: string) {
     this.text += newText + "\n";
