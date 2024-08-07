@@ -242,8 +242,9 @@ and
 `
   );
 
-  const ctx = new EvalContext(makeNumberedNames(4));
-  const alg = new Algebra([1, 1, 1, 1], ctx);
+  const metric = [1, 1, 1, 1];
+  const ctx = new EvalContext(makeNumberedNames(metric.length));
+  const alg = new Algebra(metric, ctx);
 
   const m = ctx.mv({1: 7, e01: 3, e23: 5});
   console.log("m: " + m);
@@ -257,8 +258,9 @@ and
 `
   );
 
-  const ctx = new EvalContext(makeNumberedNames(13, {scalar: "scalar", start: 1}));
-  const alg = new Algebra([1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1], ctx);
+  const metric = [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1];
+  const ctx = new EvalContext(makeNumberedNames(metric.length, {scalar: "scalar", start: 1}));
+  const alg = new Algebra(metric, ctx);
 
   const m = ctx.mv({scalar: 7, e1_11: 3, e2_13: 5});
   console.log("m: " + m);
