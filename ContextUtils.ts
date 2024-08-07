@@ -1,14 +1,16 @@
-import { bitList, Context, Factor, MultiVector, Scalar } from "./Algebra";
+import { bitList, type Context, type Factor, type MultiVector, type Scalar } from "./Algebra.ts";
 
 // TODO Support reordered component names such as "zx" or "e32"?
 // But this also means that the corresponding values might need to be negated.
 
 export abstract class AbstractContext<T> implements Context<T> {
   readonly stringToBitmap: Record<string, number> = {};
+  readonly bitmapToString: string[];
 
   constructor(
-    readonly bitmapToString: string[],
+    bitmapToString: string[],
   ) {
+    this.bitmapToString = bitmapToString;
     // TODO check if bitmapToString.length is a power of 2
     const {stringToBitmap} = this;
     bitmapToString.forEach((name, bm) => {

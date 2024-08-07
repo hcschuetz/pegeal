@@ -1,7 +1,7 @@
-import { Algebra, getGrade, MultiVector, productFlips } from "./Algebra";
-import { makeLetterNames, makeNumberedNames } from "./ContextUtils";
-import { WebGLContext } from "./generateWebGL";
-import { EvalContext } from "./evalExpr";
+import { Algebra, getGrade, type MultiVector, productFlips } from "./Algebra.ts";
+import { makeLetterNames, makeNumberedNames } from "./ContextUtils.ts";
+import { WebGLContext } from "./generateWebGL.ts";
+import { EvalContext } from "./evalExpr.ts";
 
 const ctx = new WebGLContext(makeLetterNames(["x", "y", "z", "w"]));
 const alg = new Algebra([1, 2.222, 3, 0], ctx);

@@ -1,5 +1,5 @@
-import { MultiVector, Term, Factor, Scalar, AbstractScalar } from "./Algebra";
-import { AbstractContext } from "./ContextUtils";
+import { type MultiVector, type Term, type Factor, type Scalar, AbstractScalar } from "./Algebra.ts";
+import { AbstractContext } from "./ContextUtils.ts";
 
 function formatFactor(f: Factor<string>) {
   switch (typeof f) {
@@ -13,12 +13,16 @@ function formatFactor(f: Factor<string>) {
 
 class ScalarImpl extends AbstractScalar<string> {
   haveVariable = false;
+  readonly context: WebGLContext;
+  readonly name: string;
 
   constructor(
-    readonly context: WebGLContext,
-    readonly name: string,
+    context: WebGLContext,
+    name: string,
   ) {
     super();
+    this.context = context;
+    this.name = name;
     context.emit(`\n// ${name}:`);
   }
 
@@ -48,11 +52,15 @@ class MultiVectorImpl implements MultiVector<string> {
    * component's magnitude.
    */
   components: string[] = [];
+  readonly context: WebGLContext;
+  readonly name: string;
 
   constructor(
-    readonly context: WebGLContext,
-    readonly name: string
+    context: WebGLContext,
+    name: string
   ) {
+    this.context = context;
+    this.name = name;
     context.emit(`\n// ${name}:`);
   }
 

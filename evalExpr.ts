@@ -1,13 +1,15 @@
-import { MultiVector, Term, Factor, Scalar, AbstractScalar } from "./Algebra";
-import { AbstractContext } from "./ContextUtils";
+import { type MultiVector, type Term, type Factor, type Scalar, AbstractScalar } from "./Algebra.ts";
+import { AbstractContext } from "./ContextUtils.ts";
 
 class ScalarImpl extends AbstractScalar<never> {
   value: number | undefined = undefined;
+  readonly context: EvalContext;
 
   constructor(
-    readonly context: EvalContext,
+    context: EvalContext
   ) {
     super();
+    this.context = context;
   }
 
   add0(term: Term<never>): this {
@@ -27,10 +29,13 @@ class MultiVectorImpl implements MultiVector<never> {
    * bitmap) of this multivector to the component's magnitude.
    */
   components: number[] = [];
+  readonly context: EvalContext;
 
   constructor(
-    readonly context: EvalContext
-  ) {}
+    context: EvalContext
+  ) {
+    this.context = context;
+  }
 
   add(bm: number, term: Term<never>): this {
     this.components[bm] = (this.components[bm] ?? 0) + term.reduce((x, y) => x*y, 1)

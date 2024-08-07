@@ -157,11 +157,15 @@ const flipSign = (doFlip: number): Term<never> => doFlip ? [-1] : [];
 export class Algebra<T> {
   readonly nDimensions: number;
   readonly fullBitmap: number;
+  readonly metric: Factor<T>[];
+  readonly ctx: Context<T>;
 
   constructor(
-    readonly metric: Factor<T>[],
-    readonly ctx: Context<T>,
+    metric: Factor<T>[],
+    ctx: Context<T>,
   ) {
+    this.metric = metric;
+    this.ctx = ctx;
     this.nDimensions = metric.length;
     this.fullBitmap = (1 << metric.length) - 1;
   }
