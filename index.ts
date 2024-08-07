@@ -266,3 +266,62 @@ and
   console.log("m: " + m);
   console.log("mm~: " + alg.geometricProduct(m, alg.reverse(m)));
 }
+{
+  console.log(
+`
+// --------------------------------------
+// Rotation example
+`
+  );
+
+  const coords = "xyz".split("");
+  const ctx = new EvalContext(makeLetterNames(coords));
+  const alg = new Algebra(coords.map(() => 1), ctx);
+  const [ex, ey, ez] = alg.basisVectors();
+
+  const TAU = 2 * Math.PI;
+  const P = ctx.mv({x: 1, y: 1, z: 3});
+  const n = 16;
+  for (let i = 0; i <= n; i++) {
+    console.log();
+
+    const phi = TAU * i/n;
+    console.log(`phi: ${phi.toFixed(4)} = ${(phi/TAU*360).toFixed(2)}°`)
+    const c = Math.cos(phi);
+
+    // Half-angle formulas from [DFL09], p.257 or from
+    // https://en.wikipedia.org/wiki/List_of_trigonometric_identities#Half-angle_formulae
+    // or easily derivable:
+    const cHalf = Math.sqrt((1 + c)/2), sHalf = Math.sqrt((1 - c)/2);
+
+    const R = alg.plus(
+      alg.scale(cHalf, alg.one()),
+      alg.scale(sHalf,
+        alg.wedgeProduct(
+          // ex,
+          alg.scale(Math.SQRT1_2, alg.plus(ex, ey)),
+          ez,
+        ),
+      )
+    );
+    console.log("R: " + R);
+    const R2 = alg.extractGrade(2, R);
+    const R2abs = Math.sqrt(alg.normSquared(R2).get0
+    () ?? 0);
+    const R0 = alg.extractGrade(0, R);
+    const R0abs = Math.sqrt(R0.get(0) ?? 0);
+
+    // Just trying out log computation.  It does not make much sense here where
+    // we anyway start with an angle phi rather than a pair of vectors.
+    const logR = alg.scale(Math.atan2(R2abs, R0abs) / R2abs, R2);
+    console.log("logR: " + logR);
+    // I hoped that this is phi (for phi < 180°), but it isn't quite.
+    // TODO check why
+    console.log("2*|logR|: " + (2*Math.sqrt(alg.normSquared(logR).get0() ?? 0)/TAU*360).toFixed(4) + "°");
+
+    // TODO This computes an "xyz" component, which is = 0.  Get rid of this.
+    // Use a specialized implementation for rotor application?
+    // Or implement an optimizer for longer products?
+    console.log("RPR~: " + alg.geometricProduct(R, P, alg.reverse(R)));
+  }
+}
