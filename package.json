@@ -3,9 +3,13 @@
   "version": "0.0.1",
   "main": "index.js",
   "scripts": {
-    "test": "sh -c 'rm *.js; tsc -p .; node --trace-uncaught --enable-source-maps index.js'"
+    "dev": "nodemon --trace-uncaught --enable-source-maps --import=tsx index.ts"
   },
   "author": "Heribert Schütz",
   "license": "MIT",
-  "description": "Generate WebGL shaders from geometric-algebra expressions"
+  "description": "Generate WebGL shaders from geometric-algebra expressions",
+  "dependencies": {
+    "nodemon": "^3.1.4",
+    "tsx": "^4.16.5"
+  }
 }
