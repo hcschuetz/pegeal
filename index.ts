@@ -325,3 +325,30 @@ and
     console.log("RPR~: " + alg.geometricProduct(R, P, alg.reverse(R)));
   }
 }
+{
+ 
+  console.log(
+`
+// --------------------------------------
+// Homogeneous coords
+`
+  );
+
+  const ctx = new WebGLContext(makeNumberedNames(4));
+  const alg = new Algebra(new Array(4).fill(1), ctx);
+  const [e0, e1, e2, e3] = alg.basisVectors();
+  const e0Inv = alg.inverse(e0);
+
+  const p = ctx.mv("p", {e0: "3", e1: "6", e2: "9", e3: "+++"});
+
+  // With our optimizations (and the expected optimizations by the WebGL
+  // compiler) the extractions of weight and location should be as efficient
+  // as in hand-written code:
+  const p_weight = alg.contractLeft(e0Inv, p);
+  const p_loc = alg.geometricProduct(
+    alg.contractLeft(e0Inv, alg.wedgeProduct(e0, p)),
+    alg.inverse(p_weight),
+  );
+
+  console.log(ctx.text)
+}

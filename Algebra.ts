@@ -266,11 +266,37 @@ export class Algebra<T> {
 
   /** **This is only correct for versors!** */
   inverse(mv: MultiVector<T>): MultiVector<T> {
-    const nSq = this.normSquared(mv).get0();
-    if (nSq === undefined || nSq === 0) {
-      throw `trying to invert vector ${mv} that is always null`;
+    let componentCount = 0;
+    mv.forComponents(() => componentCount++);
+    switch (componentCount) {
+      case 0: throw `trying to invert null vector ${mv} (case 0)`;
+      case 1:  {
+        // Optimization for the single-component case:
+        // Instead of dividing mv by its squared norm just invert the single
+        // component (taking sign and metric into account).
+        // TODO check for correctness
+        const result = this.ctx.makeMultiVector("inv");
+        mv.forComponents((bm, val) => {
+          const mf = this.metricFactors(bm);
+          if (mf === undefined) {
+            throw `trying to invert null vector ${mv} (case 1)`;
+          }
+          const norm = this.ctx.makeScalar("norm");
+          // TODO Put `...flipSign(getGrade(bm) & 2)` in the term or omit it
+          // as in `normSquared`?
+          norm.add0([...mf, val]);
+          result.add(bm, [this.ctx.invertFactor(norm.get0()!)])
+        });
+        return result;
+      }
+      default: {
+        const nSq = this.normSquared(mv).get0();
+        if (nSq === undefined || nSq === 0) {
+          throw `trying to invert null vector ${mv} (case 2)`;
+        }
+        return this.scale(this.ctx.invertFactor(nSq), mv);
+      }
     }
-    return this.scale(this.ctx.invertFactor(nSq), mv);
   }
 
   extractGrade(grade: number, mv: MultiVector<T>): MultiVector<T> {
