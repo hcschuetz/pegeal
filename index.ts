@@ -3,11 +3,41 @@ import { makeLetterNames, makeNumberedNames } from "./ContextUtils";
 import { WebGLContext } from "./generateWebGL";
 import { EvalContext } from "./evalExpr";
 
-const ctx = new WebGLContext(makeLetterNames(["x", "y", "z", "w"]));
-const alg = new Algebra([1, 2.222, 3, 0], ctx);
+const euclidean = (coords: number | string | string[]) =>
+  (
+    typeof coords === "number" ? Array.from({length: coords}) :
+    typeof coords === "string" ? coords.split("") :
+    coords
+  ).map(() => 1);
+
+const TAU = 2 * Math.PI;
+const deg = (x: number, p?: number) => `${(x * (360 / TAU)).toFixed(p)}°`;
+
+const p = console.log;
+const q_ = (coords: string) => (label: string, x: MultiVector<never> | number | string | undefined) => {
+  switch (typeof x) {
+    case "undefined":
+    case "string":
+      p(label + " = " + x);
+      return;
+    case "number":
+      p(label + " = " + x.toFixed(5).replace(/\.?0*$/, ""));
+      return;
+    default:
+      p(label + " =");
+      x.forComponents((bm, val) => {
+        p(`  ${
+          coords.split("").map((c, i) => (1 << i) & bm ? c : "_").join("")
+        }: ${val.toFixed(5).replace(/\.?0*$/, "")}`);
+      });
+    }
+}
 
 // -----------------------------------------------------------------------------
 // Usage Examples
+
+const ctx = new WebGLContext(makeLetterNames("xyzw"));
+const alg = new Algebra([1, 2.222, 3, 0], ctx);
 
 const zero = alg.zero(), one = alg.one();
 const [ex, ey, ez] = alg.basisVectors();
@@ -100,7 +130,7 @@ ctx.emit(`\n// norm, inverse (mv3):`);
 alg.scalarProduct(mv3, alg.reverse(mv3));
 alg.inverse(mv3);
 
-console.log("Generated Code:\n" + ctx.text);
+p("Generated Code:\n" + ctx.text);
 
 /*
 TODO support control structures.
@@ -111,23 +141,23 @@ and the value is usable after the paths have joined.
 components missing in a path must be set to 0.0 explicitly in that path.)
 */
 
-console.log(`
+p(`
 ================================================================================
 `);
 
 {
-  const ctx = new EvalContext(makeLetterNames(["x", "y", "z"]));
+  const ctx = new EvalContext(makeLetterNames("xyz"));
   const alg = new Algebra([1,2,3], ctx);
 
   const v = ctx.mv({x: 4, y: 11});
-  console.log("geomProd(v, v) = " + alg.geometricProduct(v, v));
-  console.log("contractRight(v, v) = " + alg.contractRight(v, v));
+  p("geomProd(v, v) = " + alg.geometricProduct(v, v));
+  p("contractRight(v, v) = " + alg.contractRight(v, v));
 
   const bv = ctx.mv({xy: 3, yz: 5});
-  console.log("geomProd(bv, v) = " + alg.geometricProduct(bv, v));
-  console.log("geomProd(v, bv) = " + alg.geometricProduct(v, bv));
-  console.log("geomProd(bv, bv) = " + alg.geometricProduct(bv, bv));
-  console.log(`
+  p("geomProd(bv, v) = " + alg.geometricProduct(bv, v));
+  p("geomProd(v, bv) = " + alg.geometricProduct(v, bv));
+  p("geomProd(bv, bv) = " + alg.geometricProduct(bv, bv));
+  p(`
 It is not a coincidence that the xz component of the latter product is 0.
 It comes from using bv twice:
 
@@ -158,33 +188,33 @@ and
 ----
 `);
 
-  console.log(""+v, ""+alg.reverse(v));
-  console.log(""+bv, ""+alg.reverse(bv));
-  console.log("geometricProd(v, ~v): " + alg.geometricProduct(v, alg.reverse(v)));
-  console.log("geometricProd(bv, ~bv): " + alg.geometricProduct(bv, alg.reverse(bv)));
-  console.log("scalarProd(v, ~v): " + alg.scalarProduct(v, alg.reverse(v)));
-  console.log("scalarProd(bv, ~bv): " + alg.scalarProduct(bv, alg.reverse(bv)));
-  console.log("-----");
-  console.log("scalarProd(v, v): " + alg.scalarProduct(v, v));
-  console.log("scalarProd(bv, bv): " + alg.scalarProduct(bv, bv));
-  console.log("contractLeft(v, bv): " + alg.contractLeft(v, bv));
-  console.log("contractRight(bv, v): " + alg.contractRight(bv, v));
-  console.log("dotProduct(v, v): " + alg.dotProduct(v, v));
-  console.log("dotProduct(bv, bv): " + alg.dotProduct(bv, bv));
-  console.log("-----");
-  console.log("normSquared(v): " + alg.normSquared(v));
-  console.log("normSquared(bv): " + alg.normSquared(bv));
-  console.log("inv(v): " + alg.inverse(v));
-  console.log("inv(bv): " + alg.inverse(bv));
-  console.log("-----");
-  console.log("ps: " + alg.pseudoScalar());
-  console.log("psi: " + alg.pseudoScalarInv());
-  console.log("dual(v): " + alg.dual(v));
-  console.log("dual(bv): " + alg.dual(bv));
+  p(""+v, ""+alg.reverse(v));
+  p(""+bv, ""+alg.reverse(bv));
+  p("geometricProd(v, ~v): " + alg.geometricProduct(v, alg.reverse(v)));
+  p("geometricProd(bv, ~bv): " + alg.geometricProduct(bv, alg.reverse(bv)));
+  p("scalarProd(v, ~v): " + alg.scalarProduct(v, alg.reverse(v)));
+  p("scalarProd(bv, ~bv): " + alg.scalarProduct(bv, alg.reverse(bv)));
+  p("-----");
+  p("scalarProd(v, v): " + alg.scalarProduct(v, v));
+  p("scalarProd(bv, bv): " + alg.scalarProduct(bv, bv));
+  p("contractLeft(v, bv): " + alg.contractLeft(v, bv));
+  p("contractRight(bv, v): " + alg.contractRight(bv, v));
+  p("dotProduct(v, v): " + alg.dotProduct(v, v));
+  p("dotProduct(bv, bv): " + alg.dotProduct(bv, bv));
+  p("-----");
+  p("normSquared(v): " + alg.normSquared(v));
+  p("normSquared(bv): " + alg.normSquared(bv));
+  p("inv(v): " + alg.inverse(v));
+  p("inv(bv): " + alg.inverse(bv));
+  p("-----");
+  p("ps: " + alg.pseudoScalar());
+  p("psi: " + alg.pseudoScalarInv());
+  p("dual(v): " + alg.dual(v));
+  p("dual(bv): " + alg.dual(bv));
 }
 
 {
-  console.log(`
+  p(`
 // --------------------------------------
 // An example where my simple normalizability test fails:
 // (See doc/unsorted/normalisierbarkeit-von-multivektoren.md)
@@ -202,7 +232,7 @@ and
         // Actually the non-scalar component is twice the product,
         // but for our refined test we can omit the factor 2.
         const product = (productFlips(bmA, bmB) & 1 ? -1 : 1) * valA * valB;
-        console.log(
+        p(
           "record simple-test failure", bmA, bmB,
           ":", productFlips(bmA, bmB) & 1 ? -1 : 1, valA, valB,
           ":", product
@@ -210,13 +240,14 @@ and
         nonScalars[bm] = (nonScalars[bm] ?? 0) + product;
       }
     }))
-    console.log("non-scalars:", nonScalars);
+    p("non-scalars:", nonScalars);
     return nonScalars.every(val => val === 0); // <--- The refined test
     // The refined test should allow for roundoff errors.
   }
 
-  const ctx = new EvalContext(makeLetterNames(["x", "y", "z", "w"]));
-  const alg = new Algebra([1,1,1,1], ctx);
+  const coords = "xyzw";
+  const ctx = new EvalContext(makeLetterNames(coords));
+  const alg = new Algebra(euclidean(coords), ctx);
 
   const a = ctx.mv({x: 2, y: 3})
   const b = ctx.mv({z: 5, w: 7});
@@ -224,72 +255,72 @@ and
   const m = alg.geometricProduct(a, b);
   const mrev = alg.reverse(m);
 
-  console.log("m: " + m);
-  console.log("normalizable: ", isNormalizable(m));
-  console.log("m~: " + mrev);
-  console.log("mm~: " + alg.geometricProduct(m, mrev));
-  console.log(
+  p("m: " + m);
+  p("normalizable: ", isNormalizable(m));
+  p("m~: " + mrev);
+  p("mm~: " + alg.geometricProduct(m, mrev));
+  p(
 `// Notice that the simple normalizability test skipped
 // some term combinations that became 0 in mm~,
 // but not the component for "xyzw" (bitmap 15).`)
-  console.log("|m|**2: " + alg.normSquared(m));
+  p("|m|: " + alg.norm(m));
 }
 {
-  console.log(
+  p(
 `
 // --------------------------------------
 // A context using component names like "e013"
 `
   );
 
-  const metric = [1, 1, 1, 1];
+  const metric = euclidean(4);
   const ctx = new EvalContext(makeNumberedNames(metric.length));
   const alg = new Algebra(metric, ctx);
 
   const m = ctx.mv({1: 7, e01: 3, e23: 5});
-  console.log("m: " + m);
-  console.log("mm~: " + alg.geometricProduct(m, alg.reverse(m)));
+  p("m: " + m);
+  p("mm~: " + alg.geometricProduct(m, alg.reverse(m)));
 }
 {
-  console.log(
+  p(
 `
 // --------------------------------------
 // A context using component names like "e1_8_11"
 `
   );
 
-  const metric = [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1];
+  const metric = euclidean(13);
   const ctx = new EvalContext(makeNumberedNames(metric.length, {scalar: "scalar", start: 1}));
   const alg = new Algebra(metric, ctx);
 
   const m = ctx.mv({scalar: 7, e1_11: 3, e2_13: 5});
-  console.log("m: " + m);
-  console.log("mm~: " + alg.geometricProduct(m, alg.reverse(m)));
+  p("m: " + m);
+  p("mm~: " + alg.geometricProduct(m, alg.reverse(m)));
 }
 {
-  console.log(
+  p(
 `
 // --------------------------------------
 // Rotation example
+// (see also "Rotor Log" examples below)
 `
   );
 
-  const coords = "xyz".split("");
+  const coords = "xyz";
   const ctx = new EvalContext(makeLetterNames(coords));
-  const alg = new Algebra(coords.map(() => 1), ctx);
+  const alg = new Algebra(euclidean(coords), ctx);
   const [ex, ey, ez] = alg.basisVectors();
 
-  const TAU = 2 * Math.PI;
   const P = ctx.mv({x: 1, y: 1, z: 3});
   const n = 16;
   for (let i = 0; i <= n; i++) {
-    console.log();
+    p();
 
     const phi = TAU * i/n;
-    console.log(`phi: ${phi.toFixed(4)} = ${(phi/TAU*360).toFixed(2)}°`)
+    p(`phi: ${phi.toFixed(4)} = ${deg(phi, 2)}`)
     const c = Math.cos(phi);
 
-    // Half-angle formulas from [DFL09], p.257 or from
+    // Half-angle formulas from [DFM09], p.257 or from
     // https://en.wikipedia.org/wiki/List_of_trigonometric_identities#Half-angle_formulae
     // or easily derivable:
     const cHalf = Math.sqrt((1 + c)/2), sHalf = Math.sqrt((1 - c)/2);
@@ -304,51 +335,214 @@ and
         ),
       )
     );
-    console.log("R: " + R);
+    p("R: " + R);
     const R2 = alg.extractGrade(2, R);
-    const R2abs = Math.sqrt(alg.normSquared(R2).get0
-    () ?? 0);
-    const R0 = alg.extractGrade(0, R);
-    const R0abs = Math.sqrt(R0.get(0) ?? 0);
+    const R2abs = alg.norm(R2).get0() ?? 0;
+    const R0 = alg.extractGrade(0, R).get(0) ?? 0;
 
     // Just trying out log computation.  It does not make much sense here where
     // we anyway start with an angle phi rather than a pair of vectors.
-    const logR = alg.scale(Math.atan2(R2abs, R0abs) / R2abs, R2);
-    console.log("logR: " + logR);
-    // I hoped that this is phi (for phi < 180°), but it isn't quite.
-    // TODO check why
-    console.log("2*|logR|: " + (2*Math.sqrt(alg.normSquared(logR).get0() ?? 0)/TAU*360).toFixed(4) + "°");
+    const logR = alg.scale(Math.atan2(R2abs, R0) / R2abs, R2);
+    p("logR: " + logR);
+    // For phi <= 180° this is phi.
+    // For phi >= 180° this is 360° - phi.
+    p("2*|logR|: " + deg(2*(alg.norm(logR).get0() ?? 0), 4));
 
     // TODO This computes an "xyz" component, which is = 0.  Get rid of this.
     // Use a specialized implementation for rotor application?
     // Or implement an optimizer for longer products?
-    console.log("RPR~: " + alg.geometricProduct(R, P, alg.reverse(R)));
+    p("RPR~: " + alg.geometricProduct(R, P, alg.reverse(R)));
   }
 }
 {
- 
-  console.log(
+  p(
 `
 // --------------------------------------
 // Homogeneous coords
 `
   );
 
-  const ctx = new WebGLContext(makeNumberedNames(4));
-  const alg = new Algebra(new Array(4).fill(1), ctx);
+  const metric = euclidean(4);
+  const ctx = new WebGLContext(makeNumberedNames(metric.length));
+  const alg = new Algebra(metric, ctx);
   const [e0, e1, e2, e3] = alg.basisVectors();
   const e0Inv = alg.inverse(e0);
 
-  const p = ctx.mv("p", {e0: "3", e1: "6", e2: "9", e3: "+++"});
+  const point = ctx.mv("point", {e0: "3", e1: "6", e2: "9", e3: "+++"});
 
   // With our optimizations (and the expected optimizations by the WebGL
   // compiler) the extractions of weight and location should be as efficient
   // as in hand-written code:
-  const p_weight = alg.contractLeft(e0Inv, p);
+  const p_weight = alg.contractLeft(e0Inv, point);
   const p_loc = alg.geometricProduct(
-    alg.contractLeft(e0Inv, alg.wedgeProduct(e0, p)),
+    alg.contractLeft(e0Inv, alg.wedgeProduct(e0, point)),
     alg.inverse(p_weight),
   );
 
-  console.log(ctx.text)
+  p(ctx.text)
+}
+{
+  p(`
+// ------------------------------------------
+// Blade Squaring
+`);
+
+  const coords = "uvwxyz";
+  const ctx = new EvalContext(makeLetterNames(coords));
+  const alg = new Algebra(euclidean(coords), ctx);
+
+  const blade =
+    !true ? alg.wedgeProduct(
+      ctx.mv({x: 3, y: 5, z: 9, u: 1}),
+      ctx.mv({x: 1, y:-3, z: 7, v:13}),
+      ctx.mv({x: 2, y: 2, z:11, w:-3}),
+    )
+    : ctx.mv({wx: 4, xz: 7, yz:-5, uv: 3});
+
+  p(`${blade} ** 2
+= ${alg.geometricProduct(blade, blade)}`);
+}
+{
+  p(`
+// ------------------------------------------
+// Blade Exponentiation - WebGL
+`);
+
+  const coords = "xyz";
+  const ctx = new WebGLContext(makeLetterNames(coords));
+  const alg = new Algebra(euclidean(coords), ctx);
+
+  const blade = alg.wedgeProduct(
+      ctx.mv("v", {x: 3, y: 5, z: 9}),
+      ctx.mv("v", {x: 1, y:-3, z: 7}),
+    );
+
+  const result = alg.exp(blade);
+  p(ctx.text);
+  p(`// result: ${result}`)
+}
+{
+  p(`
+// ------------------------------------------
+// Blade Exponentiation - Eval
+`);
+
+  const coords = "xyz";
+  const ctx = new EvalContext(makeLetterNames(coords));
+  const alg = new Algebra(euclidean(coords), ctx);
+
+  const blade = alg.wedgeProduct(
+    ctx.mv({x: 3, y: 5, z: 9}),
+    ctx.mv({x: 1, y:-3, z: 7}),
+  );
+
+  p(`exp(${blade}) =
+${alg.exp(blade)}`);
+}
+{
+  p(`
+// ------------------------------------------
+// Rotor Log - WebGL
+`);
+
+  const coords = "xyz";
+  const ctx = new WebGLContext(makeLetterNames(coords));
+  const alg = new Algebra(euclidean(coords), ctx);
+
+  const versor = alg.geometricProduct(
+    ctx.mv("v", {x: 3, y: 5, z: 9}),
+    ctx.mv("v", {x: 1, y:-3, z: 7}),
+  );
+  const rotor = alg.normalize(versor);
+
+  const result = alg.log(rotor);
+  p(ctx.text);
+  p(`// result: ${result}`)
+}
+{
+  p(`
+// ------------------------------------------
+// Rotor Log -  Eval
+`);
+
+  const coords = "xyz";
+  const ctx = new EvalContext(makeLetterNames(coords));
+  const alg = new Algebra(euclidean(coords), ctx);
+
+  const q = q_(coords);
+
+  const v1 = alg.normalize(ctx.mv({x: 1, y: 1}));
+  q("v1", v1);
+  const v2 = alg.normalize(ctx.mv({x: 1, y: 1, z: 1}));
+  q("v2", v2);
+  const vMid = alg.normalize(alg.plus(v1, v2));
+  q("vMid", vMid);
+  q("angle  ", deg(alg.getAngle(v1, v2), 5));
+  q("angle/2", deg(alg.getAngle(v1, vMid), 5));
+  q("angle/2", deg(alg.getAngle(vMid, v2), 5));
+  const rotor1 = alg.geometricProduct(vMid, v1);
+  const rotor2 = alg.geometricProduct(v2, vMid);
+  q("dist(R1, R2)", alg.dist(rotor1, rotor2));
+  const rotor = rotor1;
+  p("R = " + rotor);
+  p("|R| = " + alg.norm(rotor));
+
+  q("dist(R v1 R~, v2)",
+    alg.dist(alg.geometricProduct(rotor, v1, alg.reverse(rotor)), v2)
+  );
+
+  const log = alg.log(rotor);
+  q("log(rotor)", log);
+
+  // Cannot compare with [DFM09]'s reference implementation because that does
+  // not provide a multivector logarithm, not even for specific cases.
+  // Instead we check if log is the inverse function of exp.
+  q("dist(exp(log(rotor)), rotor)", alg.dist(alg.exp(log), rotor));
+
+  // Interpolation of an angle spanned by two vectors
+  const a12 = alg.getAngle(v1, v2);
+  const inv_sin_a12 = 1 / Math.sin(a12);
+  const n = 10;
+  for (let i = 0; i <= n; i++) {
+    p();
+    const frac = i/n;
+    q("frac", frac);
+    const partialRotor = alg.exp(alg.scale(frac, log));
+    // q("PR", partialRotor);
+    // q("|PR|", alg.norm(partialRotor).get0());
+    const v = alg.geometricProduct(partialRotor, v1, alg.reverse(partialRotor))
+    q("v", v);
+    // TODO can the computation of v be optimized by using lower-level operations?
+    // See the Wikipedia article on "Slerp".
+
+    // control the result:
+    const a1 = alg.getAngle(v1, v), a2 = alg.getAngle(v, v2);
+    q("angle frac 1", a1 / a12);
+    q("angle frac 2", a2 / a12);
+
+    // TODO use a testing lib
+    if (Math.abs(a12 * frac - a1) > 1e-10) throw "angle test failed";
+    if (Math.abs(a12 - a1 - a2) > 1e-10) throw "angle test failed";
+
+    const slerp = alg.slerp(frac, v1, v2);
+    q("slerp", slerp);
+    q("dist(slerp, v)", alg.dist(slerp, v));
+  }
+}
+{
+  p(`
+// ------------------------------------------
+// Slerp - WebGL
+`);
+
+  const coords = "xyz";
+  const ctx = new WebGLContext(makeLetterNames(coords));
+  const alg = new Algebra(euclidean(coords), ctx);
+
+  const v1 = ctx.mv("v1", {x: 1, y: 1});
+  const v2 = ctx.mv("v2", {x: 1, y: 1, z: 1});
+  const slerp = alg.slerp(.3, v1, v2);
+
+  p(ctx.text);
+  p("// " + slerp);
 }

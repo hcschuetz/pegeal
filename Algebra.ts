@@ -81,10 +81,15 @@ export abstract class AbstractScalar<T> implements Scalar<T> {
   }
 }
 
+export type ScalarFuncName = "abs" | "sqrt" | "cos" | "sin" | "cosh" | "sinh";
+export type ScalarFunc2Name = "+" | "-" | "*" | "/" | "atan2";
+
 export interface Context<T> {
   makeScalar(nameHint: string): Scalar<T>;
   makeMultiVector(nameHint: string): MultiVector<T>;
-  invertFactor(f: Factor<T>): Factor<T>;
+  invertFactor(f: Factor<T>): Factor<T>; // TODO handle as scalarFunc?
+  scalarFunc(name: ScalarFuncName, f: Factor<T>): Factor<T>;
+  scalarFunc2(name: ScalarFunc2Name, f1: Factor<T>, f2: Factor<T>): Factor<T>;
   // TODO more operations on scalars such as sqrt, trig functions, ...
 }
 
@@ -120,18 +125,20 @@ export function getGrade(bitmap: number) {
 type ProductKind = "wedge" | "geom" | "contrL" | "contrR" | "dot" | "scalar";
 
 /**
- * For each product kind a test whether the combination of two basis blades
- * (represented as bitmaps) should be skipped in the product.
- * The result is technically a number but is to be used as a boolean.
+ * For each product kind a test whether the product of two basis blades
+ * (represented as bitmaps) should be include in the product.
  */
-const productSkip: Record<ProductKind, (bmA: number, bmB: number) => number> = {
-  wedge:  (bmA, bmB) => bmA & bmB,
-  geom:   (bmA, bmB) => 0,
-  contrL: (bmA, bmB) => bmA & ~bmB,
-  contrR: (bmA, bmB) => ~bmA & bmB,
-  dot:    (bmA, bmB) => bmA & ~bmB | ~bmA & bmB,
-  scalar: (bmA, bmB) => bmA ^ bmB,
-};
+const includeProduct = (kind: ProductKind, bmA: number, bmB: number): boolean  => {
+  switch (kind) {                                   // condition on the set of
+                                                    // involved basis vectors:
+    case "wedge" : return !(bmA & bmB);                   // A ⋂ B = {}
+    case "geom"  : return true;                           // true
+    case "contrL": return !(bmA & ~bmB);                  // A ⊂ B
+    case "contrR": return !(~bmA & bmB);                  // A ⊃ B
+    case "dot"   : return !(bmA & ~bmB) || !(~bmA & bmB); // A ⊂ B or A ⊃ B
+    case "scalar": return !(bmA ^ bmB);                   // A = B
+  }
+}
 
 /**
  * The number of adjacent transpositions needed for the product of
@@ -264,39 +271,41 @@ export class Algebra<T> {
     return result;
   }
 
+  norm(mv: MultiVector<T>): Scalar<T> {
+    const n2 = this.normSquared(mv).get(0);
+    if (n2 === undefined) {
+      return this.ctx.makeScalar("norm0");
+    } else {
+      const n = this.ctx.scalarFunc("sqrt", n2);
+      const result = this.ctx.makeScalar("norm");
+      result.add0([n]);
+      return result;
+    }
+  }
+
+  // A note on inverse(...) and normalize(...):
+  // ------------------------------------------
+  // I had specialized implementations for the cases where the argument
+  // had only 0 or 1 component.  But meanwhile I think these implementations
+  // were no better than the generic implementations and so I have removed them.
+  // TODO Have another look at the generated code for 0 or 1 component.
+
   /** **This is only correct for versors!** */
   inverse(mv: MultiVector<T>): MultiVector<T> {
-    let componentCount = 0;
-    mv.forComponents(() => componentCount++);
-    switch (componentCount) {
-      case 0: throw `trying to invert null vector ${mv} (case 0)`;
-      case 1:  {
-        // Optimization for the single-component case:
-        // Instead of dividing mv by its squared norm just invert the single
-        // component (taking sign and metric into account).
-        // TODO check for correctness
-        const result = this.ctx.makeMultiVector("inv");
-        mv.forComponents((bm, val) => {
-          const mf = this.metricFactors(bm);
-          if (mf === undefined) {
-            throw `trying to invert null vector ${mv} (case 1)`;
-          }
-          const norm = this.ctx.makeScalar("norm");
-          // TODO Put `...flipSign(getGrade(bm) & 2)` in the term or omit it
-          // as in `normSquared`?
-          norm.add0([...mf, val]);
-          result.add(bm, [this.ctx.invertFactor(norm.get0()!)])
-        });
-        return result;
-      }
-      default: {
-        const nSq = this.normSquared(mv).get0();
-        if (nSq === undefined || nSq === 0) {
-          throw `trying to invert null vector ${mv} (case 2)`;
-        }
-        return this.scale(this.ctx.invertFactor(nSq), mv);
-      }
+    const norm2 = this.normSquared(mv).get0();
+    if (norm2 === undefined || norm2 === 0) {
+      throw `trying to invert null vector ${mv}`;
     }
+    return this.scale(this.ctx.invertFactor(norm2), mv);
+  }
+
+  /** **This is only correct for versors!** */
+  normalize(mv: MultiVector<T>): MultiVector<T> {
+    const norm = this.norm(mv).get0();
+    if (norm === undefined || norm === 0) {
+      throw `trying to normalize null vector ${mv}`;
+    }
+    return this.scale(this.ctx.invertFactor(norm), mv);
   }
 
   extractGrade(grade: number, mv: MultiVector<T>): MultiVector<T> {
@@ -321,7 +330,7 @@ export class Algebra<T> {
   private product2(kind: ProductKind, a: MultiVector<T>, b: MultiVector<T>): MultiVector<T> {
     const result = this.ctx.makeMultiVector(kind + "Prod");
     a.forComponents((bmA, valA) => b.forComponents((bmB, valB) => {
-      if (!productSkip[kind](bmA, bmB)) {
+      if (includeProduct(kind, bmA, bmB)) {
         const mf = this.metricFactors(bmA & bmB);
         if (mf !== undefined) {
           const sign = flipSign(productFlips(bmA, bmB) & 1);
@@ -381,5 +390,90 @@ export class Algebra<T> {
       }
     });
     return result;
+  }
+
+  /** **EXPECTS A 2-BLADE AND POSITIVE-DEFINITE METRIC** */
+  exp(A: MultiVector<T>): MultiVector<T> {
+    const {ctx} = this;
+    // Notice that [DFM09] p. 185 use A**2, which is -norm2 for a 2-blade.
+    const norm2 = this.normSquared(A).get0();
+    if (norm2 == undefined) {
+      const result = ctx.makeMultiVector("expNull");
+      result.add(0, [1]);
+      A.forComponents((bm, val) => result.add(bm, [val]));      
+      return result;
+    } else {
+      // TODO detect and handle negative or zero norm2 at runtime
+      const alpha = ctx.scalarFunc("sqrt", norm2);
+      const c = ctx.scalarFunc("cos", alpha);
+      const s = ctx.scalarFunc("sin", alpha);
+      const sByAlpha = ctx.scalarFunc2("/", s, alpha);
+      const result = ctx.makeMultiVector("exp");
+      result.add(0, [c]);
+      A.forComponents((bm, val) => result.add(bm, [sByAlpha, val]));
+      return result;
+    }
+  }
+
+  /** **EXPECTS A 3-D ROTOR** */
+  // See [DFM09] p. 259.
+  //
+  // TODO Does this really only work in 3-D?  Doesn't it suffice that the rotor
+  // is "exp(some 2-blade)", even in higher dimensions or 2-D?
+  // 
+  // Notice that R can also be seen as a unit quaternion,
+  // except that the xz component is the negative j component.
+  log(R: MultiVector<T>): MultiVector<T> {
+    const {ctx} = this;
+    /** The cosine of the half angle, that is, the real part of the quaternion */
+    const R0 = R.get(0);
+    /** The imaginary part of the quaternion */
+    const R2 = this.extractGrade(2, R);
+    /** The sine of the half angle */
+    const R2Norm = this.norm(R2).get(0);
+    if (R2Norm == undefined) throw "attempt to compute log of bad arg ###TODO text###";
+    // TODO optimize away atan2 call if R0 == undefined.
+    const atan = ctx.scalarFunc2("atan2", R2Norm, R0 ?? 0);
+    const scalarFactor = ctx.scalarFunc2("/", atan, R2Norm);
+    return this.scale(scalarFactor, R2);
+  }
+
+  // ----------------------------------------------------
+  // Utilities (TODO Separate them from the core methods?)
+
+  dist(a: MultiVector<T>, b: MultiVector<T>): Factor<T> {
+    return this.norm(this.plus(a, this.negate(b))).get0() ?? 0;
+  }
+  
+  /** **expects 1-vectors** */
+  getAngle(a: MultiVector<T>, b: MultiVector<T>): Factor<T> {
+    // TODO omit normalization if a or b are known to be normalized
+    const prod = this.geometricProduct(this.normalize(a), this.normalize(b));
+    return this.ctx.scalarFunc2("atan2",
+      this.norm(this.extractGrade(2, prod)).get0() ?? 0,
+      prod.get(0) ?? 0
+    );
+  }
+
+  slerp(t: Factor<T>, a: MultiVector<T>, b: MultiVector<T>) {
+    const {ctx} = this;
+    const Omega = this.getAngle(a, b);
+    return this.scale(
+      ctx.invertFactor(ctx.scalarFunc("sin", Omega)),
+      this.plus(
+        this.scale(
+          ctx.scalarFunc("sin",
+            ctx.scalarFunc2("*", ctx.scalarFunc2("-", 1, t), Omega)
+          ),
+          a
+        ),
+        this.scale(
+          ctx.scalarFunc("sin",
+            ctx.scalarFunc2("*", t, Omega)
+          ),
+          b
+        )
+      )
+    );
   }
 }

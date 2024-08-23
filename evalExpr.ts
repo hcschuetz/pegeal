@@ -1,4 +1,4 @@
-import { MultiVector, Term, Factor, Scalar, AbstractScalar } from "./Algebra";
+import { MultiVector, Term, Factor, AbstractScalar, ScalarFuncName, ScalarFunc2Name } from "./Algebra";
 import { AbstractContext } from "./ContextUtils";
 
 class ScalarImpl extends AbstractScalar<never> {
@@ -10,12 +10,12 @@ class ScalarImpl extends AbstractScalar<never> {
     super();
   }
 
-  add0(term: Term<never>): this {
+  add0(term: Term<never>) {
     this.value = (this.value ?? 0) + term.reduce((x, y) => x*y, 1);
     return this;
   }
 
-  get0(): Factor<never> | undefined { return this.value; }
+  get0() { return this.value; }
 
   toJSON() { return this.value; }
   toString() { return JSON.stringify(this); }
@@ -32,18 +32,18 @@ class MultiVectorImpl implements MultiVector<never> {
     readonly context: EvalContext
   ) {}
 
-  add(bm: number, term: Term<never>): this {
+  add(bm: number, term: Term<never>) {
     this.components[bm] = (this.components[bm] ?? 0) + term.reduce((x, y) => x*y, 1)
     return this;
   }
 
-  forComponents(callback: (bitmap: number, value: Factor<never>) => unknown): void {
+  forComponents(callback: (bitmap: number, value: Factor<never>) => unknown) {
     this.components.forEach((val, bm) => callback(bm, val));
   }
 
-  get(bm: number): number | undefined { return this.components[bm]; }
+  get(bm: number) { return this.components[bm]; }
 
-  toJSON(): Record<string, number> {
+  toJSON() {
     const result: Record<string, number> = {};
     this.forComponents((bm, val) => result[this.context.bitmapToString[bm]] = val);
     return result;
@@ -53,14 +53,14 @@ class MultiVectorImpl implements MultiVector<never> {
 }
 
 export class EvalContext extends AbstractContext<never> {
-  makeScalar(nameHint: string): Scalar<never> {
+  makeScalar(nameHint: string) {
     return new ScalarImpl(this);
   }
 
-  makeMultiVector(): MultiVector<never> {
+  makeMultiVector() {
     return new MultiVectorImpl(this);
   }
-  mv(obj: Record<string, number>): MultiVector<never> {
+  mv(obj: Record<string, number>) {
     const result = this.makeMultiVector();
     Object.entries(obj).forEach(([key, val]) => {
       const bm = this.stringToBitmap[key];
@@ -72,7 +72,21 @@ export class EvalContext extends AbstractContext<never> {
     return result;
   }
 
-  invertFactor(f: number): Factor<never> {
+  invertFactor(f: number) {
     return 1 / f;
+  }
+
+  scalarFunc(name: ScalarFuncName, f: number) {
+    return Math[name](f);
+  }
+
+  scalarFunc2(name: ScalarFunc2Name, f1: number, f2: number): number {
+    switch (name) {
+      case "+": return f1 + f2;
+      case "-": return f1 - f2;
+      case "*": return f1 * f2;
+      case "/": return f1 / f2;
+      case "atan2": return Math.atan2(f1, f2);
+    }
   }
 }

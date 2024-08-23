@@ -1,4 +1,4 @@
-import { bitList, Context, Factor, MultiVector, Scalar } from "./Algebra";
+import { bitList, Context, Factor, MultiVector, Scalar, ScalarFunc2Name, ScalarFuncName } from "./Algebra";
 
 // TODO Support reordered component names such as "zx" or "e32"?
 // But this also means that the corresponding values might need to be negated.
@@ -17,12 +17,14 @@ export abstract class AbstractContext<T> implements Context<T> {
   }
 
   abstract invertFactor(f: Factor<T>): Factor<T>;
+  abstract scalarFunc(name: ScalarFuncName, f: Factor<T>): Factor<T>;
+  abstract scalarFunc2(name: ScalarFunc2Name, f1: Factor<T>, f2: Factor<T>): Factor<T>;
   abstract makeMultiVector(nameHint: string): MultiVector<T>;
   abstract makeScalar(nameHint: string): Scalar<T>;
 }
 
 export function makeLetterNames(
-  dims: string[],
+  dims: string | string[],
   options: {scalar?: string} = {},
 ): string[] {
   const {scalar = "1"} = options;
