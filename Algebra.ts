@@ -247,7 +247,6 @@ export class Algebra<T> {
 
   /**
    * Short for `this.scalarProduct(mv, this.reverse(mv))`.
-   * **This is only correct for versors!**
    */
   normSquared(mv: MultiVector<T>): Scalar<T> {
     const result = this.ctx.makeScalar("normSquared");

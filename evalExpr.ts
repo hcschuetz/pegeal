@@ -33,7 +33,7 @@ class MultiVectorImpl implements MultiVector<never> {
   ) {}
 
   add(bm: number, term: Term<never>) {
-    this.components[bm] = (this.components[bm] ?? 0) + term.reduce((x, y) => x*y, 1)
+    this.components[bm] = (this.components[bm] ?? 0) + term.reduce((x, y) => x*y, 1);
     return this;
   }
 
