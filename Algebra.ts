@@ -2,6 +2,7 @@ export type Factor<T> = number | T;
 export type Term<T> = Factor<T>[];
 
 export interface MultiVector<T> {
+  set(bm: number, value: Factor<T>): this;
   add(bm: number, term: Term<T>): this;
   forComponents(callback: (bitmap: number, value: Factor<T>) => unknown): unknown;
   get(bitmap: number): Factor<T> | undefined;
@@ -53,13 +54,23 @@ implementation.  General multivectors get no support or less efficient code.
  * that no other components are present.
  */
 export interface Scalar<T> extends MultiVector<T> {
+  set0(factor: Factor<T>): this;
   add0(term: Term<T>): this;
   get0(): Factor<T> | undefined;
 }
 
 export abstract class AbstractScalar<T> implements Scalar<T> {
+  abstract set0(term: Factor<T>): this;
   abstract add0(term: Term<T>): this;
   abstract get0(): Factor<T> | undefined;
+
+  set(bm: number, val: Factor<T>): this {
+    if (bm !== 0) {
+      throw "Cannot set non-scalar component of scalar";
+    }
+    this.set0(val);
+    return this;
+  }
 
   add(bm: number, term: Term<T>): this {
     if (bm !== 0) {
@@ -191,7 +202,7 @@ export class Algebra<T> {
     return this.ctx.makeScalar("zero");
   };
   one(): Scalar<T> {
-    return this.ctx.makeScalar("one").add0([]);
+    return this.ctx.makeScalar("one").set0(1);
   }
   pseudoScalar(): MultiVector<T> {
     // return this.wedgeProduct(...this.basisVectors());
@@ -203,8 +214,8 @@ export class Algebra<T> {
   }
   basisVectors(): MultiVector<T>[] {
     return this.metric.map((_, i) =>
-      this.ctx.makeMultiVector("basis" + i).add(1 << i, [])
-    )
+      this.ctx.makeMultiVector("basis" + i).set(1 << i, 1)
+    );
   }
 
   // TODO Move the methods taking a single MultiVector to the MultiVector class?
@@ -311,7 +322,7 @@ export class Algebra<T> {
     const result = this.ctx.makeMultiVector("extract" + grade);
     mv.forComponents((bm, val) => {
       if (getGrade(bm) == grade) {
-        result.add(bm, [val]);
+        result.set(bm, val);
       }
     });
     return result;

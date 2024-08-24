@@ -10,6 +10,11 @@ class ScalarImpl extends AbstractScalar<never> {
     super();
   }
 
+  set0(value: Factor<never>) {
+    this.value = value;
+    return this;
+  }
+
   add0(term: Term<never>) {
     this.value = (this.value ?? 0) + term.reduce((x, y) => x*y, 1);
     return this;
@@ -31,6 +36,11 @@ class MultiVectorImpl implements MultiVector<never> {
   constructor(
     readonly context: EvalContext
   ) {}
+
+  set(bm: number, val: Factor<never>) {
+    this.components[bm] = val;
+    return this;
+  }
 
   add(bm: number, term: Term<never>) {
     this.components[bm] = (this.components[bm] ?? 0) + term.reduce((x, y) => x*y, 1);

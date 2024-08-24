@@ -16,10 +16,18 @@ class ScalarImpl extends AbstractScalar<string> {
 
   constructor(
     readonly context: WebGLContext,
-    readonly name: string,
+    public name: string,
   ) {
     super();
     context.emit(`\n// ${name}:`);
+  }
+
+  set0(f: Factor<string>) {
+    const value = formatFactor(f);
+    this.name = value;
+    this.haveVariable = true;
+    this.context.emit(`//   ${value}`);
+    return this;
   }
 
   add0(term: Term<string>) {
@@ -54,6 +62,13 @@ class MultiVectorImpl implements MultiVector<string> {
     readonly name: string
   ) {
     context.emit(`\n// ${name}:`);
+  }
+
+  set(bm: number, f: Factor<string>) {
+    const value = formatFactor(f);
+    this.components[bm] = "" + value;
+    this.context.emit(`//   ${this.context.bitmapToString[bm]}: ${value}`);
+    return this;
   }
 
   add(bm: number, term: Term<string>) {

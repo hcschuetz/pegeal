@@ -545,4 +545,22 @@ ${alg.exp(blade)}`);
 
   p(ctx.text);
   p("// " + slerp);
+
+}
+{
+  p(`
+// ------------------------------------------
+// use of .set() - WebGL
+`);
+
+  const coords = "xyz";
+  const ctx = new WebGLContext(makeLetterNames(coords));
+  const alg = new Algebra(euclidean(coords), ctx);
+
+  const [ex, ey, ez] = alg.basisVectors();
+  const v = alg.plus(alg.one(), alg.scale(3, ex), alg.scale(5, ey));
+
+  p(ctx.text);
+  p("// " + v);
+
 }
