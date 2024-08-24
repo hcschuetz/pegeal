@@ -81,25 +81,22 @@ export class WebGLContext extends AbstractContext<string> {
 
   invertFactor(f: Factor<string>) {
     const varName: string = `inv_${this.count++}`;
-    this.emit(`\n// ${varName}:`);
-    this.emit(`float ${varName} = 1.0 / ${formatFactor(f)};`);
+    this.emit(`\nfloat ${varName} = 1.0 / ${formatFactor(f)};`);
     return varName;
   }
 
   scalarFunc(name: ScalarFuncName, f: Factor<string>) {
     const varName: string = `${name}_${this.count++}`;
-    this.emit(`\n// ${varName}:`);
-    this.emit(`float ${varName} = ${name}(${formatFactor(f)});`);
+    this.emit(`\nfloat ${varName} = ${name}(${formatFactor(f)});`);
     return varName;
   }
 
   scalarFunc2(name: ScalarFunc2Name, f1: Factor<string>, f2: Factor<string>) {
     const varName: string = `${scalarFunc2LongName[name]}_${this.count++}`;
-    this.emit(`\n// ${varName}:`);
     const expr = /^[a-z]/i.test(name)
       ? `${name}(${formatFactor(f1)}, ${formatFactor(f2)})`
       : `${formatFactor(f1)} ${name} ${formatFactor(f2)}`;
-    this.emit(`float ${varName} = ${expr};`);
+    this.emit(`\nfloat ${varName} = ${expr};`);
     return varName;
   }
 }
