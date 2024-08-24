@@ -1,4 +1,4 @@
-import { MultiVector, Term, Factor, AbstractScalar, ScalarFuncName, ScalarFunc2Name } from "./Algebra";
+import { MultiVector, Term, Factor, ScalarFuncName, ScalarFunc2Name } from "./Algebra";
 import { AbstractContext } from "./ContextUtils";
 
 function formatFactor(f: Factor<string>) {
@@ -9,36 +9,6 @@ function formatFactor(f: Factor<string>) {
     }
     case "string": return f;
   }
-}
-
-class ScalarImpl extends AbstractScalar<string> {
-  haveVariable = false;
-
-  constructor(
-    readonly context: WebGLContext,
-    readonly name: string,
-  ) {
-    super();
-    context.emit(`\n// ${name}:`);
-  }
-
-  add0(term: Term<string>) {
-    const termString =
-      term.length === 0 ? "1.0" : term.map(formatFactor).join(" * ");
-    if (!this.haveVariable) {
-      this.context.emit(`float ${this.name}  = ${termString};`);
-      this.haveVariable = true;
-    } else {
-      this.context.emit(`      ${this.name} += ${termString};`);
-    }
-    return this;
-  }
-
-  get0() {
-    return this.haveVariable ? this.name : undefined;
-  }
-
-  toString() { return `${this.get0()}`; }
 }
 
 class MultiVectorImpl implements MultiVector<string> {
@@ -74,13 +44,12 @@ class MultiVectorImpl implements MultiVector<string> {
     this.components.forEach((val, bm) => callback(bm, val));
   }
 
-  get(bm: number) { return this.components[bm]; }
+  get(bm: number) { return this.components[bm] ?? 0; }
 
   toString() {
     return `${this.name}{${
       this.components
       .map((val, bm) => `${this.context.bitmapToString[bm]}: ${val}`)
-      .filter(val => val !== undefined)
       .join(", ")
     }}`;
   }
@@ -92,10 +61,6 @@ export class WebGLContext extends AbstractContext<string> {
 
   emit(newText: string) {
     this.text += newText + "\n";
-  }
-
-  makeScalar(nameHint: string) {
-    return new ScalarImpl(this, `${nameHint}_${this.count++}`);
   }
 
   makeMultiVector(nameHint: string) {

@@ -337,8 +337,8 @@ and
     );
     p("R: " + R);
     const R2 = alg.extractGrade(2, R);
-    const R2abs = alg.norm(R2).get0() ?? 0;
-    const R0 = alg.extractGrade(0, R).get(0) ?? 0;
+    const R2abs = alg.norm(R2);
+    const R0 = R.get(0);
 
     // Just trying out log computation.  It does not make much sense here where
     // we anyway start with an angle phi rather than a pair of vectors.
@@ -346,7 +346,7 @@ and
     p("logR: " + logR);
     // For phi <= 180° this is phi.
     // For phi >= 180° this is 360° - phi.
-    p("2*|logR|: " + deg(2*(alg.norm(logR).get0() ?? 0), 4));
+    p("2*|logR|: " + deg(2*(alg.norm(logR)), 4));
 
     // TODO This computes an "xyz" component, which is = 0.  Get rid of this.
     // Use a specialized implementation for rotor application?
@@ -509,7 +509,7 @@ ${alg.exp(blade)}`);
     q("frac", frac);
     const partialRotor = alg.exp(alg.scale(frac, log));
     // q("PR", partialRotor);
-    // q("|PR|", alg.norm(partialRotor).get0());
+    // q("|PR|", alg.norm(partialRotor).get(0));
     const v = alg.geometricProduct(partialRotor, v1, alg.reverse(partialRotor))
     q("v", v);
     // TODO can the computation of v be optimized by using lower-level operations?

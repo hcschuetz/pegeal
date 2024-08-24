@@ -4,7 +4,7 @@ export type Term<T> = Factor<T>[];
 export interface MultiVector<T> {
   add(bm: number, term: Term<T>): this;
   forComponents(callback: (bitmap: number, value: Factor<T>) => unknown): unknown;
-  get(bitmap: number): Factor<T> | undefined;
+  get(bitmap: number): Factor<T>;
 }
 
 /*
@@ -47,50 +47,14 @@ implementation.  General multivectors get no support or less efficient code.
 (See section 21.2 of Dorst/Fontijne/Mann.)
 */
 
-/**
- * Not sure if we need this.  We could just use a MultiVector having (at most)
- * the scalar component.  But using `Scalar` makes it clear in the TS/JS code
- * that no other components are present.
- */
-export interface Scalar<T> extends MultiVector<T> {
-  add0(term: Term<T>): this;
-  get0(): Factor<T> | undefined;
-}
-
-export abstract class AbstractScalar<T> implements Scalar<T> {
-  abstract add0(term: Term<T>): this;
-  abstract get0(): Factor<T> | undefined;
-
-  add(bm: number, term: Term<T>): this {
-    if (bm !== 0) {
-      throw "Cannot add to non-scalar component of scalar";
-    }
-    this.add0(term);
-    return this;
-  }
-
-  get(bm: number) {
-    return (bm === 0) ? this.get0() : undefined;
-  }
-
-  forComponents(callback: (bitmap: number, value: Factor<T>) => unknown) {
-    const value = this.get0();
-    if (value !== undefined) {
-      callback(0, value);
-    }
-  }
-}
-
 export type ScalarFuncName = "abs" | "sqrt" | "cos" | "sin" | "cosh" | "sinh";
 export type ScalarFunc2Name = "+" | "-" | "*" | "/" | "atan2";
 
 export interface Context<T> {
-  makeScalar(nameHint: string): Scalar<T>;
   makeMultiVector(nameHint: string): MultiVector<T>;
   invertFactor(f: Factor<T>): Factor<T>; // TODO handle as scalarFunc?
   scalarFunc(name: ScalarFuncName, f: Factor<T>): Factor<T>;
   scalarFunc2(name: ScalarFunc2Name, f1: Factor<T>, f2: Factor<T>): Factor<T>;
-  // TODO more operations on scalars such as sqrt, trig functions, ...
 }
 
 /** For each 1 bit in the bitmap, invoke the callback with the bit position. */
@@ -173,13 +137,13 @@ export class Algebra<T> {
     this.fullBitmap = (1 << metric.length) - 1;
   }
 
-  /** Return a term for the metric or `undefined` if the term is always 0. */
-  metricFactors(bm: number): Term<T> | undefined {
+  /** Return a term for the metric or 0 if the term is always 0. */
+  metricFactors(bm: number): Term<T> | null {
     const result = [];
     for (const i of bitList(bm)) {
       const f = this.metric[i];
       switch (f) {
-        case 0: return undefined;
+        case 0: return null;
         case 1: break;
         default: result.push(f);
       }
@@ -187,11 +151,11 @@ export class Algebra<T> {
     return result;
   }
 
-  zero(): Scalar<T> {
-    return this.ctx.makeScalar("zero");
+  zero(): MultiVector<T> {
+    return this.ctx.makeMultiVector("zero");
   };
-  one(): Scalar<T> {
-    return this.ctx.makeScalar("one").add0([]);
+  one(): MultiVector<T> {
+    return this.ctx.makeMultiVector("one").add(0, []);
   }
   pseudoScalar(): MultiVector<T> {
     // return this.wedgeProduct(...this.basisVectors());
@@ -248,11 +212,11 @@ export class Algebra<T> {
   /**
    * Short for `this.scalarProduct(mv, this.reverse(mv))`.
    */
-  normSquared(mv: MultiVector<T>): Scalar<T> {
-    const result = this.ctx.makeScalar("normSquared");
+  normSquared(mv: MultiVector<T>): Factor<T> {
+    const result = this.ctx.makeMultiVector("normSquared");
     mv.forComponents((bm, val) => {
       const mf = this.metricFactors(bm);
-      if (mf !== undefined) {
+      if (mf !== null) {
         // TODO Check the following discussion on signs:
         // normSquared(mv) is defined as "scalarProduct(mv, reverse(mv))".
         // - "reverse" introduces a sign expression
@@ -264,22 +228,14 @@ export class Algebra<T> {
         // (It actually looks like the reversion of one argument has been
         // added to the definition of normSquared precisely for the purpose
         // of cancelling the signs from the scalar product.)
-        result.add0([...mf, val, val]);
+        result.add(0, [...mf, val, val]);
       }
     });
-    return result;
+    return result.get(0);
   }
 
-  norm(mv: MultiVector<T>): Scalar<T> {
-    const n2 = this.normSquared(mv).get(0);
-    if (n2 === undefined) {
-      return this.ctx.makeScalar("norm0");
-    } else {
-      const n = this.ctx.scalarFunc("sqrt", n2);
-      const result = this.ctx.makeScalar("norm");
-      result.add0([n]);
-      return result;
-    }
+  norm(mv: MultiVector<T>): Factor<T> {
+    return this.ctx.scalarFunc("sqrt", this.normSquared(mv));
   }
 
   // A note on inverse(...) and normalize(...):
@@ -291,8 +247,8 @@ export class Algebra<T> {
 
   /** **This is only correct for versors!** */
   inverse(mv: MultiVector<T>): MultiVector<T> {
-    const norm2 = this.normSquared(mv).get0();
-    if (norm2 === undefined || norm2 === 0) {
+    const norm2 = this.normSquared(mv);
+    if (norm2 === 0) {
       throw `trying to invert null vector ${mv}`;
     }
     return this.scale(this.ctx.invertFactor(norm2), mv);
@@ -300,8 +256,8 @@ export class Algebra<T> {
 
   /** **This is only correct for versors!** */
   normalize(mv: MultiVector<T>): MultiVector<T> {
-    const norm = this.norm(mv).get0();
-    if (norm === undefined || norm === 0) {
+    const norm = this.norm(mv);
+    if (norm === 0) {
       throw `trying to normalize null vector ${mv}`;
     }
     return this.scale(this.ctx.invertFactor(norm), mv);
@@ -331,7 +287,7 @@ export class Algebra<T> {
     a.forComponents((bmA, valA) => b.forComponents((bmB, valB) => {
       if (includeProduct(kind, bmA, bmB)) {
         const mf = this.metricFactors(bmA & bmB);
-        if (mf !== undefined) {
+        if (mf !== null) {
           const sign = flipSign(productFlips(bmA, bmB) & 1);
           result.add(bmA ^ bmB, [...sign, ...mf, valA, valB]);
         }
@@ -376,27 +332,27 @@ export class Algebra<T> {
   }
 
   /** Implementation returning an object of scalar type. */
-  scalarProduct(a: MultiVector<T>, b: MultiVector<T>): Scalar<T> {
-    const result = this.ctx.makeScalar("scalarProd");
+  scalarProduct(a: MultiVector<T>, b: MultiVector<T>): Factor<T> {
+    const result = this.ctx.makeMultiVector("scalarProd");
     a.forComponents((bm, valA) => {
       const valB = b.get(bm);
-      if (valB !== undefined) {
+      if (valB !== 0) {
         const mf = this.metricFactors(bm);
-        if (mf !== undefined) {
+        if (mf !== null) {
           const sign = flipSign(getGrade(bm) & 2);
-          result.add0([...sign, ...mf, valA, valB]);
+          result.add(0, [...sign, ...mf, valA, valB]);
         }
       }
     });
-    return result;
+    return result.get(0);
   }
 
   /** **EXPECTS A 2-BLADE AND POSITIVE-DEFINITE METRIC** */
   exp(A: MultiVector<T>): MultiVector<T> {
     const {ctx} = this;
     // Notice that [DFM09] p. 185 use A**2, which is -norm2 for a 2-blade.
-    const norm2 = this.normSquared(A).get0();
-    if (norm2 == undefined) {
+    const norm2 = this.normSquared(A);
+    if (norm2 === 0) {
       const result = ctx.makeMultiVector("expNull");
       result.add(0, [1]);
       A.forComponents((bm, val) => result.add(bm, [val]));      
@@ -429,10 +385,10 @@ export class Algebra<T> {
     /** The imaginary part of the quaternion */
     const R2 = this.extractGrade(2, R);
     /** The sine of the half angle */
-    const R2Norm = this.norm(R2).get(0);
-    if (R2Norm == undefined) throw "attempt to compute log of bad arg ###TODO text###";
-    // TODO optimize away atan2 call if R0 == undefined.
-    const atan = ctx.scalarFunc2("atan2", R2Norm, R0 ?? 0);
+    const R2Norm = this.norm(R2);
+    if (R2Norm == 0) throw "division by zero in log computation";
+    // TODO optimize away atan2 call if R0 == 0.
+    const atan = ctx.scalarFunc2("atan2", R2Norm, R0);
     const scalarFactor = ctx.scalarFunc2("/", atan, R2Norm);
     return this.scale(scalarFactor, R2);
   }
@@ -441,7 +397,7 @@ export class Algebra<T> {
   // Utilities (TODO Separate them from the core methods?)
 
   dist(a: MultiVector<T>, b: MultiVector<T>): Factor<T> {
-    return this.norm(this.plus(a, this.negate(b))).get0() ?? 0;
+    return this.norm(this.plus(a, this.negate(b)));
   }
   
   /** **expects 1-vectors** */
@@ -449,8 +405,8 @@ export class Algebra<T> {
     // TODO omit normalization if a or b are known to be normalized
     const prod = this.geometricProduct(this.normalize(a), this.normalize(b));
     return this.ctx.scalarFunc2("atan2",
-      this.norm(this.extractGrade(2, prod)).get0() ?? 0,
-      prod.get(0) ?? 0
+      this.norm(this.extractGrade(2, prod)),
+      prod.get(0)
     );
   }
 

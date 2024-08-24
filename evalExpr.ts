@@ -1,25 +1,5 @@
-import { MultiVector, Term, Factor, AbstractScalar, ScalarFuncName, ScalarFunc2Name } from "./Algebra";
+import { MultiVector, Term, Factor, ScalarFuncName, ScalarFunc2Name } from "./Algebra";
 import { AbstractContext } from "./ContextUtils";
-
-class ScalarImpl extends AbstractScalar<never> {
-  value: number | undefined = undefined;
-
-  constructor(
-    readonly context: EvalContext,
-  ) {
-    super();
-  }
-
-  add0(term: Term<never>) {
-    this.value = (this.value ?? 0) + term.reduce((x, y) => x*y, 1);
-    return this;
-  }
-
-  get0() { return this.value; }
-
-  toJSON() { return this.value; }
-  toString() { return JSON.stringify(this); }
-}
 
 class MultiVectorImpl implements MultiVector<never> {
   /**
@@ -41,7 +21,7 @@ class MultiVectorImpl implements MultiVector<never> {
     this.components.forEach((val, bm) => callback(bm, val));
   }
 
-  get(bm: number) { return this.components[bm]; }
+  get(bm: number) { return this.components[bm] ?? 0; }
 
   toJSON() {
     const result: Record<string, number> = {};
@@ -53,10 +33,6 @@ class MultiVectorImpl implements MultiVector<never> {
 }
 
 export class EvalContext extends AbstractContext<never> {
-  makeScalar(nameHint: string) {
-    return new ScalarImpl(this);
-  }
-
   makeMultiVector() {
     return new MultiVectorImpl(this);
   }
