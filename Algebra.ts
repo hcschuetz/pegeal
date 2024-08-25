@@ -7,7 +7,11 @@ export interface Var<T> {
 }
 
 /*
-TODO Should we also have special types for other grades such as 1 and n?
+TODO:
+- properties: unit
+- outermorphism
+
+----
 
 It probably makes most sense to have a subclass for unit multivectors:
 - Operations creating unit vectors by construction should return such a vector:
