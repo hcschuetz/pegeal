@@ -36,8 +36,8 @@ const q_ = (coords: string) => (label: string, x: MultiVector<never> | number | 
 // -----------------------------------------------------------------------------
 // Usage Examples
 
-const ctx = new WebGLContext(makeLetterNames("xyzw"));
-const alg = new Algebra([1, 2.222, 3, 0], ctx);
+const ctx = new WebGLContext();
+const alg = new Algebra([1, 2.222, 3, 0], ctx, makeLetterNames("xyzw"));
 
 const zero = alg.zero(), one = alg.one();
 const [ex, ey, ez] = alg.basisVectors();
@@ -51,13 +51,13 @@ const I = alg.pseudoScalar();
 ctx.emit("\n// ---------------");
 const mv =
   true
-  ? ctx.mv("foo", {
+  ? alg.mv("foo", {
       "1": "foo_scalar",
       x: "foo_x", y: "foo_y", z: "foo_z",
       xy: "foo_xy", xz: "foo_xz", yz: "foo_yx",
       xyz: "foo_xyz",
     })
-  : ctx.mv("bar", {1: "S", x: "X", yz: "YZ", xyz: "PS"});
+  : alg.mv("bar", {1: "S", x: "X", yz: "YZ", xyz: "PS"});
 
 alg.gradeInvolution(mv);
 alg.reverse(mv);
@@ -71,7 +71,7 @@ const result =
     alg.wedgeProduct(ey, one),
     alg.wedgeProduct(
       alg.plus(alg.scale("2.0", ex), ex, ey, I, zero, alg.plus()),
-      alg.negate(ctx.mv("myVec", {y: "1.0", x: "4.0", z: "3.0"})),
+      alg.negate(alg.mv("myVec", {y: "1.0", x: "4.0", z: "3.0"})),
       alg.wedgeProduct(),
     )
   );
@@ -84,10 +84,10 @@ ctx.emit("\n// ex _| (ez _| mv)")
 alg.contractLeft(ex, alg.contractLeft(ez, mv));
 
 const X = 1, Y = 2, Z = 4;
-ctx.emit(`\n// extracted: ${mv.get(X|Y)}`);
+ctx.emit(`\n// extracted: ${mv.value(X|Y)}`);
 
-const mv2 = ctx.mv("mv2", {x: "3", z: "2"});
-const mv3 = ctx.mv("mv3", {xy: "3", xz: "2", zw: "8"});
+const mv2 = alg.mv("mv2", {x: "3", z: "2"});
+const mv3 = alg.mv("mv3", {xy: "3", xz: "2", zw: "8"});
 
 ctx.emit(`\n// contractLeft`);
 alg.contractLeft(mv2, mv2);
@@ -146,14 +146,14 @@ p(`
 `);
 
 {
-  const ctx = new EvalContext(makeLetterNames("xyz"));
-  const alg = new Algebra([1,2,3], ctx);
+  const ctx = new EvalContext();
+  const alg = new Algebra([1,2,3], ctx, makeLetterNames("xyz"));
 
-  const v = ctx.mv({x: 4, y: 11});
+  const v = alg.mv("v", {x: 4, y: 11});
   p("geomProd(v, v) = " + alg.geometricProduct(v, v));
   p("contractRight(v, v) = " + alg.contractRight(v, v));
 
-  const bv = ctx.mv({xy: 3, yz: 5});
+  const bv = alg.mv("bv", {xy: 3, yz: 5});
   p("geomProd(bv, v) = " + alg.geometricProduct(bv, v));
   p("geomProd(v, bv) = " + alg.geometricProduct(v, bv));
   p("geomProd(bv, bv) = " + alg.geometricProduct(bv, bv));
@@ -246,11 +246,11 @@ and
   }
 
   const coords = "xyzw";
-  const ctx = new EvalContext(makeLetterNames(coords));
-  const alg = new Algebra(euclidean(coords), ctx);
+  const ctx = new EvalContext();
+  const alg = new Algebra(euclidean(coords), ctx, makeLetterNames(coords));
 
-  const a = ctx.mv({x: 2, y: 3})
-  const b = ctx.mv({z: 5, w: 7});
+  const a = alg.mv("a", {x: 2, y: 3})
+  const b = alg.mv("b", {z: 5, w: 7});
 
   const m = alg.geometricProduct(a, b);
   const mrev = alg.reverse(m);
@@ -274,10 +274,10 @@ and
   );
 
   const metric = euclidean(4);
-  const ctx = new EvalContext(makeNumberedNames(metric.length));
-  const alg = new Algebra(metric, ctx);
+  const ctx = new EvalContext();
+  const alg = new Algebra(metric, ctx, makeNumberedNames(metric.length));
 
-  const m = ctx.mv({1: 7, e01: 3, e23: 5});
+  const m = alg.mv("m", {1: 7, e01: 3, e23: 5});
   p("m: " + m);
   p("mm~: " + alg.geometricProduct(m, alg.reverse(m)));
 }
@@ -290,10 +290,14 @@ and
   );
 
   const metric = euclidean(13);
-  const ctx = new EvalContext(makeNumberedNames(metric.length, {scalar: "scalar", start: 1}));
-  const alg = new Algebra(metric, ctx);
+  const ctx = new EvalContext();
+  const alg = new Algebra(
+    metric,
+    ctx,
+    makeNumberedNames(metric.length, {scalar: "scalar", start: 1})
+  );
 
-  const m = ctx.mv({scalar: 7, e1_11: 3, e2_13: 5});
+  const m = alg.mv("m", {scalar: 7, e1_11: 3, e2_13: 5});
   p("m: " + m);
   p("mm~: " + alg.geometricProduct(m, alg.reverse(m)));
 }
@@ -307,11 +311,11 @@ and
   );
 
   const coords = "xyz";
-  const ctx = new EvalContext(makeLetterNames(coords));
-  const alg = new Algebra(euclidean(coords), ctx);
+  const ctx = new EvalContext();
+  const alg = new Algebra(euclidean(coords), ctx, makeLetterNames(coords));
   const [ex, ey, ez] = alg.basisVectors();
 
-  const P = ctx.mv({x: 1, y: 1, z: 3});
+  const P = alg.mv("P", {x: 1, y: 1, z: 3});
   const n = 16;
   for (let i = 0; i <= n; i++) {
     p();
@@ -338,7 +342,7 @@ and
     p("R: " + R);
     const R2 = alg.extractGrade(2, R);
     const R2abs = alg.norm(R2);
-    const R0 = R.get(0);
+    const R0 = R.value(0);
 
     // Just trying out log computation.  It does not make much sense here where
     // we anyway start with an angle phi rather than a pair of vectors.
@@ -363,12 +367,12 @@ and
   );
 
   const metric = euclidean(4);
-  const ctx = new WebGLContext(makeNumberedNames(metric.length));
-  const alg = new Algebra(metric, ctx);
+  const ctx = new WebGLContext();
+  const alg = new Algebra(metric, ctx, makeNumberedNames(metric.length));
   const [e0, e1, e2, e3] = alg.basisVectors();
   const e0Inv = alg.inverse(e0);
 
-  const point = ctx.mv("point", {e0: "3", e1: "6", e2: "9", e3: "+++"});
+  const point = alg.mv("point", {e0: "3", e1: "6", e2: "9", e3: "+++"});
 
   // With our optimizations (and the expected optimizations by the WebGL
   // compiler) the extractions of weight and location should be as efficient
@@ -388,16 +392,16 @@ and
 `);
 
   const coords = "uvwxyz";
-  const ctx = new EvalContext(makeLetterNames(coords));
-  const alg = new Algebra(euclidean(coords), ctx);
+  const ctx = new EvalContext();
+  const alg = new Algebra(euclidean(coords), ctx, makeLetterNames(coords));
 
   const blade =
     !true ? alg.wedgeProduct(
-      ctx.mv({x: 3, y: 5, z: 9, u: 1}),
-      ctx.mv({x: 1, y:-3, z: 7, v:13}),
-      ctx.mv({x: 2, y: 2, z:11, w:-3}),
+      alg.mv("v1", {x: 3, y: 5, z: 9, u: 1}),
+      alg.mv("v2", {x: 1, y:-3, z: 7, v:13}),
+      alg.mv("v3", {x: 2, y: 2, z:11, w:-3}),
     )
-    : ctx.mv({wx: 4, xz: 7, yz:-5, uv: 3});
+    : alg.mv("v", {wx: 4, xz: 7, yz:-5, uv: 3});
 
   p(`${blade} ** 2
 = ${alg.geometricProduct(blade, blade)}`);
@@ -409,12 +413,12 @@ and
 `);
 
   const coords = "xyz";
-  const ctx = new WebGLContext(makeLetterNames(coords));
-  const alg = new Algebra(euclidean(coords), ctx);
+  const ctx = new WebGLContext();
+  const alg = new Algebra(euclidean(coords), ctx, makeLetterNames(coords));
 
   const blade = alg.wedgeProduct(
-      ctx.mv("v", {x: 3, y: 5, z: 9}),
-      ctx.mv("v", {x: 1, y:-3, z: 7}),
+      alg.mv("v", {x: 3, y: 5, z: 9}),
+      alg.mv("v", {x: 1, y:-3, z: 7}),
     );
 
   const result = alg.exp(blade);
@@ -428,12 +432,12 @@ and
 `);
 
   const coords = "xyz";
-  const ctx = new EvalContext(makeLetterNames(coords));
-  const alg = new Algebra(euclidean(coords), ctx);
+  const ctx = new EvalContext();
+  const alg = new Algebra(euclidean(coords), ctx, makeLetterNames(coords));
 
   const blade = alg.wedgeProduct(
-    ctx.mv({x: 3, y: 5, z: 9}),
-    ctx.mv({x: 1, y:-3, z: 7}),
+    alg.mv("a", {x: 3, y: 5, z: 9}),
+    alg.mv("b", {x: 1, y:-3, z: 7}),
   );
 
   p(`exp(${blade}) =
@@ -446,12 +450,12 @@ ${alg.exp(blade)}`);
 `);
 
   const coords = "xyz";
-  const ctx = new WebGLContext(makeLetterNames(coords));
-  const alg = new Algebra(euclidean(coords), ctx);
+  const ctx = new WebGLContext();
+  const alg = new Algebra(euclidean(coords), ctx, makeLetterNames(coords));
 
   const versor = alg.geometricProduct(
-    ctx.mv("v", {x: 3, y: 5, z: 9}),
-    ctx.mv("v", {x: 1, y:-3, z: 7}),
+    alg.mv("v", {x: 3, y: 5, z: 9}),
+    alg.mv("v", {x: 1, y:-3, z: 7}),
   );
   const rotor = alg.normalize(versor);
 
@@ -466,14 +470,14 @@ ${alg.exp(blade)}`);
 `);
 
   const coords = "xyz";
-  const ctx = new EvalContext(makeLetterNames(coords));
-  const alg = new Algebra(euclidean(coords), ctx);
+  const ctx = new EvalContext();
+  const alg = new Algebra(euclidean(coords), ctx, makeLetterNames(coords));
 
   const q = q_(coords);
 
-  const v1 = alg.normalize(ctx.mv({x: 1, y: 1}));
+  const v1 = alg.normalize(alg.mv("v1", {x: 1, y: 1}));
   q("v1", v1);
-  const v2 = alg.normalize(ctx.mv({x: 1, y: 1, z: 1}));
+  const v2 = alg.normalize(alg.mv("v2", {x: 1, y: 1, z: 1}));
   q("v2", v2);
   const vMid = alg.normalize(alg.plus(v1, v2));
   q("vMid", vMid);
@@ -536,11 +540,11 @@ ${alg.exp(blade)}`);
 `);
 
   const coords = "xyz";
-  const ctx = new WebGLContext(makeLetterNames(coords));
-  const alg = new Algebra(euclidean(coords), ctx);
+  const ctx = new WebGLContext();
+  const alg = new Algebra(euclidean(coords), ctx, makeLetterNames(coords));
 
-  const v1 = ctx.mv("v1", {x: 1, y: 1});
-  const v2 = ctx.mv("v2", {x: 1, y: 1, z: 1});
+  const v1 = alg.mv("v1", {x: 1, y: 1});
+  const v2 = alg.mv("v2", {x: 1, y: 1, z: 1});
   const slerp = alg.slerp(.3, v1, v2);
 
   p(ctx.text);

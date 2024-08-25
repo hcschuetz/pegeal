@@ -1,26 +1,6 @@
-import { bitList, Context, Factor, MultiVector, ScalarFunc2Name, ScalarFuncName } from "./Algebra";
+import { bitList } from "./Algebra";
 
-// TODO Support reordered component names such as "zx" or "e32"?
-// But this also means that the corresponding values might need to be negated.
-
-export abstract class AbstractContext<T> implements Context<T> {
-  readonly stringToBitmap: Record<string, number> = {};
-
-  constructor(
-    readonly bitmapToString: string[],
-  ) {
-    // TODO check if bitmapToString.length is a power of 2
-    const {stringToBitmap} = this;
-    bitmapToString.forEach((name, bm) => {
-      stringToBitmap[name] = bm;
-    });
-  }
-
-  abstract invertFactor(f: Factor<T>): Factor<T>;
-  abstract scalarFunc(name: ScalarFuncName, f: Factor<T>): Factor<T>;
-  abstract scalarFunc2(name: ScalarFunc2Name, f1: Factor<T>, f2: Factor<T>): Factor<T>;
-  abstract makeMultiVector(nameHint: string): MultiVector<T>;
-}
+// TODO rename this module (or move this to the top of index.ts)
 
 export function makeLetterNames(
   dims: string | string[],

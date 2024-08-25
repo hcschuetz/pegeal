@@ -1,51 +1,23 @@
-import { MultiVector, Term, Factor, ScalarFuncName, ScalarFunc2Name } from "./Algebra";
-import { AbstractContext } from "./ContextUtils";
+import { Context, ScalarFuncName, ScalarFunc2Name, Var, Term } from "./Algebra";
 
-class MultiVectorImpl implements MultiVector<never> {
-  /**
-   * A sparse array mapping each possibly non-zero component (expressed as a
-   * bitmap) of this multivector to the component's magnitude.
-   */
-  components: number[] = [];
+class VarImpl implements Var<never> {
+  #value = 0;
 
-  constructor(
-    readonly context: EvalContext
-  ) {}
-
-  add(bm: number, term: Term<never>) {
-    this.components[bm] = (this.components[bm] ?? 0) + term.reduce((x, y) => x*y, 1);
-    return this;
+  add(term: Term<never>): void {
+    this.#value += term.reduce((x, y) => x * y, 1);
   }
 
-  forComponents(callback: (bitmap: number, value: Factor<never>) => unknown) {
-    this.components.forEach((val, bm) => callback(bm, val));
+  value(): number {
+    return this.#value;
   }
-
-  get(bm: number) { return this.components[bm] ?? 0; }
-
-  toJSON() {
-    const result: Record<string, number> = {};
-    this.forComponents((bm, val) => result[this.context.bitmapToString[bm]] = val);
-    return result;
-  }
-
-  toString() { return JSON.stringify(this); }
 }
 
-export class EvalContext extends AbstractContext<never> {
-  makeMultiVector() {
-    return new MultiVectorImpl(this);
-  }
-  mv(obj: Record<string, number>) {
-    const result = this.makeMultiVector();
-    Object.entries(obj).forEach(([key, val]) => {
-      const bm = this.stringToBitmap[key];
-      if (bm === undefined) {
-        throw `unexpected key in mv data: ${key}`;
-      }
-      result.add(bm, [val]);
-    })
-    return result;
+export class EvalContext implements Context<never> {
+
+  space(): void {}
+
+  makeVar(nameHint: string): Var<never> {
+    return new VarImpl();
   }
 
   invertFactor(f: number) {

@@ -1,10 +1,9 @@
 export type Factor<T> = number | T;
 export type Term<T> = Factor<T>[];
 
-export interface MultiVector<T> {
-  add(bm: number, term: Term<T>): this;
-  forComponents(callback: (bitmap: number, value: Factor<T>) => unknown): unknown;
-  get(bitmap: number): Factor<T>;
+export interface Var<T> {
+  add(term: Term<T>): void;
+  value(): Factor<T>;
 }
 
 /*
@@ -51,10 +50,48 @@ export type ScalarFuncName = "abs" | "sqrt" | "cos" | "sin" | "cosh" | "sinh";
 export type ScalarFunc2Name = "+" | "-" | "*" | "/" | "atan2";
 
 export interface Context<T> {
-  makeMultiVector(nameHint: string): MultiVector<T>;
+  space(): void;
+  makeVar(nameHint: string): Var<T>;
   invertFactor(f: Factor<T>): Factor<T>; // TODO handle as scalarFunc?
   scalarFunc(name: ScalarFuncName, f: Factor<T>): Factor<T>;
   scalarFunc2(name: ScalarFunc2Name, f1: Factor<T>, f2: Factor<T>): Factor<T>;
+}
+
+export class MultiVector<T> {
+  components: Var<T>[] = [];
+
+  constructor(
+    readonly alg: Algebra<T>,
+    readonly name: string,
+    initialize: (component: (i: number) => Var<T>) => unknown,
+  ) {
+    alg.ctx.space();
+    initialize(i => this.component(i));
+  }
+
+  component(bm: number): Var<T> {
+    return (
+      this.components[bm] ??
+      (this.components[bm] = this.alg.ctx.makeVar(this.name + "_" + this.alg.bitmapToString[bm]))
+    );
+  }
+
+  value(bm: number): Factor<T> { return this.component(bm).value(); }
+
+  forComponents(callback: (bitmap: number, value: Factor<T>) => unknown): void {
+    this.components.forEach((variable: Var<T>, bm: number) => {
+      callback(bm, variable.value());
+    });
+  }
+
+  toString() {
+    return `${this.name} {${
+      this.components
+      .map((variable, bm) => `${this.alg.bitmapToString[bm]}: ${variable.value()}`)
+      .filter(val => val)
+      .join(", ")
+    }}`;
+  }
 }
 
 /** For each 1 bit in the bitmap, invoke the callback with the bit position. */
@@ -128,13 +165,24 @@ const flipSign = (doFlip: number): Term<never> => doFlip ? [-1] : [];
 export class Algebra<T> {
   readonly nDimensions: number;
   readonly fullBitmap: number;
+  readonly stringToBitmap: Record<string, number> = {};
 
   constructor(
     readonly metric: Factor<T>[],
     readonly ctx: Context<T>,
+    readonly bitmapToString: string[],
   ) {
-    this.nDimensions = metric.length;
-    this.fullBitmap = (1 << metric.length) - 1;
+    const nDimensions = this.nDimensions = metric.length;
+
+    if (bitmapToString.length !== 1 << nDimensions) {
+      throw "sizes of metric and component names do not fit";
+    }
+    const {stringToBitmap} = this;
+    bitmapToString.forEach((name, bm) => {
+      stringToBitmap[name] = bm;
+    });
+
+    this.fullBitmap = (1 << nDimensions) - 1;
   }
 
   /** Return a term for the metric or 0 if the term is always 0. */
@@ -151,15 +199,26 @@ export class Algebra<T> {
     return result;
   }
 
+  mv(nameHint: string, obj: Record<string, Factor<T>>) {
+    return new MultiVector(this, nameHint, c => {
+      Object.entries(obj).forEach(([key, val]) => {
+        const bm = this.stringToBitmap[key];
+        if (bm === undefined) {
+          throw `unexpected key in mv data: ${key}`;
+        }
+        c(bm).add([val]);
+      });
+    });
+  }
+
   zero(): MultiVector<T> {
-    return this.ctx.makeMultiVector("zero");
+    return new MultiVector(this, "zero", () => {});
   };
   one(): MultiVector<T> {
-    return this.ctx.makeMultiVector("one").add(0, []);
+    return new MultiVector(this, "one", c => c(0).add([]));
   }
   pseudoScalar(): MultiVector<T> {
-    // return this.wedgeProduct(...this.basisVectors());
-    return this.ctx.makeMultiVector("ps").add(this.fullBitmap, []);
+    return new MultiVector(this, "ps", c => c(this.fullBitmap).add([]));
   }
   pseudoScalarInv(): MultiVector<T> {
     // TODO implement directly?
@@ -167,7 +226,7 @@ export class Algebra<T> {
   }
   basisVectors(): MultiVector<T>[] {
     return this.metric.map((_, i) =>
-      this.ctx.makeMultiVector("basis" + i).add(1 << i, [])
+      new MultiVector(this, "basis" + i, c => c(1 << i).add([]))
     )
   }
 
@@ -175,33 +234,29 @@ export class Algebra<T> {
 
   /** The scalar `alpha` should be given as a target-code expression. */
   scale(alpha: Factor<T>, mv: MultiVector<T>): MultiVector<T> {
-    switch (alpha) {
-      case 0: return this.ctx.makeMultiVector("scale0");
-      case 1: return mv;
-      default: {
-        const result = this.ctx.makeMultiVector("scale");
-        mv.forComponents((bm, val) => result.add(bm, [alpha, val]));
-        return result;
+    return new MultiVector(this, "scale", c => {
+      if (alpha !== 0) {
+        mv.forComponents((bm, val) => c(bm).add([alpha, val]));
       }
-    }
+    });
   }
 
   negate(mv: MultiVector<T>): MultiVector<T> {
-    const result = this.ctx.makeMultiVector("negate");
-    mv.forComponents((bm, val) => result.add(bm, [-1, val]));
-    return result;
+    return new MultiVector(this, "negate", c => {
+      mv.forComponents((bm, val) => c(bm).add([-1, val]))
+    });
   }
 
   gradeInvolution(mv: MultiVector<T>): MultiVector<T> {
-    const result = this.ctx.makeMultiVector("gradeInvolution");
-    mv.forComponents((bm, val) => result.add(bm, [...flipSign(getGrade(bm) & 1), val]));
-    return result;
+    return new MultiVector(this, "gradeInvolution", c => {
+      mv.forComponents((bm, val) => c(bm).add([...flipSign(getGrade(bm) & 1), val]))
+    });
   }
 
   reverse(mv: MultiVector<T>): MultiVector<T> {
-    const result = this.ctx.makeMultiVector("reverse");
-    mv.forComponents((bm, val) => result.add(bm, [...flipSign(getGrade(bm) & 2), val]));
-    return result;
+    return new MultiVector(this, "reverse", c => {
+      mv.forComponents((bm, val) => c(bm).add([...flipSign(getGrade(bm) & 2), val]))
+    });
   }
 
   dual(mv: MultiVector<T>): MultiVector<T> {
@@ -213,7 +268,8 @@ export class Algebra<T> {
    * Short for `this.scalarProduct(mv, this.reverse(mv))`.
    */
   normSquared(mv: MultiVector<T>): Factor<T> {
-    const result = this.ctx.makeMultiVector("normSquared");
+    this.ctx.space();
+    const variable = this.ctx.makeVar("normSquared");
     mv.forComponents((bm, val) => {
       const mf = this.metricFactors(bm);
       if (mf !== null) {
@@ -228,10 +284,10 @@ export class Algebra<T> {
         // (It actually looks like the reversion of one argument has been
         // added to the definition of normSquared precisely for the purpose
         // of cancelling the signs from the scalar product.)
-        result.add(0, [...mf, val, val]);
+        variable.add([...mf, val, val]);
       }
     });
-    return result.get(0);
+    return variable.value();
   }
 
   norm(mv: MultiVector<T>): Factor<T> {
@@ -264,42 +320,42 @@ export class Algebra<T> {
   }
 
   extractGrade(grade: number, mv: MultiVector<T>): MultiVector<T> {
-    const result = this.ctx.makeMultiVector("extract" + grade);
-    mv.forComponents((bm, val) => {
-      if (getGrade(bm) == grade) {
-        result.add(bm, [val]);
-      }
+    return new MultiVector(this, "extract" + grade, c => {
+      mv.forComponents((bm, val) => {
+        if (getGrade(bm) == grade) {
+          c(bm).add([val]);
+        }
+      })
     });
-    return result;
   }
 
   plus(...mvs: MultiVector<T>[]): MultiVector<T> {
-    const result = this.ctx.makeMultiVector("plus");
-    for (const mv of mvs) {
-      mv.forComponents((bm, val) => result.add(bm, [val]));
-    }
-    return result;
+    return new MultiVector(this, "plus", c => {
+      for (const mv of mvs) {
+        mv.forComponents((bm, val) => c(bm).add([val]));
+      }
+    });
   }
 
   /** The core functionality for all kinds of products */
   private product2(kind: ProductKind, a: MultiVector<T>, b: MultiVector<T>): MultiVector<T> {
-    const result = this.ctx.makeMultiVector(kind + "Prod");
-    a.forComponents((bmA, valA) => b.forComponents((bmB, valB) => {
-      if (includeProduct(kind, bmA, bmB)) {
-        const mf = this.metricFactors(bmA & bmB);
-        if (mf !== null) {
-          const sign = flipSign(productFlips(bmA, bmB) & 1);
-          result.add(bmA ^ bmB, [...sign, ...mf, valA, valB]);
+    return new MultiVector(this, kind + "Prod", c => {
+      a.forComponents((bmA, valA) => b.forComponents((bmB, valB) => {
+        if (includeProduct(kind, bmA, bmB)) {
+          const mf = this.metricFactors(bmA & bmB);
+          if (mf !== null) {
+            const sign = flipSign(productFlips(bmA, bmB) & 1);
+            c(bmA ^ bmB).add([...sign, ...mf, valA, valB]);
+          }
         }
-      }
-    }));
-    return result;
+      }))
+    });
   }
 
   /** Like `product2`, but for an arbitrary number of multivectors */
   private product(kind: ProductKind, mvs: MultiVector<T>[]): MultiVector<T> {
     return mvs.length === 0
-      ? this.ctx.makeMultiVector(kind + "1").add(0, [])
+      ? new MultiVector(this, kind + "1", c => c(0).add([]))
       : mvs.reduce((acc, mv) => this.product2(kind, acc, mv));
   }
 
@@ -333,40 +389,40 @@ export class Algebra<T> {
 
   /** Implementation returning an object of scalar type. */
   scalarProduct(a: MultiVector<T>, b: MultiVector<T>): Factor<T> {
-    const result = this.ctx.makeMultiVector("scalarProd");
+    const variable = this.ctx.makeVar("scalarProd");
     a.forComponents((bm, valA) => {
-      const valB = b.get(bm);
+      const valB = b.value(bm);
       if (valB !== 0) {
         const mf = this.metricFactors(bm);
         if (mf !== null) {
           const sign = flipSign(getGrade(bm) & 2);
-          result.add(0, [...sign, ...mf, valA, valB]);
+          variable.add([...sign, ...mf, valA, valB]);
         }
       }
     });
-    return result.get(0);
+    return variable.value();
   }
 
   /** **EXPECTS A 2-BLADE AND POSITIVE-DEFINITE METRIC** */
   exp(A: MultiVector<T>): MultiVector<T> {
-    const {ctx} = this;
     // Notice that [DFM09] p. 185 use A**2, which is -norm2 for a 2-blade.
     const norm2 = this.normSquared(A);
     if (norm2 === 0) {
-      const result = ctx.makeMultiVector("expNull");
-      result.add(0, [1]);
-      A.forComponents((bm, val) => result.add(bm, [val]));      
-      return result;
+      return new MultiVector(this, "expNull", c => {
+        c(0).add([1]);
+        A.forComponents((bm, val) => c(bm).add([val]));      
+      });
     } else {
       // TODO detect and handle negative or zero norm2 at runtime
+      const {ctx} = this;
       const alpha = ctx.scalarFunc("sqrt", norm2);
-      const c = ctx.scalarFunc("cos", alpha);
-      const s = ctx.scalarFunc("sin", alpha);
-      const sByAlpha = ctx.scalarFunc2("/", s, alpha);
-      const result = ctx.makeMultiVector("exp");
-      result.add(0, [c]);
-      A.forComponents((bm, val) => result.add(bm, [sByAlpha, val]));
-      return result;
+      const cos = ctx.scalarFunc("cos", alpha);
+      const sin = ctx.scalarFunc("sin", alpha);
+      const sinByAlpha = ctx.scalarFunc2("/", sin, alpha);
+      return new MultiVector(this, "exp", c => {
+        c(0).add([cos]);
+        A.forComponents((bm, val) => c(bm).add([sinByAlpha, val]));
+      });
     }
   }
 
@@ -381,7 +437,7 @@ export class Algebra<T> {
   log(R: MultiVector<T>): MultiVector<T> {
     const {ctx} = this;
     /** The cosine of the half angle, that is, the real part of the quaternion */
-    const R0 = R.get(0);
+    const R0 = R.value(0);
     /** The imaginary part of the quaternion */
     const R2 = this.extractGrade(2, R);
     /** The sine of the half angle */
@@ -406,7 +462,7 @@ export class Algebra<T> {
     const prod = this.geometricProduct(this.normalize(a), this.normalize(b));
     return this.ctx.scalarFunc2("atan2",
       this.norm(this.extractGrade(2, prod)),
-      prod.get(0)
+      prod.value(0)
     );
   }
 
