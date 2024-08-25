@@ -193,6 +193,10 @@ export class Algebra<T> {
     return result;
   }
 
+  checkMine(mv: MultiVector<T>): void {
+    if (mv.alg !== this) throw "trying to use foreign multivector";
+  }
+
   mv(nameHint: string, obj: Record<string, Factor<T>>) {
     return new MultiVector(this, nameHint, c => {
       Object.entries(obj).forEach(([key, val]) => {
@@ -228,6 +232,7 @@ export class Algebra<T> {
 
   /** The scalar `alpha` should be given as a target-code expression. */
   scale(alpha: Factor<T>, mv: MultiVector<T>): MultiVector<T> {
+    this.checkMine(mv);
     return new MultiVector(this, "scale", c => {
       if (alpha !== 0) {
         mv.forComponents((bm, val) => c(bm).add([alpha, val]));
@@ -236,18 +241,21 @@ export class Algebra<T> {
   }
 
   negate(mv: MultiVector<T>): MultiVector<T> {
+    this.checkMine(mv);
     return new MultiVector(this, "negate", c => {
       mv.forComponents((bm, val) => c(bm).add([-1, val]))
     });
   }
 
   gradeInvolution(mv: MultiVector<T>): MultiVector<T> {
+    this.checkMine(mv);
     return new MultiVector(this, "gradeInvolution", c => {
       mv.forComponents((bm, val) => c(bm).add([...flipSign(getGrade(bm) & 1), val]))
     });
   }
 
   reverse(mv: MultiVector<T>): MultiVector<T> {
+    this.checkMine(mv);
     return new MultiVector(this, "reverse", c => {
       mv.forComponents((bm, val) => c(bm).add([...flipSign(getGrade(bm) & 2), val]))
     });
@@ -266,6 +274,7 @@ export class Algebra<T> {
   // (It looks like the `reverse` operation is in the definition of
   // normSquared precisely for this purpose.)
   normSquared(mv: MultiVector<T>): Factor<T> {
+    this.checkMine(mv);
     this.ctx.space();
     const variable = this.ctx.makeVar("normSquared");
     mv.forComponents((bm, val) => {
@@ -327,6 +336,7 @@ export class Algebra<T> {
   }
 
   extractGrade(grade: number, mv: MultiVector<T>): MultiVector<T> {
+    this.checkMine(mv);
     return new MultiVector(this, "extract" + grade, c => {
       mv.forComponents((bm, val) => {
         if (getGrade(bm) == grade) {
@@ -339,6 +349,7 @@ export class Algebra<T> {
   plus(...mvs: MultiVector<T>[]): MultiVector<T> {
     return new MultiVector(this, "plus", c => {
       for (const mv of mvs) {
+        this.checkMine(mv);
         mv.forComponents((bm, val) => c(bm).add([val]));
       }
     });
@@ -346,6 +357,8 @@ export class Algebra<T> {
 
   /** The core functionality for all kinds of products */
   private product2(kind: ProductKind, a: MultiVector<T>, b: MultiVector<T>): MultiVector<T> {
+    this.checkMine(a);
+    this.checkMine(b);
     return new MultiVector(this, kind + "Prod", c => {
       a.forComponents((bmA, valA) => b.forComponents((bmB, valB) => {
         if (includeProduct(kind, bmA, bmB)) {
@@ -396,6 +409,8 @@ export class Algebra<T> {
 
   /** Implementation returning an object of scalar type. */
   scalarProduct(a: MultiVector<T>, b: MultiVector<T>): Factor<T> {
+    this.checkMine(a);
+    this.checkMine(b);
     const variable = this.ctx.makeVar("scalarProd");
     a.forComponents((bm, valA) => {
       const valB = b.value(bm);
