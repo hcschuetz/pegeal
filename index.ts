@@ -581,6 +581,18 @@ ${alg.exp(blade)}`);
     q("normalize(B1^B2)", alg.normalize(alg.wedgeProduct(B1, B2)));
     q("normalize(B1 B2)", alg.normalize(alg.geometricProduct(B1, B2)));
     q("normalize(B1 B2 B3)", alg.normalize(alg.geometricProduct(B1, B2, B3)));
+    p();
+    p("// Normalization distributes over geometric products:");
+    q("normalize(B1) normalize(B2) normalize(B3)",
+      alg.geometricProduct(alg.normalize(B1), alg.normalize(B2), alg.normalize(B3))
+    );
+    q("normalize(B1) normalize(B2 B3)",
+      alg.geometricProduct(alg.normalize(B1), alg.normalize(alg.geometricProduct(B2, B3)))
+    );
+    p("// But it does not distribute over wedge products:")
+    q("normalize(B1)^normalize(B2)",
+      alg.wedgeProduct(alg.normalize(B1), alg.normalize(B2))
+    );
   }
 
   for (let m of [[1,1,1,1],[2,-3,4,1]]) {
