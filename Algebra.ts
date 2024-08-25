@@ -47,7 +47,7 @@ implementation.  General multivectors get no support or less efficient code.
 */
 
 export type ScalarFuncName = "abs" | "sqrt" | "cos" | "sin" | "cosh" | "sinh";
-export type ScalarFunc2Name = "+" | "-" | "*" | "/" | "atan2";
+export type ScalarFunc2Name = "+" | "-" | "*" | "/" | "atan2" | "max" | "min";
 
 export interface Context<T> {
   space(): void;
@@ -285,7 +285,16 @@ export class Algebra<T> {
   }
 
   norm(mv: MultiVector<T>): Factor<T> {
-    return this.ctx.scalarFunc("sqrt", this.normSquared(mv));
+    return this.ctx.scalarFunc("sqrt",
+      // As in the [DFM07] reference implementation we floor the squared norm
+      // to 0 to avoid problems when the squared norm is slightly below 0 due
+      // to rounding errors.
+      // Unfortunately this leaves actual errors undetected if the squared norm
+      // is significantly below 0.
+      // TODO Check for "truly" negative squared norm?
+      // But how to do this in gernerated code?
+      this.ctx.scalarFunc2("max", 0, this.normSquared(mv))
+    );
   }
 
   // A note on inverse(...) and normalize(...):
@@ -307,11 +316,21 @@ export class Algebra<T> {
   /** **This is only correct for versors!** */
   normalize(mv: MultiVector<T>): MultiVector<T> {
     // TODO omit normalization if mv is known to be normalized
-    const norm = this.norm(mv);
-    if (norm === 0) {
+    const {ctx} = this;
+    const normSq = this.normSquared(mv);
+    if (normSq === 0) {
       throw `trying to normalize null vector ${mv}`;
     }
-    return this.scale(this.ctx.scalarFunc2("/", 1, norm), mv);
+    return this.scale(
+      ctx.scalarFunc2("/", 1,
+        ctx.scalarFunc("sqrt",
+          // Use the absolute value for compatibility with the
+          // [DFM07] reference implementation.  Does it actually make sense?
+          true ? ctx.scalarFunc("abs", normSq) : normSq
+        )
+      ),
+      mv
+    );
   }
 
   extractGrade(grade: number, mv: MultiVector<T>): MultiVector<T> {

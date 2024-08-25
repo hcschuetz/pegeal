@@ -56,7 +56,7 @@ export class WebGLContext implements Context<string> {
   }
 
   scalarFunc2(name: ScalarFunc2Name, f1: Factor<string>, f2: Factor<string>) {
-    const varName = `${scalarFunc2LongName[name]}_${this.count++}`;
+    const varName = `${scalarFunc2LongName[name] ?? name}_${this.count++}`;
     const expr = /^[a-z]/i.test(name)
       ? `${name}(${formatFactor(f1)}, ${formatFactor(f2)})`
       : `${formatFactor(f1)} ${name} ${formatFactor(f2)}`;
@@ -65,10 +65,9 @@ export class WebGLContext implements Context<string> {
   }
 }
 
-const scalarFunc2LongName: Record<ScalarFunc2Name, String> = {
+const scalarFunc2LongName: Partial<Record<ScalarFunc2Name, String>> = {
   "+": "plus",
   "-": "minus",
   "*": "times",
   "/": "div",
-  "atan2": "atan2",
 };

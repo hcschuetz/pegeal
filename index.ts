@@ -21,14 +21,14 @@ const q_ = (coords: string) => (label: string, x: MultiVector<never> | number | 
       p(label + " = " + x);
       return;
     case "number":
-      p(label + " = " + x.toFixed(5).replace(/\.?0*$/, ""));
+      p(label + " = " + x.toFixed(8).replace(/\.?0*$/, ""));
       return;
     default:
       p(label + " =");
       x.forComponents((bm, val) => {
         p(`  ${
           coords.split("").map((c, i) => (1 << i) & bm ? c : "_").join("")
-        }: ${val.toFixed(5).replace(/\.?0*$/, "")}`);
+        }: ${val.toFixed(8).replace(/^(?!-)/, "+").replace(/\.?0*$/, "")}`);
       });
     }
 }
@@ -557,4 +557,33 @@ ${alg.exp(blade)}`);
   p("// " + result);
 
   q_(coords)("\nresult", slerpTest(new EvalContext()));
+}
+{
+  p(`
+// ------------------------------------------
+// Normalization - eval
+`);
+
+  const coords = "xyzw";
+  const q = q_(coords);
+
+  function test_normalize(m: number[]) {
+    const alg = new Algebra(m, new EvalContext(), makeLetterNames(coords));
+
+    const B1 = alg.mv("B1", {x: 5, y: 2, z: 3});
+    const B2 = alg.mv("B1", {x: 2, y:-1, z: 2});
+    const B3 = alg.mv("B1", {x:-1, y: 4, z:-1});
+
+    p("-----------");
+    q("normalize(one)", alg.normalize(alg.one()));
+    q("normalize(ex)", alg.normalize(alg.basisVectors()[0]));
+    q("normalize(B1)", alg.normalize(B1));
+    q("normalize(B1^B2)", alg.normalize(alg.wedgeProduct(B1, B2)));
+    q("normalize(B1 B2)", alg.normalize(alg.geometricProduct(B1, B2)));
+    q("normalize(B1 B2 B3)", alg.normalize(alg.geometricProduct(B1, B2, B3)));
+  }
+
+  for (let m of [[1,1,1,1],[2,-3,4,1]]) {
+    test_normalize(m);
+  }
 }

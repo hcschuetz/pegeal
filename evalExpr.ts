@@ -30,7 +30,7 @@ export class EvalContext implements Context<never> {
       case "-": return f1 - f2;
       case "*": return f1 * f2;
       case "/": return f1 / f2;
-      case "atan2": return Math.atan2(f1, f2);
+      default: return Math[name](f1, f2);
     }
   }
 }
