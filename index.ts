@@ -1,4 +1,4 @@
-import { Algebra, getGrade, MultiVector, productFlips } from "./Algebra";
+import { Algebra, Context, getGrade, MultiVector, productFlips } from "./Algebra";
 import { makeLetterNames, makeNumberedNames } from "./componentNaming";
 import { WebGLContext } from "./generateWebGL";
 import { EvalContext } from "./evalExpr";
@@ -536,17 +536,23 @@ ${alg.exp(blade)}`);
 {
   p(`
 // ------------------------------------------
-// Slerp - WebGL
+// Slerp - WebGL + eval
 `);
 
   const coords = "xyz";
+
+  function slerpTest<T>(ctx: Context<T>) {
+    const alg = new Algebra(euclidean(coords), ctx, makeLetterNames(coords));
+
+    const v1 = alg.mv("v1", {x: 1, y: 1});
+    const v2 = alg.mv("v2", {x: 1, y: 1, z: 1});
+    return alg.slerp(.3, v1, v2);
+  }
+
   const ctx = new WebGLContext();
-  const alg = new Algebra(euclidean(coords), ctx, makeLetterNames(coords));
-
-  const v1 = alg.mv("v1", {x: 1, y: 1});
-  const v2 = alg.mv("v2", {x: 1, y: 1, z: 1});
-  const slerp = alg.slerp(.3, v1, v2);
-
+  const slerp = slerpTest(ctx);
   p(ctx.text);
   p("// " + slerp);
+
+  q_(coords)("\nslerp", slerpTest(new EvalContext()));
 }
