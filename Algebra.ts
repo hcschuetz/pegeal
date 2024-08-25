@@ -460,25 +460,27 @@ export class Algebra<T> {
     );
   }
 
-  slerp(t: Factor<T>, a: MultiVector<T>, b: MultiVector<T>) {
+  slerp(a: MultiVector<T>, b: MultiVector<T>) {
     const {ctx} = this;
     const Omega = this.getAngle(a, b);
-    return this.scale(
-      ctx.scalarFunc2("/", 1, ctx.scalarFunc("sin", Omega)),
-      this.plus(
-        this.scale(
-          ctx.scalarFunc("sin",
-            ctx.scalarFunc2("*", ctx.scalarFunc2("-", 1, t), Omega)
+    const scale = ctx.scalarFunc2("/", 1, ctx.scalarFunc("sin", Omega));
+    return (t: Factor<T>) =>
+      this.scale(
+        scale,
+        this.plus(
+          this.scale(
+            ctx.scalarFunc("sin",
+              ctx.scalarFunc2("*", ctx.scalarFunc2("-", 1, t), Omega)
+            ),
+            a
           ),
-          a
-        ),
-        this.scale(
-          ctx.scalarFunc("sin",
-            ctx.scalarFunc2("*", t, Omega)
-          ),
-          b
+          this.scale(
+            ctx.scalarFunc("sin",
+              ctx.scalarFunc2("*", t, Omega)
+            ),
+            b
+          )
         )
-      )
-    );
+      );
   }
 }

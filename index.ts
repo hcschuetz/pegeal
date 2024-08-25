@@ -506,6 +506,7 @@ ${alg.exp(blade)}`);
   // Interpolation of an angle spanned by two vectors
   const a12 = alg.getAngle(v1, v2);
   const inv_sin_a12 = 1 / Math.sin(a12);
+  const slerpArc = alg.slerp(v1, v2);
   const n = 10;
   for (let i = 0; i <= n; i++) {
     p();
@@ -528,7 +529,7 @@ ${alg.exp(blade)}`);
     if (Math.abs(a12 * frac - a1) > 1e-10) throw "angle test failed";
     if (Math.abs(a12 - a1 - a2) > 1e-10) throw "angle test failed";
 
-    const slerp = alg.slerp(frac, v1, v2);
+    const slerp = slerpArc(frac);
     q("slerp", slerp);
     q("dist(slerp, v)", alg.dist(slerp, v));
   }
@@ -546,13 +547,14 @@ ${alg.exp(blade)}`);
 
     const v1 = alg.mv("v1", {x: 1, y: 1});
     const v2 = alg.mv("v2", {x: 1, y: 1, z: 1});
-    return alg.slerp(.3, v1, v2);
+    const slerpArc = alg.slerp(v1, v2);
+    return alg.plus(slerpArc(.3), slerpArc(.5));
   }
 
   const ctx = new WebGLContext();
-  const slerp = slerpTest(ctx);
+  const result = slerpTest(ctx);
   p(ctx.text);
-  p("// " + slerp);
+  p("// " + result);
 
-  q_(coords)("\nslerp", slerpTest(new EvalContext()));
+  q_(coords)("\nresult", slerpTest(new EvalContext()));
 }
