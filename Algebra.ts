@@ -146,15 +146,10 @@ const includeProduct = (kind: ProductKind, bmA: number, bmB: number): boolean  =
  * two basis blades (represented as bitmaps).
  */
 export function productFlips(bitmapA: number, bitmapB: number): number {
-  let flips = 0;
-  let bCount = 0;
+  let bCount = 0, flips = 0;
   for (let bit = 1; bit <= bitmapA; bit <<= 1) {
-    if (bit & bitmapA) {
-      flips += bCount;
-    }
-    if (bit & bitmapB) {
-      bCount++;
-    }
+    if (bit & bitmapA) { flips += bCount; }
+    if (bit & bitmapB) { bCount++; }
   }
   return flips;
 }
