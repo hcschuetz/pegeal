@@ -1,3 +1,5 @@
+import { EvalContext } from "./evalExpr";
+
 export type Factor<T> = number | T;
 export type Term<T> = Factor<T>[];
 
@@ -8,46 +10,7 @@ export interface Var<T> {
 
 /*
 TODO:
-- properties: unit
 - outermorphism
-
-----
-
-It probably makes most sense to have a subclass for unit multivectors:
-- Operations creating unit vectors by construction should return such a vector:
-  - normalization
-  - basis vectors if the corresponding metric component is 1
-  - more?
-- normSquared(mv) then simply returns the constant scalar 1.
-  (That should suffice for optimization in the subsequent compilation.)
-- inverse(mv) simply returns its argument.
-To solve this in an object-oriented way (inheritance + selective overriding)
-we would have to implement normSquared(mv) and inverse(mv) as methods of
-the multivector, not the algebra.
-
-Alternatively we could just add a boolean "definitelyUnit" to MultiVector<T>
-without subclassing.  It is false by default and can be set using a method
-mv.markAsUnit().  Then we can optimize after checking this flag.
-
-CAUTION: Norm and unitness depend on the metric and thus on the algebra.
-They are NOT properties of just the Multivector seen as a mapping from bitmaps
-to numbers.  So it might make sense to re-introduce the algebra pointer
-(or at least a metric pointer) in multivectors and checkMine(mv).
-(We need the algebra/metric pointer anyway for implementing mv.normSquared().)
-
-BTW, is the geometric product of two unit mvs again a unit mv?
-More generally:  Does the norm (or equivalently the squared norm) commute
-with the geometric product?
-In the Euclidean case probably yes.  Otherwise ???
-Other products of units are not unit because their norm involves the angle
-between the two arguments.
-
-And would a flag or subclass for invertible MVs help?
-
-A specialized type for versors might help.  Only versors support
-normSquared(...) and inverse(...), at least with their current efficient
-implementation.  General multivectors get no support or less efficient code.
-(See section 21.2 of Dorst/Fontijne/Mann.)
 */
 
 export type ScalarFuncName = "abs" | "sqrt" | "cos" | "sin" | "cosh" | "sinh";
@@ -61,7 +24,13 @@ export interface Context<T> {
 }
 
 export class MultiVector<T> {
-  components: Var<T>[] = [];
+  #components: Var<T>[] = [];
+
+  /**
+   * Do we know (before evaluation, just by looking at the code structure)
+   * that this multivector has norm 1?
+   */
+  knownUnit = false;
 
   constructor(
     readonly alg: Algebra<T>,
@@ -74,22 +43,51 @@ export class MultiVector<T> {
 
   component(bm: number): Var<T> {
     return (
-      this.components[bm] ??
-      (this.components[bm] = this.alg.ctx.makeVar(this.name + "_" + this.alg.bitmapToString[bm]))
+      this.#components[bm] ??
+      (this.#components[bm] = this.alg.ctx.makeVar(this.name + "_" + this.alg.bitmapToString[bm]))
     );
   }
 
-  value(bm: number): Factor<T> { return this.component(bm).value(); }
+  value(bm: number): Factor<T> { return this.#components[bm]?.value() ?? 0; }
 
   forComponents(callback: (bitmap: number, value: Factor<T>) => unknown): void {
-    this.components.forEach((variable: Var<T>, bm: number) => {
+    this.#components.forEach((variable: Var<T>, bm: number) => {
       callback(bm, variable.value());
     });
   }
 
+  isZero() {
+    return this.#components.every(c => c.value() === 0);
+    // TODO Actually components with value 0 should not have been inserted
+    // in the first place.
+  }
+
+  markAsUnit(mark: boolean): MultiVector<T> {
+    // // Debug code looking for non-unit multivectors being marked as unit:
+    // if (mark && this.alg.ctx instanceof EvalContext) {
+    //   const THIS = this as any as MultiVector<never>;
+    //   let n2 = 0;
+    //   for (const [bm, variable] of THIS.#components.entries()) {
+    //     if (variable === undefined) continue;
+    //     const mf = THIS.alg.metricFactors(bm);
+    //     if (mf === null) continue;
+    //     const val = variable.value();
+    //     n2 += [...mf, val, val].reduce((x, y) => x*y);
+    //   }
+    //   console.log("# UNIT: " + n2);
+    //   // n2 ~ -1 is also allowed:
+    //   if (Math.abs(Math.abs(n2) - 1) > 1e-10) {
+    //     throw new Error("Marking a non-unit multivector as unit");
+    //   }
+    // }
+
+    this.knownUnit = mark;
+    return this;
+  }
+
   toString() {
-    return `${this.name} {${
-      this.components
+    return `${this.name} ${this.knownUnit ? "[unit] " : ""}{${
+      this.#components
       .map((variable, bm) => `${this.alg.bitmapToString[bm]}: ${variable.value()}`)
       .filter(val => val)
       .join(", ")
@@ -217,10 +215,11 @@ export class Algebra<T> {
     return new MultiVector(this, "zero", () => {});
   };
   one(): MultiVector<T> {
-    return new MultiVector(this, "one", c => c(0).add([]));
+    return new MultiVector(this, "one", c => c(0).add([])).markAsUnit(true);
   }
   pseudoScalar(): MultiVector<T> {
-    return new MultiVector(this, "ps", c => c(this.fullBitmap).add([]));
+    return new MultiVector(this, "ps", c => c(this.fullBitmap).add([]))
+      .markAsUnit(this.metric.every(v => v === 1));
   }
   pseudoScalarInv(): MultiVector<T> {
     // TODO implement directly?
@@ -229,6 +228,7 @@ export class Algebra<T> {
   basisVectors(): MultiVector<T>[] {
     return this.metric.map((_, i) =>
       new MultiVector(this, "basis" + i, c => c(1 << i).add([]))
+      .markAsUnit(this.metric[i] === 1)
     )
   }
 
@@ -248,21 +248,21 @@ export class Algebra<T> {
     this.checkMine(mv);
     return new MultiVector(this, "negate", c => {
       mv.forComponents((bm, val) => c(bm).add([-1, val]))
-    });
+    }).markAsUnit(mv.knownUnit);
   }
 
   gradeInvolution(mv: MultiVector<T>): MultiVector<T> {
     this.checkMine(mv);
     return new MultiVector(this, "gradeInvolution", c => {
       mv.forComponents((bm, val) => c(bm).add([...flipSign(getGrade(bm) & 1), val]))
-    });
+    }).markAsUnit(mv.knownUnit);
   }
 
   reverse(mv: MultiVector<T>): MultiVector<T> {
     this.checkMine(mv);
     return new MultiVector(this, "reverse", c => {
       mv.forComponents((bm, val) => c(bm).add([...flipSign(getGrade(bm) & 2), val]))
-    });
+    }).markAsUnit(mv.knownUnit);
   }
 
   dual(mv: MultiVector<T>): MultiVector<T> {
@@ -279,6 +279,7 @@ export class Algebra<T> {
   // normSquared precisely for this purpose.)
   normSquared(mv: MultiVector<T>): Factor<T> {
     this.checkMine(mv);
+    if (mv.knownUnit) return 1; // TODO or -1?
     this.ctx.space();
     const variable = this.ctx.makeVar("normSquared");
     mv.forComponents((bm, val) => {
@@ -291,6 +292,7 @@ export class Algebra<T> {
   }
 
   norm(mv: MultiVector<T>): Factor<T> {
+    if (mv.knownUnit) return 1; // TODO What if `normSquared` is -1?
     return this.ctx.scalarFunc("sqrt",
       // As in the [DFM07] reference implementation we floor the squared norm
       // to 0 to avoid problems when the squared norm is slightly below 0 due
@@ -299,6 +301,7 @@ export class Algebra<T> {
       // is significantly below 0.
       // TODO Check for "truly" negative squared norm?
       // But how to do this in gernerated code?
+      // Or just take the absolute value of `normSquared` (as in `normalize`)?
       this.ctx.scalarFunc2("max", 0, this.normSquared(mv))
     );
   }
@@ -312,6 +315,7 @@ export class Algebra<T> {
 
   /** **This is only correct for versors!** */
   inverse(mv: MultiVector<T>): MultiVector<T> {
+    if (mv.knownUnit) return mv;
     const norm2 = this.normSquared(mv);
     if (norm2 === 0) {
       throw `trying to invert null vector ${mv}`;
@@ -321,7 +325,7 @@ export class Algebra<T> {
 
   /** **This is only correct for versors!** */
   normalize(mv: MultiVector<T>): MultiVector<T> {
-    // TODO omit normalization if mv is known to be normalized
+    if (mv.knownUnit) return mv;
     const {ctx} = this;
     const normSq = this.normSquared(mv);
     if (normSq === 0) {
@@ -336,7 +340,7 @@ export class Algebra<T> {
         )
       ),
       mv
-    );
+    ).markAsUnit(true);
   }
 
   extractGrade(grade: number, mv: MultiVector<T>): MultiVector<T> {
@@ -373,13 +377,14 @@ export class Algebra<T> {
           }
         }
       }))
-    });
+    }).markAsUnit(kind === "geom" && a.knownUnit && b.knownUnit);
+    // TODO Check if the geometric product of units is really always a unit.
   }
 
   /** Like `product2`, but for an arbitrary number of multivectors */
   private product(kind: ProductKind, mvs: MultiVector<T>[]): MultiVector<T> {
     return mvs.length === 0
-      ? new MultiVector(this, kind + "1", c => c(0).add([]))
+      ? new MultiVector(this, kind + "1", c => c(0).add([])).markAsUnit(true)
       : mvs.reduce((acc, mv) => this.product2(kind, acc, mv));
   }
 
@@ -437,7 +442,7 @@ export class Algebra<T> {
       return new MultiVector(this, "expNull", c => {
         c(0).add([1]);
         A.forComponents((bm, val) => c(bm).add([val]));      
-      });
+      }).markAsUnit(A.isZero());
     } else {
       // TODO detect and handle negative or zero norm2 at runtime
       const {ctx} = this;
@@ -482,7 +487,7 @@ export class Algebra<T> {
     return this.norm(this.plus(a, this.negate(b)));
   }
   
-  /** **expects 1-vectors** */
+  /** **EXPECTS 1-VECTORS.  DOES IT ASSUME A EUCLIDEAN METRIC?** */
   getAngle(a: MultiVector<T>, b: MultiVector<T>): Factor<T> {
     const prod = this.geometricProduct(this.normalize(a), this.normalize(b));
     return this.ctx.scalarFunc2("atan2",
@@ -491,11 +496,14 @@ export class Algebra<T> {
     );
   }
 
+  /** **DOES THIS ASSUME A EUCLIDEAN METRIC?** */
   slerp(a: MultiVector<T>, b: MultiVector<T>) {
     const {ctx} = this;
+    a = this.normalize(a);
+    b = this.normalize(b);
     const Omega = this.getAngle(a, b);
     const scale = ctx.scalarFunc2("/", 1, ctx.scalarFunc("sin", Omega));
-    return (t: Factor<T>) =>
+    return (t: Factor<T>) => (
       this.scale(
         scale,
         this.plus(
@@ -512,6 +520,9 @@ export class Algebra<T> {
             b
           )
         )
-      );
+      )
+      // Unitness is not detected by the lower-level operations.
+      .markAsUnit(true)
+    );
   }
 }

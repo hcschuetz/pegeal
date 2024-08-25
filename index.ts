@@ -24,7 +24,7 @@ const q_ = (coords: string) => (label: string, x: MultiVector<never> | number | 
       p(label + " = " + x.toFixed(8).replace(/\.?0*$/, ""));
       return;
     default:
-      p(label + " =");
+      p(label + " =" + (x.knownUnit ? " [unit]" : ""));
       x.forComponents((bm, val) => {
         p(`  ${
           coords.split("").map((c, i) => (1 << i) & bm ? c : "_").join("")
@@ -148,15 +148,18 @@ p(`
 {
   const ctx = new EvalContext();
   const alg = new Algebra([1,2,3], ctx, makeLetterNames("xyz"));
+  const q = q_("xyz");
 
   const v = alg.mv("v", {x: 4, y: 11});
-  p("geomProd(v, v) = " + alg.geometricProduct(v, v));
-  p("contractRight(v, v) = " + alg.contractRight(v, v));
+  q("v", v);
+  q("geomProd(v, v)", alg.geometricProduct(v, v));
+  q("contractRight(v, v)", alg.contractRight(v, v));
 
   const bv = alg.mv("bv", {xy: 3, yz: 5});
-  p("geomProd(bv, v) = " + alg.geometricProduct(bv, v));
-  p("geomProd(v, bv) = " + alg.geometricProduct(v, bv));
-  p("geomProd(bv, bv) = " + alg.geometricProduct(bv, bv));
+  q("bv", bv);
+  q("geomProd(bv, v)", alg.geometricProduct(bv, v));
+  q("geomProd(v, bv)", alg.geometricProduct(v, bv));
+  q("geomProd(bv, bv)", alg.geometricProduct(bv, bv));
   p(`
 It is not a coincidence that the xz component of the latter product is 0.
 It comes from using bv twice:
@@ -488,8 +491,8 @@ ${alg.exp(blade)}`);
   const rotor2 = alg.geometricProduct(v2, vMid);
   q("dist(R1, R2)", alg.dist(rotor1, rotor2));
   const rotor = rotor1;
-  p("R = " + rotor);
-  p("|R| = " + alg.norm(rotor));
+  q("R", rotor);
+  q("|R|", alg.norm(rotor));
 
   q("dist(R v1 R~, v2)",
     alg.dist(alg.geometricProduct(rotor, v1, alg.reverse(rotor)), v2)
@@ -548,7 +551,7 @@ ${alg.exp(blade)}`);
     const v1 = alg.mv("v1", {x: 1, y: 1});
     const v2 = alg.mv("v2", {x: 1, y: 1, z: 1});
     const slerpArc = alg.slerp(v1, v2);
-    return alg.plus(slerpArc(.3), slerpArc(.5));
+    return slerpArc(.3);
   }
 
   const ctx = new WebGLContext();
