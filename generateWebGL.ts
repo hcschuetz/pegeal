@@ -1,6 +1,6 @@
 import { Term, Factor, ScalarFuncName, ScalarFunc2Name, Var, Context } from "./Algebra";
 
-function formatFactor(f: Factor<string>) {
+function formatFactor(f: Factor<string>): string {
   switch (typeof f) {
     case "number": {
       const s = f.toString();
