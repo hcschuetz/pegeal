@@ -312,6 +312,7 @@ export class Algebra<T> {
 
   /** **This is only correct for versors!** */
   normalize(mv: MultiVector<T>): MultiVector<T> {
+    // TODO omit normalization if mv is known to be normalized
     const norm = this.norm(mv);
     if (norm === 0) {
       throw `trying to normalize null vector ${mv}`;
@@ -458,7 +459,6 @@ export class Algebra<T> {
   
   /** **expects 1-vectors** */
   getAngle(a: MultiVector<T>, b: MultiVector<T>): Factor<T> {
-    // TODO omit normalization if a or b are known to be normalized
     const prod = this.geometricProduct(this.normalize(a), this.normalize(b));
     return this.ctx.scalarFunc2("atan2",
       this.norm(this.extractGrade(2, prod)),
