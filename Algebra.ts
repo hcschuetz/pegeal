@@ -160,7 +160,7 @@ export function productFlips(bitmapA: number, bitmapB: number): number {
 }
 
 /** Provide factor -1 if argument is truthy. */
-const flipSign = (doFlip: number): Term<never> => doFlip ? [-1] : [];
+const flipSign = (doFlip: any): Term<never> => doFlip ? [-1] : [];
 
 export class Algebra<T> {
   readonly nDimensions: number;
