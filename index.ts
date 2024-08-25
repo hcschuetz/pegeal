@@ -574,8 +574,8 @@ ${alg.exp(blade)}`);
     const alg = new Algebra(m, new EvalContext(), makeLetterNames(coords));
 
     const B1 = alg.mv("B1", {x: 5, y: 2, z: 3});
-    const B2 = alg.mv("B1", {x: 2, y:-1, z: 2});
-    const B3 = alg.mv("B1", {x:-1, y: 4, z:-1});
+    const B2 = alg.mv("B2", {x: 2, y:-1, z: 2});
+    const B3 = alg.mv("B3", {x:-1, y: 4, z:-1});
 
     p("-----------");
     q("normalize(one)", alg.normalize(alg.one()));
