@@ -52,7 +52,6 @@ export type ScalarFunc2Name = "+" | "-" | "*" | "/" | "atan2";
 export interface Context<T> {
   space(): void;
   makeVar(nameHint: string): Var<T>;
-  invertFactor(f: Factor<T>): Factor<T>; // TODO handle as scalarFunc?
   scalarFunc(name: ScalarFuncName, f: Factor<T>): Factor<T>;
   scalarFunc2(name: ScalarFunc2Name, f1: Factor<T>, f2: Factor<T>): Factor<T>;
 }
@@ -302,7 +301,7 @@ export class Algebra<T> {
     if (norm2 === 0) {
       throw `trying to invert null vector ${mv}`;
     }
-    return this.scale(this.ctx.invertFactor(norm2), mv);
+    return this.scale(this.ctx.scalarFunc2("/", 1, norm2), mv);
   }
 
   /** **This is only correct for versors!** */
@@ -312,7 +311,7 @@ export class Algebra<T> {
     if (norm === 0) {
       throw `trying to normalize null vector ${mv}`;
     }
-    return this.scale(this.ctx.invertFactor(norm), mv);
+    return this.scale(this.ctx.scalarFunc2("/", 1, norm), mv);
   }
 
   extractGrade(grade: number, mv: MultiVector<T>): MultiVector<T> {
@@ -465,7 +464,7 @@ export class Algebra<T> {
     const {ctx} = this;
     const Omega = this.getAngle(a, b);
     return this.scale(
-      ctx.invertFactor(ctx.scalarFunc("sin", Omega)),
+      ctx.scalarFunc2("/", 1, ctx.scalarFunc("sin", Omega)),
       this.plus(
         this.scale(
           ctx.scalarFunc("sin",

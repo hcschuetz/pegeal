@@ -49,12 +49,6 @@ export class WebGLContext implements Context<string> {
     return new VarImpl(this, `${nameHint}_${this.count++}`);
   }
 
-  invertFactor(f: Factor<string>) {
-    const varName: string = `inv_${this.count++}`;
-    this.emit(`\nfloat ${varName} = 1.0 / ${formatFactor(f)};`);
-    return varName;
-  }
-
   scalarFunc(name: ScalarFuncName, f: Factor<string>) {
     const varName = `${name}_${this.count++}`;
     this.emit(`\nfloat ${varName} = ${name}(${formatFactor(f)});`);

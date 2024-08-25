@@ -20,10 +20,6 @@ export class EvalContext implements Context<never> {
     return new VarImpl();
   }
 
-  invertFactor(f: number) {
-    return 1 / f;
-  }
-
   scalarFunc(name: ScalarFuncName, f: number) {
     return Math[name](f);
   }
