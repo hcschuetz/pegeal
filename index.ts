@@ -1,5 +1,5 @@
 import { Algebra, getGrade, MultiVector, productFlips } from "./Algebra";
-import { makeLetterNames, makeNumberedNames } from "./ContextUtils";
+import { makeLetterNames, makeNumberedNames } from "./componentNaming";
 import { WebGLContext } from "./generateWebGL";
 import { EvalContext } from "./evalExpr";
 
