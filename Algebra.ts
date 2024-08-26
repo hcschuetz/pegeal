@@ -232,6 +232,40 @@ export class Algebra<T> {
     )
   }
 
+  outermorphism(mv: MultiVector<T>, matrix: (Factor<T> | undefined)[][]): MultiVector<T> {
+    // See `doc/Outermorphism.md` for explanations.
+
+    // no `this.checkMine(mv);` here as `mv` may actually come from elsewhere
+    const {nDimensions} = this;
+    return new MultiVector(this, "morph", c => {
+      mv.forComponents((bitmapIn, f) => {
+        function recur(i: number, bitmapOut: number, flips: number, product: Factor<T>[]) {
+          const iBit = 1 << i;
+          if (iBit > bitmapIn) {
+            // Fully traversed bitmapIn.  Contribute to the output:
+            c(bitmapOut).add([...(flips & 1 ? [-1] : []), ...product, f]);
+          } else if (!(iBit & bitmapIn)) {
+            // The i-th basis vector is not in bitmapIn.  Skip it:
+            recur(i + 1, bitmapOut, flips, product);
+          } else {
+            // The i-th basis vector is in bitmapIn.
+            // Recur for the "appropriate" codomain basis vectors:
+            for (let j = 0; j < nDimensions; j++) {
+              const jBit = 1 << j;
+              if (jBit & bitmapOut) continue; // wedge prod with duplicate is 0
+              const elem = (matrix[j] ?? [])[i] ?? 0;
+              if (elem === 0) continue; // omit product with a factor 0
+              const newFlips = bitCount(bitmapOut & ~(jBit - 1));
+              recur(i + 1, bitmapOut | jBit, flips + newFlips, [...product, elem]);
+            }
+          }
+        }
+
+        recur(0, 0, 0, []);
+      });
+    });
+  }
+
   // TODO Move the methods taking a single MultiVector to the MultiVector class?
 
   /** The scalar `alpha` should be given as a target-code expression. */

@@ -2,7 +2,6 @@ import { Algebra, Context, bitCount, MultiVector, productFlips } from "./Algebra
 import { makeLetterNames, makeNumberedNames } from "./componentNaming";
 import { WebGLContext } from "./generateWebGL";
 import { EvalContext } from "./evalExpr";
-import { Outermorphism } from "./Outermorphism";
 
 const euclidean = (coords: number | string | string[]) =>
   (
@@ -651,7 +650,7 @@ ${alg.exp(blade)}`);
       xyz: 9,
     });
 
-    return (new Outermorphism<T>(alg, alg2, m3)).apply(A);
+    return alg.outermorphism(A, m3);
   }
 
   const webCtx = new WebGLContext();
@@ -690,7 +689,7 @@ ${alg.exp(blade)}`);
   q("I", I);
   q("|I|", alg.norm(I));
 
-  const mI = (new Outermorphism<never>(alg, alg2, m)).apply(I);
+  const mI = alg2.outermorphism(I, m);
   q2("f_m(I)", mI);
   q2("|f_m(I)|", alg2.norm(mI));
 
