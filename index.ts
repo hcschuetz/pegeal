@@ -2,7 +2,7 @@ import { Algebra, Context, getGrade, MultiVector, productFlips } from "./Algebra
 import { makeLetterNames, makeNumberedNames } from "./componentNaming";
 import { WebGLContext } from "./generateWebGL";
 import { EvalContext } from "./evalExpr";
-import { debugOM, Outermorphism } from "./Outermorphism";
+import { Outermorphism } from "./Outermorphism";
 
 const euclidean = (coords: number | string | string[]) =>
   (
@@ -661,7 +661,6 @@ ${alg.exp(blade)}`);
 
   console.log("\n-------------\n")
 
-  // debugOM(true);
   q2("result", testOM(new EvalContext()));
 }
 {

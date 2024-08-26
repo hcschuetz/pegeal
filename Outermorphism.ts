@@ -50,9 +50,6 @@ Parameters of the recursive function:
   - multiply (symbolically) with M_ji in each recursion step.
 */
 
-let DEBUG = false;
-export function debugOM(val: boolean) { DEBUG = val; }
-
 // TODO move to utility module
 function bitCount(v: number): number {
   // Kernighan method
@@ -78,42 +75,29 @@ export class Outermorphism<T> {
     return new MultiVector(codomain, "morph", c => {
       mv.forComponents((bitmapIn, f) => {
         function recur(i: number, bitmapOut: number, flips: number, product: Factor<T>[]) {
-          DEBUG && console.log(`${". ".repeat(i)}i = ${i}; ${codomain.bitmapToString[bitmapOut]}: (${flips} flips) ${product.join("*")}`);
           const iBit = 1 << i;
           if (iBit > bitmapIn) {
             // We have traversed bitmapIn and can contribute to the output:
-            DEBUG && console.log(`${"  ".repeat(i)}${codomain.bitmapToString[bitmapOut]} += ${product.join("*")}`);
             c(bitmapOut).add([...(flips & 1 ? [-1] : []), ...product]);
-          } else if (iBit & bitmapIn) {
-            // The i-th basis vector is in bitmapIn.
-            // Continue to recur for each member of the i-th column of the matrix.
-            matrix.forEach((row, j) => {
-              const jBit = 1 << j;
-              DEBUG && console.log(`${"  ".repeat(i)}j = ${j} // ${codomain.bitmapToString[jBit]}`);
-              if (jBit & bitmapOut) {
-                // wedge prod with duplicate vector is 0.
-                DEBUG && console.log(`${"  ".repeat(i)}# duplicate ${codomain.bitmapToString[jBit]}`);
-                return;
-              }
-              const elem = row[i] ?? 0;
-              if (elem === 0) {
-                // no need for a product with a factor 0.
-                DEBUG && console.log(`${"  ".repeat(i)}# M(${i},${j}) = 0`);
-                return;
-              }
-              // TODO check flip management for correctness
-              const newFlips = bitCount(bitmapOut & ~(jBit - 1));
-              DEBUG && console.log(`recur: j=${codomain.bitmapToString[jBit]} ${newFlips} newFlips, ${elem}`)
-              recur(i + 1, bitmapOut | jBit, flips + newFlips, [...product, elem]);
-            });
-          } else {
+          } else if (!(iBit & bitmapIn)) {
             // The i-th basis vector is not in bitmapIn.
             // Ignore it and try the next one.
             recur(i + 1, bitmapOut, flips, product);
+          } else {
+            // The i-th basis vector is in bitmapIn.
+            // Recur for each member of the i-th column of the matrix.
+            matrix.forEach((row, j) => {
+              const jBit = 1 << j;
+              if (jBit & bitmapOut) return; // wedge prod with duplicate is 0.
+              const elem = row[i] ?? 0;
+              if (elem === 0) return; // no need for a product with a factor 0.
+              // TODO check flip management for correctness
+              const newFlips = bitCount(bitmapOut & ~(jBit - 1));
+              recur(i + 1, bitmapOut | jBit, flips + newFlips, [...product, elem]);
+            });
           }
         }
 
-        DEBUG && console.log("-----", domain.bitmapToString[bitmapIn], f);
         recur(0, 0, 0, [f]);
       });
     });
