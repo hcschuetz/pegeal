@@ -701,7 +701,7 @@ but the determinant of the linear mapping,
 which also takes the metrics into account.
 
 In [DFM09], p. 106, formula (4.7) the determinant is defined for
-an endomorphism (i.e., alg2 = alg) only.  So the metrics of the domain
+an endomorphism (co-domain == domain) only.  So the metrics of the domain
 and co-domain are the same and cancel each other out.
 `,)
 }
