@@ -66,33 +66,33 @@ function bitCount(v: number): number {
 
 export class Outermorphism<T> {
   constructor(
-    readonly from: Algebra<T>,
-    readonly to: Algebra<T>,
+    readonly domain: Algebra<T>,
+    readonly codomain: Algebra<T>,
     /** matrix in row-major order, possibly sparse */
     readonly matrix: (Factor<T> | undefined)[][],
   ) {}
 
   apply(mv: MultiVector<T>): MultiVector<T> {
-    this.from.checkMine(mv);
-    const {from, to, matrix} = this;
-    return new MultiVector(this.to, "morph", c => {
+    const {domain, codomain, matrix} = this;
+    domain.checkMine(mv);
+    return new MultiVector(codomain, "morph", c => {
       mv.forComponents((bitmapIn, f) => {
         function recur(i: number, bitmapOut: number, flips: number, product: Factor<T>[]) {
-          DEBUG && console.log(`${". ".repeat(i)}i = ${i}; ${to.bitmapToString[bitmapOut]}: (${flips} flips) ${product.join("*")}`);
+          DEBUG && console.log(`${". ".repeat(i)}i = ${i}; ${codomain.bitmapToString[bitmapOut]}: (${flips} flips) ${product.join("*")}`);
           const iBit = 1 << i;
           if (iBit > bitmapIn) {
             // We have traversed bitmapIn and can contribute to the output:
-            DEBUG && console.log(`${"  ".repeat(i)}${to.bitmapToString[bitmapOut]} += ${product.join("*")}`);
+            DEBUG && console.log(`${"  ".repeat(i)}${codomain.bitmapToString[bitmapOut]} += ${product.join("*")}`);
             c(bitmapOut).add([...(flips & 1 ? [-1] : []), ...product]);
           } else if (iBit & bitmapIn) {
             // The i-th basis vector is in bitmapIn.
             // Continue to recur for each member of the i-th column of the matrix.
             matrix.forEach((row, j) => {
               const jBit = 1 << j;
-              DEBUG && console.log(`${"  ".repeat(i)}j = ${j} // ${to.bitmapToString[jBit]}`);
+              DEBUG && console.log(`${"  ".repeat(i)}j = ${j} // ${codomain.bitmapToString[jBit]}`);
               if (jBit & bitmapOut) {
                 // wedge prod with duplicate vector is 0.
-                DEBUG && console.log(`${"  ".repeat(i)}# duplicate ${to.bitmapToString[jBit]}`);
+                DEBUG && console.log(`${"  ".repeat(i)}# duplicate ${codomain.bitmapToString[jBit]}`);
                 return;
               }
               const elem = row[i] ?? 0;
@@ -103,7 +103,7 @@ export class Outermorphism<T> {
               }
               // TODO check flip management for correctness
               const newFlips = bitCount(bitmapOut & ~(jBit - 1));
-              DEBUG && console.log(`recur: j=${to.bitmapToString[jBit]} ${newFlips} newFlips, ${elem}`)
+              DEBUG && console.log(`recur: j=${codomain.bitmapToString[jBit]} ${newFlips} newFlips, ${elem}`)
               recur(i + 1, bitmapOut | jBit, flips + newFlips, [...product, elem]);
             });
           } else {
@@ -113,7 +113,7 @@ export class Outermorphism<T> {
           }
         }
 
-        DEBUG && console.log("-----", from.bitmapToString[bitmapIn], f);
+        DEBUG && console.log("-----", domain.bitmapToString[bitmapIn], f);
         recur(0, 0, 0, [f]);
       });
     });
