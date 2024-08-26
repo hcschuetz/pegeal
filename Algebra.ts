@@ -112,7 +112,7 @@ export function bitList(bm: number): number[] {
 
 // See https://graphics.stanford.edu/%7Eseander/bithacks.html#CountBitsSetNaive
 // and subsequent solutions for alternative implementations.
-export function getGrade(bitmap: number) {
+export function bitCount(bitmap: number) {
   let result = 0;
   // Kernighan method:
   while (bitmap) {
@@ -254,14 +254,14 @@ export class Algebra<T> {
   gradeInvolution(mv: MultiVector<T>): MultiVector<T> {
     this.checkMine(mv);
     return new MultiVector(this, "gradeInvolution", c => {
-      mv.forComponents((bm, val) => c(bm).add([...flipSign(getGrade(bm) & 1), val]))
+      mv.forComponents((bm, val) => c(bm).add([...flipSign(bitCount(bm) & 1), val]))
     }).markAsUnit(mv.knownUnit);
   }
 
   reverse(mv: MultiVector<T>): MultiVector<T> {
     this.checkMine(mv);
     return new MultiVector(this, "reverse", c => {
-      mv.forComponents((bm, val) => c(bm).add([...flipSign(getGrade(bm) & 2), val]))
+      mv.forComponents((bm, val) => c(bm).add([...flipSign(bitCount(bm) & 2), val]))
     }).markAsUnit(mv.knownUnit);
   }
 
@@ -347,7 +347,7 @@ export class Algebra<T> {
     this.checkMine(mv);
     return new MultiVector(this, "extract" + grade, c => {
       mv.forComponents((bm, val) => {
-        if (getGrade(bm) == grade) {
+        if (bitCount(bm) == grade) {
           c(bm).add([val]);
         }
       })
@@ -426,7 +426,7 @@ export class Algebra<T> {
       if (valB !== 0) {
         const mf = this.metricFactors(bm);
         if (mf !== null) {
-          const sign = flipSign(getGrade(bm) & 2);
+          const sign = flipSign(bitCount(bm) & 2);
           variable.add([...sign, ...mf, valA, valB]);
         }
       }

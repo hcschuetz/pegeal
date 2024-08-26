@@ -1,4 +1,4 @@
-import { Algebra, Context, getGrade, MultiVector, productFlips } from "./Algebra";
+import { Algebra, Context, bitCount, MultiVector, productFlips } from "./Algebra";
 import { makeLetterNames, makeNumberedNames } from "./componentNaming";
 import { WebGLContext } from "./generateWebGL";
 import { EvalContext } from "./evalExpr";
@@ -232,7 +232,7 @@ and
       if (bmA >= bmB) return;
 
       const bm = bmA ^ bmB;
-      if (!(getGrade(bm) & 2)) { // <--- The simple test
+      if (!(bitCount(bm) & 2)) { // <--- The simple test
         // Actually the non-scalar component is twice the product,
         // but for our refined test we can omit the factor 2.
         const product = (productFlips(bmA, bmB) & 1 ? -1 : 1) * valA * valB;

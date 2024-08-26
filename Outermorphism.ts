@@ -1,4 +1,4 @@
-import { Algebra, Factor, MultiVector } from "./Algebra";
+import { Algebra, bitCount, Factor, MultiVector } from "./Algebra";
 
 /*
 Outermorphism
@@ -25,11 +25,11 @@ Applying a linear mapping `f` to a multivector `A`:
       // f(e_i) = sum{j} M_ji E_j
       // i: column index, j: row index, E_j: j-th base vector in the co-domain
     sum{b in A.baseblades} A_b ⋀{e_i in b} sum{j} M_ji E_j
-                          ------------------------------
+                               ---------------------------
 
 We implement the underlined expression
-- recursively along the "e_i in b" direction and
-- iteratively along the "j (along the rows of M)" direction.
+- recursively along the domain basis ("e_i in b") and
+- iteratively along the co-domain basis ("j").
 
 Recursion terminates in multiple ways:
 - Without contributing a value if M_ji === 0 (or missing in a sparse matrix).
@@ -50,17 +50,6 @@ Parameters of the recursive function:
   - multiply (symbolically) with M_ji in each recursion step.
 */
 
-// TODO move to utility module
-function bitCount(v: number): number {
-  // Kernighan method
-  let c = 0;
-  while (v) {
-    v &= v - 1;
-    c++;
-  }
-  return c;
-}
-
 export class Outermorphism<T> {
   constructor(
     readonly domain: Algebra<T>,
@@ -77,36 +66,35 @@ export class Outermorphism<T> {
         function recur(i: number, bitmapOut: number, flips: number, product: Factor<T>[]) {
           const iBit = 1 << i;
           if (iBit > bitmapIn) {
-            // We have traversed bitmapIn and can contribute to the output:
-            c(bitmapOut).add([...(flips & 1 ? [-1] : []), ...product]);
+            // Fully traversed bitmapIn.  Contribute to the output:
+            c(bitmapOut).add([...(flips & 1 ? [-1] : []), ...product, f]);
           } else if (!(iBit & bitmapIn)) {
-            // The i-th basis vector is not in bitmapIn.
-            // Ignore it and try the next one.
+            // The i-th basis vector is not in bitmapIn.  Skip it:
             recur(i + 1, bitmapOut, flips, product);
           } else {
             // The i-th basis vector is in bitmapIn.
-            // Recur for each member of the i-th column of the matrix.
-            matrix.forEach((row, j) => {
+            // Recur for the "appropriate" codomain basis vectors:
+            for (let j = 0; j < codomain.nDimensions; j++) {
               const jBit = 1 << j;
-              if (jBit & bitmapOut) return; // wedge prod with duplicate is 0.
-              const elem = row[i] ?? 0;
-              if (elem === 0) return; // no need for a product with a factor 0.
+              if (jBit & bitmapOut) continue; // wedge prod with duplicate is 0
+              const elem = (matrix[j] ?? [])[i] ?? 0;
+              if (elem === 0) continue; // omit product with a factor 0
               // TODO check flip management for correctness
               const newFlips = bitCount(bitmapOut & ~(jBit - 1));
               recur(i + 1, bitmapOut | jBit, flips + newFlips, [...product, elem]);
-            });
+            }
           }
         }
 
-        recur(0, 0, 0, [f]);
+        recur(0, 0, 0, []);
       });
     });
   }
 }
 
 /*
-TODO Actually parameters `from` and `to` of an `Outermorphism` need not be
-as powerful as class Algebra, which should be renamed to
+TODO Actually parameters `domain` and `codomain` of an `Outermorphism`
+need not be as powerful as class Algebra, which should be renamed to
 `OrthogonalAlgebra`.
 
 The class hierarchy would be:
