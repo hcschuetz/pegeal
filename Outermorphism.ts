@@ -1,0 +1,141 @@
+import { Algebra, Factor, MultiVector } from "./Algebra";
+
+/*
+Outermorphism
+-------------
+
+(See also [DFM09], chapter 4.)
+
+Applying a linear mapping `f` to a multivector `A`:
+
+    f(A)
+    = // Let A := sum{b in A.baseblades} A_b b
+      // b is a set of base vectors (technically represented as bitmap).
+      // It is also used as an index in A to access the corresponding
+      // magnitude A_b.
+    f(sum{b in A.baseblades} A_b b)
+    = // linearity
+    sum{b in A.baseblades} A_b f(b)
+    = // Let b := ⋀{e_i in b} e_i
+      // e_i is the i-th base vector in the domain
+    sum{b in A.baseblades} A_b f(⋀{e_i in b} e_i)
+    = // distribute f
+    sum{b in A.baseblades} A_b ⋀{e_i in b} f(e_i)
+    = // Let f be given as matrix M:
+      // f(e_i) = sum{j} M_ji E_j
+      // i: column index, j: row index, E_j: j-th base vector in the co-domain
+    sum{b in A.baseblades} A_b ⋀{e_i in b} sum{j} M_ji E_j
+                          ------------------------------
+
+We implement the underlined expression
+- recursively along the "e_i in b" direction and
+- iteratively along the "j (along the rows of M)" direction.
+
+Recursion terminates in multiple ways:
+- Without contributing a value if M_ji === 0 (or missing in a sparse matrix).
+- Without contributing a value if E_j is already in the recursion path.
+- Contributing a value if the end of the bitmap b has been reached,
+  that is, (1 << i) > b.
+
+Parameters of the recursive function:
+- The current value of i.  Skip i values that are not set in b.
+- The accumulated bitmap of E_j indices so that
+  - duplicate E_j can be detected and
+  - the accumulated value will be contributed to the output component
+    corresponding to the accumulated bitmap.
+- The accumulated number of flips (adjacent transpositions)
+  for permuting the output basis vectors into the proper order.
+- An accumulated "value":
+  - Start with A_b and
+  - multiply (symbolically) with M_ji in each recursion step.
+*/
+
+let DEBUG = false;
+export function debugOM(val: boolean) { DEBUG = val; }
+
+// TODO move to utility module
+function bitCount(v: number): number {
+  // Kernighan method
+  let c = 0;
+  while (v) {
+    v &= v - 1;
+    c++;
+  }
+  return c;
+}
+
+export class Outermorphism<T> {
+  constructor(
+    readonly from: Algebra<T>,
+    readonly to: Algebra<T>,
+    /** matrix in row-major order, possibly sparse */
+    readonly matrix: (Factor<T> | undefined)[][],
+  ) {}
+
+  apply(mv: MultiVector<T>): MultiVector<T> {
+    this.from.checkMine(mv);
+    const {from, to, matrix} = this;
+    return new MultiVector(this.to, "morph", c => {
+      mv.forComponents((bitmapIn, f) => {
+        function recur(i: number, bitmapOut: number, flips: number, product: Factor<T>[]) {
+          DEBUG && console.log(`${". ".repeat(i)}i = ${i}; ${to.bitmapToString[bitmapOut]}: (${flips} flips) ${product.join("*")}`);
+          const iBit = 1 << i;
+          if (iBit > bitmapIn) {
+            // We have traversed bitmapIn and can contribute to the output:
+            DEBUG && console.log(`${"  ".repeat(i)}${to.bitmapToString[bitmapOut]} += ${product.join("*")}`);
+            c(bitmapOut).add([...(flips & 1 ? [-1] : []), ...product]);
+          } else if (iBit & bitmapIn) {
+            // The i-th basis vector is in bitmapIn.
+            // Continue to recur for each member of the i-th column of the matrix.
+            matrix.forEach((row, j) => {
+              const jBit = 1 << j;
+              DEBUG && console.log(`${"  ".repeat(i)}j = ${j} // ${to.bitmapToString[jBit]}`);
+              if (jBit & bitmapOut) {
+                // wedge prod with duplicate vector is 0.
+                DEBUG && console.log(`${"  ".repeat(i)}# duplicate ${to.bitmapToString[jBit]}`);
+                return;
+              }
+              const elem = row[i] ?? 0;
+              if (elem === 0) {
+                // no need for a product with a factor 0.
+                DEBUG && console.log(`${"  ".repeat(i)}# M(${i},${j}) = 0`);
+                return;
+              }
+              // TODO check flip management for correctness
+              const newFlips = bitCount(bitmapOut & ~(jBit - 1));
+              DEBUG && console.log(`recur: j=${to.bitmapToString[jBit]} ${newFlips} newFlips, ${elem}`)
+              recur(i + 1, bitmapOut | jBit, flips + newFlips, [...product, elem]);
+            });
+          } else {
+            // The i-th basis vector is not in bitmapIn.
+            // Ignore it and try the next one.
+            recur(i + 1, bitmapOut, flips, product);
+          }
+        }
+
+        DEBUG && console.log("-----", from.bitmapToString[bitmapIn], f);
+        recur(0, 0, 0, [f]);
+      });
+    });
+  }
+}
+
+/*
+TODO Actually parameters `from` and `to` of an `Outermorphism` need not be
+as powerful as class Algebra, which should be renamed to
+`OrthogonalAlgebra`.
+
+The class hierarchy would be:
+- Algebra
+  - OrthogonalAlgebra (~ today's class Algebra)
+    - EuclideanAlgebra
+  - NonOrthogonalAlgebra
+    - ConformalAlgebra
+
+Notes:
+- Euclidean and conformal algebra need not be separate subclasses.
+  They might just be (non-)orthogonal algebras with appropriate behavior.
+- A NonOrthogonalAlgebra manages two kinds of multivectors:
+  - "local" multivectors
+  - multivectors of an underlying (typically orthogonal) algebra
+*/

@@ -2,6 +2,7 @@ import { Algebra, Context, getGrade, MultiVector, productFlips } from "./Algebra
 import { makeLetterNames, makeNumberedNames } from "./componentNaming";
 import { WebGLContext } from "./generateWebGL";
 import { EvalContext } from "./evalExpr";
+import { debugOM, Outermorphism } from "./Outermorphism";
 
 const euclidean = (coords: number | string | string[]) =>
   (
@@ -601,4 +602,65 @@ ${alg.exp(blade)}`);
   for (let m of [[1,1,1,1],[2,-3,4,1]]) {
     test_normalize(m);
   }
+}
+{
+  p(`
+// ------------------------------------------
+// Outermorphism - WebGL and eval
+`);
+
+  const coords = "xyzw";
+  const q = q_(coords);
+
+  const coords2 = "pqr";
+  const q2 = q_(coords2);
+
+  function testOM<T>(ctx: Context<T>) {
+    const alg = new Algebra(euclidean(coords), ctx, makeLetterNames(coords));
+    const alg2 = new Algebra(euclidean(coords2), ctx, makeLetterNames(coords2));
+
+    const m1 =  [
+      /*         x   y    z     w */
+      /* p */ [  10],
+      /* p */ [  ,   100],
+      /* p */ [  ,   ,    1000],
+    ];
+    const m2 =  [
+      /*         x   y    z     w */
+      /* p */ [  ,   ,    1000],
+      /* q */ [  ,   100],
+      /* r */ [  10],
+    ];
+    const m2a =  [
+      /*         x   y    z     w */
+      /* p */ [  10],
+      /* q */ [  ,   ,    1000],
+      /* r */ [  ,   100],
+    ];
+    const m3 =  [
+      /*         x   y    z     w */
+      /* p */ [  ,   10],
+      /* q */ [  ,   100, .001],
+      /* r */ [  .1, ,    1000],
+    ];
+
+    const A = alg.mv("A", {
+      "1": 1111,
+      x: 5, y: 2, z: 3,
+      xz: 8, yz: 7, xw: 6666666,
+      xyz: 9,
+    });
+
+    return (new Outermorphism<T>(alg, alg2, m3)).apply(A);
+  }
+
+  const webCtx = new WebGLContext();
+  const result = testOM(webCtx);
+  console.log(webCtx.text);
+  console.log(`// result: ${result}`);
+
+  console.log("\n-------------\n")
+
+  // debugOM(true);
+  q2("result", testOM(new EvalContext()));
 }
