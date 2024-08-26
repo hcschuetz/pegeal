@@ -664,3 +664,44 @@ ${alg.exp(blade)}`);
   // debugOM(true);
   q2("result", testOM(new EvalContext()));
 }
+{
+  p(`
+// ------------------------------------------
+// Outermorphism determinant - eval
+`);
+
+  const ctx = new EvalContext();
+
+  const coords = "xyz";
+  const q = q_(coords);
+  const alg = new Algebra([2,3,5], ctx, makeLetterNames(coords));
+
+  const coords2 = "pqr";
+  const q2 = q_(coords2);
+  const alg2 = new Algebra([4, 5, 6], ctx, makeLetterNames(coords2));
+
+  const m =  [
+    /*         x   y    z */
+    /* p */ [  ,   10],
+    /* q */ [  ,   100, .001],
+    /* r */ [  .1, ,    1000],
+  ];
+
+  const I = alg.pseudoScalar();
+  q("I", I);
+  q("|I|", alg.norm(I));
+
+  const mI = (new Outermorphism<never>(alg, alg2, m)).apply(I);
+  q2("f_m(I)", mI);
+  q2("|f_m(I)|", alg2.norm(mI));
+
+  q("det(f_m)", alg2.norm(mI) / alg.norm(I));
+  p(`Notice that this is *not* the determinant of the matrix m,
+but the determinant of the linear mapping,
+which also takes the metrics into account.
+
+In [DFM09], p. 106, formula (4.7) the determinant is defined for
+an endomorphism (i.e., alg2 = alg) only.  So the metrics of the domain
+and co-domain are the same and cancel each other out.
+`,)
+}
