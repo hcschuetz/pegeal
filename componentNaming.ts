@@ -1,7 +1,5 @@
 import { bitList } from "./Algebra";
 
-// TODO rename this module (or move this to the top of index.ts)
-
 export function makeLetterNames(
   dims: string | string[],
   options: {scalar?: string} = {},
