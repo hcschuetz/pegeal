@@ -2,7 +2,7 @@ export type Factor<T> = number | T;
 export type Term<T> = Factor<T>[];
 
 export interface Var<T> {
-  add(term: Term<T>): void;
+  add(term: Term<T>, negate?: any): void;
   value(): Factor<T>;
 }
 
@@ -146,9 +146,6 @@ export function productFlips(bitmapA: number, bitmapB: number): number {
   return flips;
 }
 
-/** Provide factor -1 if argument is truthy. */
-const flipSign = (doFlip: any): Term<never> => doFlip ? [-1] : [];
-
 export class Algebra<T> {
   readonly nDimensions: number;
   readonly fullBitmap: number;
@@ -233,7 +230,7 @@ export class Algebra<T> {
           const iBit = 1 << i;
           if (iBit > bitmapIn) {
             // Fully traversed bitmapIn.  Contribute to the output:
-            c(bitmapOut).add([...flipSign(flips & 1), ...product, f]);
+            c(bitmapOut).add([...product, f], flips & 1);
           } else if (!(iBit & bitmapIn)) {
             // The i-th basis vector is not in bitmapIn.  Skip it:
             recur(i + 1, bitmapOut, flips, product);
@@ -277,14 +274,14 @@ export class Algebra<T> {
   gradeInvolution(mv: MultiVector<T>): MultiVector<T> {
     this.checkMine(mv);
     return new MultiVector(this, "gradeInvolution", c => {
-      mv.forComponents((bm, val) => c(bm).add([...flipSign(bitCount(bm) & 1), val]))
+      mv.forComponents((bm, val) => c(bm).add([val], bitCount(bm) & 1))
     }).markAsUnit(mv.knownUnit);
   }
 
   reverse(mv: MultiVector<T>): MultiVector<T> {
     this.checkMine(mv);
     return new MultiVector(this, "reverse", c => {
-      mv.forComponents((bm, val) => c(bm).add([...flipSign(bitCount(bm) & 2), val]))
+      mv.forComponents((bm, val) => c(bm).add([val], bitCount(bm) & 2))
     }).markAsUnit(mv.knownUnit);
   }
 
@@ -389,8 +386,7 @@ export class Algebra<T> {
         if (includeProduct(kind, bmA, bmB)) {
           const mf = this.metricFactors(bmA & bmB);
           if (mf !== null) {
-            const sign = flipSign(productFlips(bmA, bmB) & 1);
-            c(bmA ^ bmB).add([...sign, ...mf, valA, valB]);
+            c(bmA ^ bmB).add([...mf, valA, valB], productFlips(bmA, bmB) & 1);
           }
         } else {
           skipped = true;
@@ -445,8 +441,7 @@ export class Algebra<T> {
       if (valB !== 0) {
         const mf = this.metricFactors(bm);
         if (mf !== null) {
-          const sign = flipSign(bitCount(bm) & 2);
-          variable.add([...sign, ...mf, valA, valB]);
+          variable.add([...mf, valA, valB], bitCount(bm) & 2);
         }
       }
     });

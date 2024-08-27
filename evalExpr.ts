@@ -3,8 +3,8 @@ import { Context, ScalarFuncName, ScalarFunc2Name, Var, Term } from "./Algebra";
 class VarImpl implements Var<never> {
   #value = 0;
 
-  add(term: Term<never>): void {
-    this.#value += term.reduce((x, y) => x * y, 1);
+  add(term: Term<never>, negate = false): void {
+    this.#value += term.reduce((x, y) => x * y, negate ? -1 : 1);
   }
 
   value(): number {

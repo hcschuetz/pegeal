@@ -18,16 +18,17 @@ class VarImpl implements Var<string> {
     readonly name: string
   ) {}
 
-  add(term: Term<string>) {
+  add(term: Term<string>, negate = false) {
     // We could easily eliminate 1 factors:
     //   term = term.filter(f => f !== 1);
     // but keeping them might make the generated code more readable,
     // and it should be easy for that code's compiler to optimize 1s away.
     const expr = term.length === 0 ? "1.0" : term.map(formatFactor).join(" * ");
+    const signedExpr = negate ? `-(${expr})` : `  ${expr}`;
     this.ctx.emit(
       !this.created
-      ? `float ${this.name}  = ${expr};`
-      : `      ${this.name} += ${expr};`
+      ? `float ${this.name}  = ${signedExpr};`
+      : `      ${this.name} += ${signedExpr};`
     );
     this.created = true;
   }
