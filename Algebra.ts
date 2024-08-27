@@ -27,14 +27,17 @@ export class MultiVector<T> {
   constructor(
     readonly alg: Algebra<T>,
     readonly name: string,
-    initialize: (component: (i: number) => Var<T>) => unknown,
+    initialize: (component: (bm: number, term: Term<T>, negate?: any) => unknown) => unknown,
   ) {
     alg.ctx.space();
-    // ###TODO pass an "add" function to `initialize` which also gets a value
-    initialize(bm =>
-      this.#components[bm] ??
-      (this.#components[bm] = this.alg.ctx.makeVar(this.name + "_" + this.alg.bitmapToString[bm]))
-    );
+    initialize((bm, term, negate?) => {
+      let variable = this.#components[bm];
+      if (variable === undefined) {
+        variable = this.#components[bm] =
+          this.alg.ctx.makeVar(this.name + "_" + this.alg.bitmapToString[bm]);
+      }
+      variable.add(term, negate);
+    });
     // ###TODO freeze variables automatically upon first value access.
     this.#components.forEach(variable => variable.freeze());
   }
@@ -189,13 +192,13 @@ export class Algebra<T> {
   }
 
   mv(nameHint: string, obj: Record<string, Factor<T>>) {
-    return new MultiVector(this, nameHint, c => {
+    return new MultiVector(this, nameHint, add => {
       Object.entries(obj).forEach(([key, val]) => {
         const bm = this.stringToBitmap[key];
         if (bm === undefined) {
           throw new Error(`unexpected key in mv data: ${key}`);
         }
-        c(bm).add([val]);
+        add(bm, [val]);
       });
     });
   }
@@ -204,10 +207,10 @@ export class Algebra<T> {
     return new MultiVector(this, "zero", () => {});
   };
   one(): MultiVector<T> {
-    return new MultiVector(this, "one", c => c(0).add([])).markAsUnit(true);
+    return new MultiVector(this, "one", add => add(0, [])).markAsUnit(true);
   }
   pseudoScalar(): MultiVector<T> {
-    return new MultiVector(this, "ps", c => c(this.fullBitmap).add([]))
+    return new MultiVector(this, "ps", add => add(this.fullBitmap, []))
       .markAsUnit(this.metric.every(v => v === 1));
   }
   pseudoScalarInv(): MultiVector<T> {
@@ -215,7 +218,7 @@ export class Algebra<T> {
   }
   basisVectors(): MultiVector<T>[] {
     return this.metric.map((_, i) =>
-      new MultiVector(this, "basis" + i, c => c(1 << i).add([]))
+      new MultiVector(this, "basis" + i, add => add(1 << i, []))
       .markAsUnit(this.metric[i] === 1)
     )
   }
@@ -225,13 +228,13 @@ export class Algebra<T> {
 
     // no `this.checkMine(mv);` here as `mv` may actually come from elsewhere
     const {nDimensions} = this;
-    return new MultiVector(this, "morph", c => {
+    return new MultiVector(this, "morph", add => {
       mv.forComponents((bitmapIn, f) => {
         function recur(i: number, bitmapOut: number, flips: number, product: Factor<T>[]) {
           const iBit = 1 << i;
           if (iBit > bitmapIn) {
             // Fully traversed bitmapIn.  Contribute to the output:
-            c(bitmapOut).add([...product, f], flips & 1);
+            add(bitmapOut, [...product, f], flips & 1);
           } else if (!(iBit & bitmapIn)) {
             // The i-th basis vector is not in bitmapIn.  Skip it:
             recur(i + 1, bitmapOut, flips, product);
@@ -258,31 +261,31 @@ export class Algebra<T> {
   /** The scalar `alpha` should be given as a target-code expression. */
   scale(alpha: Factor<T>, mv: MultiVector<T>): MultiVector<T> {
     this.checkMine(mv);
-    return new MultiVector(this, "scale", c => {
+    return new MultiVector(this, "scale", add => {
       if (alpha !== 0) {
-        mv.forComponents((bm, val) => c(bm).add([alpha, val]));
+        mv.forComponents((bm, val) => add(bm, [alpha, val]));
       }
     });
   }
 
   negate(mv: MultiVector<T>): MultiVector<T> {
     this.checkMine(mv);
-    return new MultiVector(this, "negate", c => {
-      mv.forComponents((bm, val) => c(bm).add([-1, val]))
+    return new MultiVector(this, "negate", add => {
+      mv.forComponents((bm, val) => add(bm, [-1, val]))
     }).markAsUnit(mv.knownUnit);
   }
 
   gradeInvolution(mv: MultiVector<T>): MultiVector<T> {
     this.checkMine(mv);
-    return new MultiVector(this, "gradeInvolution", c => {
-      mv.forComponents((bm, val) => c(bm).add([val], bitCount(bm) & 1))
+    return new MultiVector(this, "gradeInvolution", add => {
+      mv.forComponents((bm, val) => add(bm, [val], bitCount(bm) & 1))
     }).markAsUnit(mv.knownUnit);
   }
 
   reverse(mv: MultiVector<T>): MultiVector<T> {
     this.checkMine(mv);
-    return new MultiVector(this, "reverse", c => {
-      mv.forComponents((bm, val) => c(bm).add([val], bitCount(bm) & 2))
+    return new MultiVector(this, "reverse", add => {
+      mv.forComponents((bm, val) => add(bm, [val], bitCount(bm) & 2))
     }).markAsUnit(mv.knownUnit);
   }
 
@@ -378,7 +381,7 @@ export class Algebra<T> {
 
     const se = this.singleEuclidean(mv);
     if (se !== null) {
-      return new MultiVector(this, "normSE", c => c(se).add([
+      return new MultiVector(this, "normSE", add => add(se, [
         ctx.scalarFunc("sign", mv.value(se))
       ])).markAsUnit(true);
     }
@@ -401,10 +404,10 @@ export class Algebra<T> {
 
   extractGrade(grade: number, mv: MultiVector<T>): MultiVector<T> {
     this.checkMine(mv);
-    return new MultiVector(this, "extract" + grade, c => {
+    return new MultiVector(this, "extract" + grade, add => {
       mv.forComponents((bm, val) => {
         if (bitCount(bm) == grade) {
-          c(bm).add([val]);
+          add(bm, [val]);
         }
       })
     });
@@ -412,10 +415,10 @@ export class Algebra<T> {
 
   plus(...mvs: MultiVector<T>[]): MultiVector<T> {
     if (mvs.length === 1) return mvs[0];
-    return new MultiVector(this, "plus", c => {
+    return new MultiVector(this, "plus", add => {
       for (const mv of mvs) {
         this.checkMine(mv);
-        mv.forComponents((bm, val) => c(bm).add([val]));
+        mv.forComponents((bm, val) => add(bm, [val]));
       }
     });
   }
@@ -425,12 +428,12 @@ export class Algebra<T> {
     this.checkMine(a);
     this.checkMine(b);
     let skipped = false;
-    return new MultiVector(this, kind + "Prod", c => {
+    return new MultiVector(this, kind + "Prod", add => {
       a.forComponents((bmA, valA) => b.forComponents((bmB, valB) => {
         if (includeProduct(kind, bmA, bmB)) {
           const mf = this.metricFactors(bmA & bmB);
           if (mf !== null) {
-            c(bmA ^ bmB).add([...mf, valA, valB], productFlips(bmA, bmB) & 1);
+            add(bmA ^ bmB, [...mf, valA, valB], productFlips(bmA, bmB) & 1);
           }
         } else {
           skipped = true;
@@ -443,7 +446,7 @@ export class Algebra<T> {
   /** Like `product2`, but for an arbitrary number of multivectors */
   private product(kind: ProductKind, mvs: MultiVector<T>[]): MultiVector<T> {
     return mvs.length === 0
-      ? new MultiVector(this, kind + "1", c => c(0).add([])).markAsUnit(true)
+      ? new MultiVector(this, kind + "1", add => add(0, [])).markAsUnit(true)
       : mvs.reduce((acc, mv) => this.product2(kind, acc, mv));
   }
 
@@ -498,9 +501,9 @@ export class Algebra<T> {
     // Notice that [DFM09] p. 185 use A**2, which is -norm2 for a 2-blade.
     const norm2 = this.normSquared(A);
     if (norm2 === 0) {
-      return new MultiVector(this, "expNull", c => {
-        c(0).add([1]);
-        A.forComponents((bm, val) => c(bm).add([val]));      
+      return new MultiVector(this, "expNull", add => {
+        add(0, [1]);
+        A.forComponents((bm, val) => add(bm, [val]));      
       }).markAsUnit(A.getComponents().every(({value}) => value !== 0));
     } else {
       // TODO detect and handle negative or zero norm2 at runtime
@@ -509,9 +512,9 @@ export class Algebra<T> {
       const cos = ctx.scalarFunc("cos", alpha);
       const sin = ctx.scalarFunc("sin", alpha);
       const sinByAlpha = ctx.scalarFunc2("/", sin, alpha);
-      return new MultiVector(this, "exp", c => {
-        c(0).add([cos]);
-        A.forComponents((bm, val) => c(bm).add([sinByAlpha, val]));
+      return new MultiVector(this, "exp", add => {
+        add(0, [cos]);
+        A.forComponents((bm, val) => add(bm, [sinByAlpha, val]));
       });
     }
   }
