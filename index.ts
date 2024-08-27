@@ -705,3 +705,16 @@ ${alg.exp(blade)}`);
   // coincides with the matrix determinant.
   q("det(endomorphism)", alg.norm(alg.outermorphism(I, m)) / alg.norm(I));
 }
+{
+  p(`
+// ------------------------------------------
+// precalculate - WebGL
+`);
+
+  const ctx = new WebGLContext();
+
+  const three = ctx.scalarFunc("abs", ctx.scalarFunc2("-", 7, 10));
+  ctx.emit(`// should be 3 (evaluated): ${three}`);
+
+  p(ctx.text);
+}

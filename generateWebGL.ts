@@ -1,4 +1,5 @@
 import { Term, Factor, ScalarFuncName, ScalarFunc2Name, Var, Context } from "./Algebra";
+import { EvalContext } from "./evalExpr";
 
 function formatFactor(f: Factor<string>): string {
   switch (typeof f) {
@@ -44,6 +45,7 @@ class VarImpl implements Var<string> {
 export class WebGLContext implements Context<string> {
   private count = 0;
   public text = "";
+  private evalCtx = new EvalContext();
 
   emit(newText: string) {
     this.text += newText + "\n";
@@ -58,12 +60,26 @@ export class WebGLContext implements Context<string> {
   }
 
   scalarFunc(name: ScalarFuncName, f: Factor<string>) {
+    // If the actual value of f is known, evaluate the function call at
+    // code-generation time.  Most of the time we could simply leave this
+    // optimization to the WebGL compiler.  But occasionally it helps to
+    // evaluate such calls here:
+    // - Detect NaN and infinity in the generated code, not at runtime.
+    // - Certain results (typially 0 or 1) may allow for further optimizations
+    //   by the code generator.
+    if (typeof f === "number") return this.evalCtx.scalarFunc(name, f);
+
     const varName = `${name}_${this.count++}`;
     this.emit(`\nfloat ${varName} = ${name}(${formatFactor(f)});`);
     return varName;
   }
 
   scalarFunc2(name: ScalarFunc2Name, f1: Factor<string>, f2: Factor<string>) {
+    // See the comment at the beginning of scalarFunc(...).
+    if (typeof f1 === "number" && typeof f2 === "number") {
+      return this.evalCtx.scalarFunc2(name, f1, f2);
+    }
+
     const varName = `${scalarFunc2LongName[name] ?? name}_${this.count++}`;
     const expr = /^[a-z]/i.test(name)
       ? `${name}(${formatFactor(f1)}, ${formatFactor(f2)})`
