@@ -401,6 +401,7 @@ export class Algebra<T> {
   private product2(kind: ProductKind, a: MultiVector<T>, b: MultiVector<T>): MultiVector<T> {
     this.checkMine(a);
     this.checkMine(b);
+    let skipped = false;
     return new MultiVector(this, kind + "Prod", c => {
       a.forComponents((bmA, valA) => b.forComponents((bmB, valB) => {
         if (includeProduct(kind, bmA, bmB)) {
@@ -409,9 +410,11 @@ export class Algebra<T> {
             const sign = flipSign(productFlips(bmA, bmB) & 1);
             c(bmA ^ bmB).add([...sign, ...mf, valA, valB]);
           }
+        } else {
+          skipped = true;
         }
       }))
-    }).markAsUnit(kind === "geom" && a.knownUnit && b.knownUnit);
+    }).markAsUnit(!skipped && a.knownUnit && b.knownUnit);
     // TODO Check if the geometric product of units is really always a unit.
   }
 
