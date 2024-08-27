@@ -54,15 +54,6 @@ export class MultiVector<T> {
       ).filter(entry => entry !== undefined);
   }
 
-  // ###TODO Do we need this?
-  /** The number of components that **might be** non-zero */
-  nComponents(): number {
-    return this.#components.reduce(
-      (count, comp) => count + Number(comp.value() !== 0),
-      0
-    );
-  }
-
   markAsUnit(mark: boolean): MultiVector<T> {
     // // Debug code looking for non-unit multivectors being marked as unit:
     // if (mark && this.alg.ctx instanceof EvalContext) {
@@ -510,7 +501,7 @@ export class Algebra<T> {
       return new MultiVector(this, "expNull", c => {
         c(0).add([1]);
         A.forComponents((bm, val) => c(bm).add([val]));      
-      }).markAsUnit(A.nComponents() === 0);
+      }).markAsUnit(A.getComponents().every(({value}) => value !== 0));
     } else {
       // TODO detect and handle negative or zero norm2 at runtime
       const {ctx} = this;
