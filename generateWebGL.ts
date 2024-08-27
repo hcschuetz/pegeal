@@ -19,6 +19,10 @@ class VarImpl implements Var<string> {
   ) {}
 
   add(term: Term<string>) {
+    // We could easily eliminate 1 factors:
+    //   term = term.filter(f => f !== 1);
+    // but keeping them might make the generated code more readable,
+    // and it should be easy for that code's compiler to optimize 1s away.
     const expr = term.length === 0 ? "1.0" : term.map(formatFactor).join(" * ");
     this.ctx.emit(
       !this.created
