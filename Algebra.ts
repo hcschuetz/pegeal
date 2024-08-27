@@ -44,13 +44,6 @@ export class MultiVector<T> {
 
   value(bm: number): Factor<T> { return this.#components[bm]?.value() ?? 0; }
 
-  // ###TODO remove (use getComponents instead)
-  forComponents(callback: (bitmap: number, value: Factor<T>) => unknown): void {
-    this.#components.forEach((variable: Var<T>, bm: number) => {
-      callback(bm, variable.value());
-    });
-  }
-
   getComponents(): {bitmap: number, value: Factor<T>}[] {
     return this.#components.map((variable: Var<T>, bitmap: number) =>
         ({bitmap, value: variable.value()})
@@ -229,7 +222,7 @@ export class Algebra<T> {
     // no `this.checkMine(mv);` here as `mv` may actually come from elsewhere
     const {nDimensions} = this;
     return new MultiVector(this, "morph", add => {
-      mv.forComponents((bitmapIn, f) => {
+      for (const {bitmap: bitmapIn, value: f} of mv.getComponents()) {
         function recur(i: number, bitmapOut: number, flips: number, product: Factor<T>[]) {
           const iBit = 1 << i;
           if (iBit > bitmapIn) {
@@ -254,7 +247,7 @@ export class Algebra<T> {
         }
 
         recur(0, 0, 0, []);
-      });
+      }
     });
   }
 
@@ -263,7 +256,9 @@ export class Algebra<T> {
     this.checkMine(mv);
     return new MultiVector(this, "scale", add => {
       if (alpha !== 0) {
-        mv.forComponents((bm, val) => add(bm, [alpha, val]));
+        for (const {bitmap, value} of mv.getComponents()) {
+          add(bitmap, [alpha, value]);
+        }
       }
     });
   }
@@ -271,21 +266,27 @@ export class Algebra<T> {
   negate(mv: MultiVector<T>): MultiVector<T> {
     this.checkMine(mv);
     return new MultiVector(this, "negate", add => {
-      mv.forComponents((bm, val) => add(bm, [-1, val]))
+      for (const {bitmap, value} of mv.getComponents()) {
+        add(bitmap, [value], true);
+      }
     }).markAsUnit(mv.knownUnit);
   }
 
   gradeInvolution(mv: MultiVector<T>): MultiVector<T> {
     this.checkMine(mv);
     return new MultiVector(this, "gradeInvolution", add => {
-      mv.forComponents((bm, val) => add(bm, [val], bitCount(bm) & 1))
+      for (const {bitmap, value} of mv.getComponents()) {
+        add(bitmap, [value], bitCount(bitmap) & 1);
+      }
     }).markAsUnit(mv.knownUnit);
   }
 
   reverse(mv: MultiVector<T>): MultiVector<T> {
     this.checkMine(mv);
     return new MultiVector(this, "reverse", add => {
-      mv.forComponents((bm, val) => add(bm, [val], bitCount(bm) & 2))
+      for (const {bitmap, value} of mv.getComponents()) {
+        add(bitmap, [value], bitCount(bitmap) & 2);
+      }
     }).markAsUnit(mv.knownUnit);
   }
 
@@ -309,12 +310,12 @@ export class Algebra<T> {
     // are given as numbers, precalculate the result.
 
     const variable = this.ctx.makeVar("normSquared");
-    mv.forComponents((bm, val) => {
-      const mf = this.metricFactors(bm);
+    for (const {bitmap, value} of mv.getComponents()) {
+      const mf = this.metricFactors(bitmap);
       if (mf !== null) {
-        variable.add([...mf, val, val]);
+        variable.add([...mf, value, value]);
       }
-    });
+    }
     variable.freeze();
     return variable.value();
   }
@@ -405,11 +406,11 @@ export class Algebra<T> {
   extractGrade(grade: number, mv: MultiVector<T>): MultiVector<T> {
     this.checkMine(mv);
     return new MultiVector(this, "extract" + grade, add => {
-      mv.forComponents((bm, val) => {
-        if (bitCount(bm) == grade) {
-          add(bm, [val]);
+      for (const {bitmap, value} of mv.getComponents()) {
+        if (bitCount(bitmap) === grade) {
+          add(bitmap, [value]);
         }
-      })
+      }
     });
   }
 
@@ -418,7 +419,9 @@ export class Algebra<T> {
     return new MultiVector(this, "plus", add => {
       for (const mv of mvs) {
         this.checkMine(mv);
-        mv.forComponents((bm, val) => add(bm, [val]));
+        for (const {bitmap, value} of mv.getComponents()) {
+          add(bitmap, [value]);
+        }
       }
     });
   }
@@ -429,16 +432,18 @@ export class Algebra<T> {
     this.checkMine(b);
     let skipped = false;
     return new MultiVector(this, kind + "Prod", add => {
-      a.forComponents((bmA, valA) => b.forComponents((bmB, valB) => {
-        if (includeProduct(kind, bmA, bmB)) {
-          const mf = this.metricFactors(bmA & bmB);
-          if (mf !== null) {
-            add(bmA ^ bmB, [...mf, valA, valB], productFlips(bmA, bmB) & 1);
+      for (const {bitmap: bmA, value: valA} of a.getComponents()) {
+        for (const {bitmap: bmB, value: valB} of b.getComponents()) {
+          if (includeProduct(kind, bmA, bmB)) {
+            const mf = this.metricFactors(bmA & bmB);
+            if (mf !== null) {
+              add(bmA ^ bmB, [...mf, valA, valB], productFlips(bmA, bmB) & 1);
+            }
+          } else {
+            skipped = true;
           }
-        } else {
-          skipped = true;
         }
-      }))
+      }
     }).markAsUnit(!skipped && a.knownUnit && b.knownUnit);
     // TODO Check if the geometric product of units is really always a unit.
   }
@@ -483,15 +488,15 @@ export class Algebra<T> {
     this.checkMine(a);
     this.checkMine(b);
     const variable = this.ctx.makeVar("scalarProd");
-    a.forComponents((bm, valA) => {
-      const valB = b.value(bm);
+    for (const {bitmap, value: valA} of a.getComponents()) {
+      const valB = b.value(bitmap);
       if (valB !== 0) {
-        const mf = this.metricFactors(bm);
+        const mf = this.metricFactors(bitmap);
         if (mf !== null) {
-          variable.add([...mf, valA, valB], bitCount(bm) & 2);
+          variable.add([...mf, valA, valB], bitCount(bitmap) & 2);
         }
       }
-    });
+    }
     variable.freeze();
     return variable.value();
   }
@@ -503,8 +508,10 @@ export class Algebra<T> {
     if (norm2 === 0) {
       return new MultiVector(this, "expNull", add => {
         add(0, [1]);
-        A.forComponents((bm, val) => add(bm, [val]));      
-      }).markAsUnit(A.getComponents().every(({value}) => value !== 0));
+        for (const {bitmap, value} of A.getComponents()) {
+          add(bitmap, [value]);
+        }
+      }).markAsUnit(A.getComponents().every(({value}) => value === 0));
     } else {
       // TODO detect and handle negative or zero norm2 at runtime
       const {ctx} = this;
@@ -514,7 +521,9 @@ export class Algebra<T> {
       const sinByAlpha = ctx.scalarFunc2("/", sin, alpha);
       return new MultiVector(this, "exp", add => {
         add(0, [cos]);
-        A.forComponents((bm, val) => add(bm, [sinByAlpha, val]));
+        for (const {bitmap, value} of A.getComponents()) {
+          add(bitmap, [sinByAlpha, value]);
+        }
       });
     }
   }

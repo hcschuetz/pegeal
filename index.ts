@@ -25,11 +25,11 @@ const q_ = (coords: string) => (label: string, x: MultiVector<never> | number | 
       return;
     default:
       p(label + " =" + (x.knownUnit ? " [unit]" : ""));
-      x.forComponents((bm, val) => {
+      for (const {bitmap: bm, value: val} of x.getComponents()) {
         p(`  ${
           coords.split("").map((c, i) => (1 << i) & bm ? c : "_").join("")
         }: ${val.toFixed(8).replace(/^(?!-)/, "+").replace(/\.?0*$/, "")}`);
-      });
+      }
     }
 }
 
@@ -223,26 +223,30 @@ and
 // (See doc/unsorted/normalisierbarkeit-von-multivektoren.md)
 `);
 
+  // TODO Is this still an issue?
+
   function isNormalizable(m: MultiVector<never>): boolean {
     const nonScalars: number[] = [];
-    m.forComponents((bmA, valA) => m.forComponents((bmB, valB) => {
-      // Test only needed for bmA !== bmB and even in that case we need it only
-      // for (A, B) or (B, A), not for both:
-      if (bmA >= bmB) return;
+    for (const {bitmap: bmA, value: valA} of m.getComponents()) {
+      for (const {bitmap: bmB, value: valB} of m.getComponents()) {
+        // Test only needed for bmA !== bmB and even in that case we need it only
+        // for (A, B) or (B, A), not for both:
+        if (bmA >= bmB) continue;
 
-      const bm = bmA ^ bmB;
-      if (!(bitCount(bm) & 2)) { // <--- The simple test
-        // Actually the non-scalar component is twice the product,
-        // but for our refined test we can omit the factor 2.
-        const product = (productFlips(bmA, bmB) & 1 ? -1 : 1) * valA * valB;
-        p(
-          "record simple-test failure", bmA, bmB,
-          ":", productFlips(bmA, bmB) & 1 ? -1 : 1, valA, valB,
-          ":", product
-        );
-        nonScalars[bm] = (nonScalars[bm] ?? 0) + product;
+        const bm = bmA ^ bmB;
+        if (!(bitCount(bm) & 2)) { // <--- The simple test
+          // Actually the non-scalar component is twice the product,
+          // but for our refined test we can omit the factor 2.
+          const product = (productFlips(bmA, bmB) & 1 ? -1 : 1) * valA * valB;
+          p(
+            "record simple-test failure", bmA, bmB,
+            ":", productFlips(bmA, bmB) & 1 ? -1 : 1, valA, valB,
+            ":", product
+          );
+          nonScalars[bm] = (nonScalars[bm] ?? 0) + product;
+        }
       }
-    }))
+    }
     p("non-scalars:", nonScalars);
     return nonScalars.every(val => val === 0); // <--- The refined test
     // The refined test should allow for roundoff errors.
