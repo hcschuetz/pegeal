@@ -650,7 +650,7 @@ ${alg.exp(blade)}`);
       xyz: 9,
     });
 
-    return alg.outermorphism(A, m3);
+    return alg2.outermorphism(A, m3);
   }
 
   const webCtx = new WebGLContext();
