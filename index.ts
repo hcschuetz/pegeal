@@ -665,7 +665,7 @@ ${alg.exp(blade)}`);
 {
   p(`
 // ------------------------------------------
-// Outermorphism determinant - eval
+// Determinants - eval
 `);
 
   const ctx = new EvalContext();
@@ -693,13 +693,15 @@ ${alg.exp(blade)}`);
   q2("f_m(I)", mI);
   q2("|f_m(I)|", alg2.norm(mI));
 
+  
+  q("det(m)", mI.value(alg2.fullBitmap));
+  // The determinant of the linear mapping f_m,
+  // which also takes the metrics into account:
   q("det(f_m)", alg2.norm(mI) / alg.norm(I));
-  p(`Notice that this is *not* the determinant of the matrix m,
-but the determinant of the linear mapping,
-which also takes the metrics into account.
 
-In [DFM09], p. 106, formula (4.7) the determinant is defined for
-an endomorphism (co-domain == domain) only.  So the metrics of the domain
-and co-domain are the same and cancel each other out.
-`,)
+  // The definition of a determinant in [DFM09], p. 106, formula (4.7) assumes
+  // an endomorphisms (co-domain === domain).  So the identical metrics of
+  // domain and co-domain cancel each other out and thus the mapping determinant
+  // coincides with the matrix determinant.
+  q("det(endomorphism)", alg.norm(alg.outermorphism(I, m)) / alg.norm(I));
 }
