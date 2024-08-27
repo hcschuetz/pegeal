@@ -12,7 +12,9 @@ function formatFactor(f: Factor<string>): string {
 }
 
 class VarImpl implements Var<string> {
-  created = false;
+  #created = false;
+  #numericPart = 0;
+  #frozen = false;
 
   constructor(
     readonly ctx: WebGLContext,
@@ -20,6 +22,8 @@ class VarImpl implements Var<string> {
   ) {}
 
   add(term: Term<string>, negate = false) {
+    if (this.#frozen) throw new Error("trying to update frozen variable");
+
     if (term.some(f => f === 0)) return;
 
     // We could easily eliminate 1 factors:
@@ -27,18 +31,32 @@ class VarImpl implements Var<string> {
     // but keeping them might make the generated code more readable,
     // and it should be easy for that code's compiler to optimize 1s away.
 
+    if (term.every(f => typeof f === "number")) {
+      this.#numericPart += term.reduce((x, y) => x * y, 1);
+      return;
+    }
+
     const expr = term.length === 0 ? "1.0" : term.map(formatFactor).join(" * ");
     const signedExpr = negate ? `-(${expr})` : `  ${expr}`;
     this.ctx.emit(
-      !this.created
+      !this.#created
       ? `float ${this.name}  = ${signedExpr};`
       : `      ${this.name} += ${signedExpr};`
     );
-    this.created = true;
+    this.#created = true;
+  }
+
+  freeze() {
+    if (this.#created && this.#numericPart !== 0) {
+      this.ctx.emit(`      ${this.name} += ${formatFactor(this.#numericPart)};`);
+      this.#numericPart = 0;
+    }
+    this.#frozen = true;
   }
 
   value() {
-    return this.created ? this.name : 0;
+    if (!this.#frozen) throw new Error("trying to read non-frozen variable");
+    return this.#created ? this.name : this.#numericPart;
   }
 }
 

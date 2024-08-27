@@ -2,12 +2,20 @@ import { Context, ScalarFuncName, ScalarFunc2Name, Var, Term } from "./Algebra";
 
 class VarImpl implements Var<never> {
   #value = 0;
+  #frozen = false;
 
   add(term: Term<never>, negate = false): void {
+    if (this.#frozen) throw new Error("trying to update frozen variable");
+
     this.#value += term.reduce((x, y) => x * y, negate ? -1 : 1);
   }
 
+  freeze() {
+    this.#frozen = true;
+  }
+
   value(): number {
+    if (!this.#frozen) throw new Error("trying to read non-frozen variable");
     return this.#value;
   }
 }

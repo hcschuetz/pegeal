@@ -3,11 +3,12 @@ export type Term<T> = Factor<T>[];
 
 export interface Var<T> {
   add(term: Term<T>, negate?: any): void;
+  freeze(): void;
   value(): Factor<T>;
 }
 
 // Extend these as needed
-export type ScalarFuncName = "abs" | "sqrt" | "cos" | "sin" | "cosh" | "sinh";
+export type ScalarFuncName = "abs" | "sign" | "sqrt" | "cos" | "sin" | "cosh" | "sinh";
 export type ScalarFunc2Name = "+" | "-" | "*" | "/" | "atan2" | "max" | "min";
 
 export interface Context<T> {
@@ -29,28 +30,37 @@ export class MultiVector<T> {
     initialize: (component: (i: number) => Var<T>) => unknown,
   ) {
     alg.ctx.space();
-    initialize(i => this.component(i));
-  }
-
-  component(bm: number): Var<T> {
-    return (
+    // ###TODO pass an "add" function to `initialize` which also gets a value
+    initialize(bm =>
       this.#components[bm] ??
       (this.#components[bm] = this.alg.ctx.makeVar(this.name + "_" + this.alg.bitmapToString[bm]))
     );
+    // ###TODO freeze variables automatically upon first value access.
+    this.#components.forEach(variable => variable.freeze());
   }
 
   value(bm: number): Factor<T> { return this.#components[bm]?.value() ?? 0; }
 
+  // ###TODO remove (use getComponents instead)
   forComponents(callback: (bitmap: number, value: Factor<T>) => unknown): void {
     this.#components.forEach((variable: Var<T>, bm: number) => {
       callback(bm, variable.value());
     });
   }
 
-  isZero() {
-    return this.#components.every(c => c.value() === 0);
-    // TODO Actually components with value 0 should not have been inserted
-    // in the first place.
+  getComponents(): {bitmap: number, value: Factor<T>}[] {
+    return this.#components.map((variable: Var<T>, bitmap: number) =>
+        ({bitmap, value: variable.value()})
+      ).filter(entry => entry !== undefined);
+  }
+
+  // ###TODO Do we need this?
+  /** The number of components that **might be** non-zero */
+  nComponents(): number {
+    return this.#components.reduce(
+      (count, comp) => count + Number(comp.value() !== 0),
+      0
+    );
   }
 
   markAsUnit(mark: boolean): MultiVector<T> {
@@ -300,7 +310,10 @@ export class Algebra<T> {
   normSquared(mv: MultiVector<T>): Factor<T> {
     this.checkMine(mv);
     if (mv.knownUnit) return 1; // TODO or -1?
-    this.ctx.space();
+
+    // TODO If the entire multivector and the relevant metric factors
+    // are given as numbers, precalculate the result.
+
     const variable = this.ctx.makeVar("normSquared");
     mv.forComponents((bm, val) => {
       const mf = this.metricFactors(bm);
@@ -308,11 +321,41 @@ export class Algebra<T> {
         variable.add([...mf, val, val]);
       }
     });
+    variable.freeze();
     return variable.value();
+  }
+
+  /**
+   * "Single euclidean" means that
+   * - the multivector has precisely one base blade that might be non-zero
+   * - and the metric factors for this base blade are all one.
+   *   (Notice that it is not required that the entire metric is euclidean.)
+   * 
+   * The method returns the bitmap for that single base blade or `null`
+   * if the conditions above are not met.
+   * 
+   * Use this for to simplify/optimize 
+   */
+  protected singleEuclidean(mv: MultiVector<T>): number | null {
+    this.checkMine(mv);
+    let foundBlade: number | null = null;
+    for (const {bitmap, value} of mv.getComponents()) {
+      if (value === 0) continue;
+      if (foundBlade !== null) return null;
+      foundBlade = bitmap;
+      for (const i of bitList(bitmap)) {
+        if (this.metric[i] !== 1) return null;
+      }
+    }
+    return foundBlade;
   }
 
   norm(mv: MultiVector<T>): Factor<T> {
     if (mv.knownUnit) return 1; // TODO What if `normSquared` is -1?
+
+    const se = this.singleEuclidean(mv);
+    if (se !== null) return this.ctx.scalarFunc("abs", mv.value(se));
+
     return this.ctx.scalarFunc("sqrt",
       // As in the [DFM07] reference implementation we floor the squared norm
       // to 0 to avoid problems when the squared norm is slightly below 0 due
@@ -338,8 +381,17 @@ export class Algebra<T> {
 
   /** **This is only correct for versors!** */
   normalize(mv: MultiVector<T>): MultiVector<T> {
-    if (mv.knownUnit) return mv;
     const {ctx} = this;
+
+    if (mv.knownUnit) return mv;
+
+    const se = this.singleEuclidean(mv);
+    if (se !== null) {
+      return new MultiVector(this, "normSE", c => c(se).add([
+        ctx.scalarFunc("sign", mv.value(se))
+      ])).markAsUnit(true);
+    }
+
     const normSq = this.normSquared(mv);
     if (normSq === 0) {
       throw new Error(`trying to normalize null vector ${mv}`);
@@ -368,6 +420,7 @@ export class Algebra<T> {
   }
 
   plus(...mvs: MultiVector<T>[]): MultiVector<T> {
+    if (mvs.length === 1) return mvs[0];
     return new MultiVector(this, "plus", c => {
       for (const mv of mvs) {
         this.checkMine(mv);
@@ -445,6 +498,7 @@ export class Algebra<T> {
         }
       }
     });
+    variable.freeze();
     return variable.value();
   }
 
@@ -456,7 +510,7 @@ export class Algebra<T> {
       return new MultiVector(this, "expNull", c => {
         c(0).add([1]);
         A.forComponents((bm, val) => c(bm).add([val]));      
-      }).markAsUnit(A.isZero());
+      }).markAsUnit(A.nComponents() === 0);
     } else {
       // TODO detect and handle negative or zero norm2 at runtime
       const {ctx} = this;

@@ -1,4 +1,4 @@
-import { Algebra, Context, bitCount, MultiVector, productFlips } from "./Algebra";
+import { Algebra, Context, bitCount, MultiVector, productFlips, Factor } from "./Algebra";
 import { makeLetterNames, makeNumberedNames } from "./componentNaming";
 import { WebGLContext } from "./generateWebGL";
 import { EvalContext } from "./evalExpr";
@@ -715,6 +715,39 @@ ${alg.exp(blade)}`);
 
   const three = ctx.scalarFunc("abs", ctx.scalarFunc2("-", 7, 10));
   ctx.emit(`// should be 3 (evaluated): ${three}`);
+
+  p(ctx.text);
+}
+{
+  p(`
+// ------------------------------------------
+// norm and normalization, special cases - WebGL
+`);
+
+  const ctx = new WebGLContext();
+  const coords = "xyz";
+  const alg = new Algebra([1,1,5], ctx, makeLetterNames(coords));
+
+  ([
+    {xy: 1},
+    {xy: -7},
+    {xy: "foo"},
+    {xz: -2},
+    {xz: "bar"},
+    {x: 1, y: -2, z: 3},
+    {x: 1, y: "two", z: 3},
+  ] as Record<string, Factor<string>>[]).forEach((data, i) => {
+    ctx.space();
+    ctx.emit("// -----------");
+    const mv = alg.mv(`mv${i}`, data);
+    ctx.emit(`// ${mv}`)
+    ctx.emit(`// norm: ` + alg.norm(mv));
+    const normalized = alg.normalize(mv);
+    ctx.emit(`// normalized: ` + normalized);
+    ctx.emit(`// norm(normalized): ` + alg.norm(normalized));
+    // "plus" copies the normalized multivector without the unit mark.
+    ctx.emit(`// norm(normalized) [computed]: ` + alg.norm(alg.plus(normalized, alg.zero())));
+  });
 
   p(ctx.text);
 }
