@@ -1,5 +1,3 @@
-import { EvalContext } from "./evalExpr";
-
 export type Factor<T> = number | T;
 export type Term<T> = Factor<T>[];
 
@@ -8,11 +6,7 @@ export interface Var<T> {
   value(): Factor<T>;
 }
 
-/*
-TODO:
-- outermorphism
-*/
-
+// Extend these as needed
 export type ScalarFuncName = "abs" | "sqrt" | "cos" | "sin" | "cosh" | "sinh";
 export type ScalarFunc2Name = "+" | "-" | "*" | "/" | "atan2" | "max" | "min";
 
@@ -26,10 +20,7 @@ export interface Context<T> {
 export class MultiVector<T> {
   #components: Var<T>[] = [];
 
-  /**
-   * Do we know (before evaluation, just by looking at the code structure)
-   * that this multivector has norm 1?
-   */
+  /** Do we know (at code-generation time) that this multivector has norm 1? */
   knownUnit = false;
 
   constructor(
@@ -128,7 +119,7 @@ type ProductKind = "wedge" | "geom" | "contrL" | "contrR" | "dot" | "scalar";
 
 /**
  * For each product kind a test whether the product of two basis blades
- * (represented as bitmaps) should be include in the product.
+ * (represented as bitmaps) should be included in the product.
  */
 const includeProduct = (kind: ProductKind, bmA: number, bmB: number): boolean  => {
   switch (kind) {                                   // condition on the set of
@@ -149,8 +140,8 @@ const includeProduct = (kind: ProductKind, bmA: number, bmB: number): boolean  =
 export function productFlips(bitmapA: number, bitmapB: number): number {
   let bCount = 0, flips = 0;
   for (let bit = 1; bit <= bitmapA; bit <<= 1) {
-    if (bit & bitmapA) { flips += bCount; }
-    if (bit & bitmapB) { bCount++; }
+    if (bit & bitmapA) flips += bCount;
+    if (bit & bitmapB) bCount++;
   }
   return flips;
 }
@@ -171,7 +162,7 @@ export class Algebra<T> {
     const nDimensions = this.nDimensions = metric.length;
 
     if (bitmapToString.length !== 1 << nDimensions) {
-      throw "sizes of metric and component names do not fit";
+      throw new Error("sizes of metric and component names do not fit");
     }
     const {stringToBitmap} = this;
     bitmapToString.forEach((name, bm) => {
@@ -196,7 +187,7 @@ export class Algebra<T> {
   }
 
   checkMine(mv: MultiVector<T>): void {
-    if (mv.alg !== this) throw "trying to use foreign multivector";
+    if (mv.alg !== this) throw new Error("trying to use foreign multivector");
   }
 
   mv(nameHint: string, obj: Record<string, Factor<T>>) {
@@ -204,7 +195,7 @@ export class Algebra<T> {
       Object.entries(obj).forEach(([key, val]) => {
         const bm = this.stringToBitmap[key];
         if (bm === undefined) {
-          throw `unexpected key in mv data: ${key}`;
+          throw new Error(`unexpected key in mv data: ${key}`);
         }
         c(bm).add([val]);
       });
@@ -222,7 +213,6 @@ export class Algebra<T> {
       .markAsUnit(this.metric.every(v => v === 1));
   }
   pseudoScalarInv(): MultiVector<T> {
-    // TODO implement directly?
     return this.inverse(this.pseudoScalar());
   }
   basisVectors(): MultiVector<T>[] {
@@ -243,13 +233,14 @@ export class Algebra<T> {
           const iBit = 1 << i;
           if (iBit > bitmapIn) {
             // Fully traversed bitmapIn.  Contribute to the output:
-            c(bitmapOut).add([...(flips & 1 ? [-1] : []), ...product, f]);
+            c(bitmapOut).add([...flipSign(flips & 1), ...product, f]);
           } else if (!(iBit & bitmapIn)) {
             // The i-th basis vector is not in bitmapIn.  Skip it:
             recur(i + 1, bitmapOut, flips, product);
           } else {
             // The i-th basis vector is in bitmapIn.
-            // Recur for the "appropriate" codomain basis vectors:
+            // Iterate over the output basis vectors and recur for the
+            // "appropriate ones":
             for (let j = 0; j < nDimensions; j++) {
               const jBit = 1 << j;
               if (jBit & bitmapOut) continue; // wedge prod with duplicate is 0
@@ -265,8 +256,6 @@ export class Algebra<T> {
       });
     });
   }
-
-  // TODO Move the methods taking a single MultiVector to the MultiVector class?
 
   /** The scalar `alpha` should be given as a target-code expression. */
   scale(alpha: Factor<T>, mv: MultiVector<T>): MultiVector<T> {
@@ -340,19 +329,12 @@ export class Algebra<T> {
     );
   }
 
-  // A note on inverse(...) and normalize(...):
-  // ------------------------------------------
-  // I had specialized implementations for the cases where the argument
-  // had only 0 or 1 component.  But meanwhile I think these implementations
-  // were no better than the generic implementations and so I have removed them.
-  // TODO Have another look at the generated code for 0 or 1 component.
-
   /** **This is only correct for versors!** */
   inverse(mv: MultiVector<T>): MultiVector<T> {
     if (mv.knownUnit) return mv;
     const norm2 = this.normSquared(mv);
     if (norm2 === 0) {
-      throw `trying to invert null vector ${mv}`;
+      throw new Error(`trying to invert null vector ${mv}`);
     }
     return this.scale(this.ctx.scalarFunc2("/", 1, norm2), mv);
   }
@@ -363,7 +345,7 @@ export class Algebra<T> {
     const {ctx} = this;
     const normSq = this.normSquared(mv);
     if (normSq === 0) {
-      throw `trying to normalize null vector ${mv}`;
+      throw new Error(`trying to normalize null vector ${mv}`);
     }
     return this.scale(
       ctx.scalarFunc2("/", 1,
@@ -510,7 +492,7 @@ export class Algebra<T> {
     const R2 = this.extractGrade(2, R);
     /** The sine of the half angle */
     const R2Norm = this.norm(R2);
-    if (R2Norm == 0) throw "division by zero in log computation";
+    if (R2Norm == 0) throw new Error("division by zero in log computation");
     // TODO optimize away atan2 call if R0 == 0.
     const atan = ctx.scalarFunc2("atan2", R2Norm, R0);
     const scalarFactor = ctx.scalarFunc2("/", atan, R2Norm);
