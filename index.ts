@@ -751,7 +751,31 @@ ${alg.exp(blade)}`);
     ctx.emit(`// norm(normalized): ` + alg.norm(normalized));
     // "plus" copies the normalized multivector without the unit mark.
     ctx.emit(`// norm(normalized) [computed]: ` + alg.norm(alg.plus(normalized, alg.zero())));
+    ctx.emit(`// norm(normalized)**2 [computed]: ` + alg.scalarProduct(normalized, alg.reverse(normalized)));
   });
 
   p(ctx.text);
+}
+{
+  p(`
+// ------------------------------------------
+// unitness and exp - eval
+`);
+
+  const ctx = new EvalContext();
+  const coords = "xyzw";
+  const alg = new Algebra([1,1,1,5], ctx, makeLetterNames(coords));
+  const q = q_(coords);
+
+  const B = alg.mv("B", {xy: .3, xz: .1, yz: .2});
+  q("|B|", alg.norm(B));
+  q("|B|", deg(alg.norm(B)));
+  
+  const exp = alg.exp(B);
+  q("exp", exp);
+  q("|exp|", alg.norm(exp));
+  q("|exp| [computed]", alg.norm(alg.plus(alg.zero(), exp)));
+  q("|exp|**2 [computed]", alg.scalarProduct(exp, alg.reverse(exp)));
+
+  q("exp(exw)", alg.exp(alg.mv("exw", {xw: 1})));
 }

@@ -505,7 +505,11 @@ export class Algebra<T> {
     return variable.value();
   }
 
-  /** **EXPECTS A 2-BLADE AND POSITIVE-DEFINITE METRIC** */
+  /**
+   * **EXPERIMENTAL!**
+   * 
+   * **EXPECTS A 2-BLADE AND POSITIVE-DEFINITE METRIC**
+   */
   exp(A: MultiVector<T>): MultiVector<T> {
     // Notice that [DFM09] p. 185 use A**2, which is -norm2 for a 2-blade.
     const norm2 = this.normSquared(A);
@@ -523,12 +527,21 @@ export class Algebra<T> {
       const cos = ctx.scalarFunc("cos", alpha);
       const sin = ctx.scalarFunc("sin", alpha);
       const sinByAlpha = ctx.scalarFunc2("/", sin, alpha);
+      const components = A.getComponents();
       return new MultiVector(this, "exp", add => {
         add(0, [cos]);
-        for (const {bitmap, value} of A.getComponents()) {
+        for (const {bitmap, value} of components) {
           add(bitmap, [sinByAlpha, value]);
         }
-      });
+      })
+      .markAsUnit(
+        // testing if relevant coordinates are Euclidian
+        components.every(({bitmap}) =>
+          bitList(bitmap).every(i =>
+            this.metric[i] === 1
+          )
+        )
+      );
     }
   }
 
