@@ -17,7 +17,7 @@ export interface Context<T> {
   scalarFunc2(name: ScalarFunc2Name, f1: Factor<T>, f2: Factor<T>): Factor<T>;
 }
 
-export class MultiVector<T> {
+export class MultiVector<T> implements Iterable<{bitmap: number, value: Factor<T>}> {
   #components: Var<T>[] = [];
 
   /** Do we know (at code-generation time) that this multivector has norm 1? */
@@ -41,10 +41,12 @@ export class MultiVector<T> {
 
   value(bm: number): Factor<T> { return this.#components[bm]?.value() ?? 0; }
 
-  getComponents(): {bitmap: number, value: Factor<T>}[] {
-    return this.#components.map((variable: Var<T>, bitmap: number) =>
-        ({bitmap, value: variable.value()})
-      ).filter(entry => entry !== undefined);
+  *[Symbol.iterator](): Generator<{bitmap: number, value: Factor<T>}, void, unknown> {
+    for (const [bitmap, variable] of this.#components.entries()) {
+      if (variable !== undefined) {
+        yield {bitmap, value: variable.value()}
+      }
+    }
   }
 
   markAsUnit(mark: boolean): MultiVector<T> {
@@ -219,7 +221,7 @@ export class Algebra<T> {
     // no `this.checkMine(mv);` here as `mv` may actually come from elsewhere
     const {nDimensions} = this;
     return new MultiVector(this, "morph", add => {
-      for (const {bitmap: bitmapIn, value: f} of mv.getComponents()) {
+      for (const {bitmap: bitmapIn, value: f} of mv) {
         function recur(i: number, bitmapOut: number, flips: number, product: Factor<T>[]) {
           const iBit = 1 << i;
           if (iBit > bitmapIn) {
@@ -253,7 +255,7 @@ export class Algebra<T> {
     this.checkMine(mv);
     return new MultiVector(this, "scale", add => {
       if (alpha !== 0) {
-        for (const {bitmap, value} of mv.getComponents()) {
+        for (const {bitmap, value} of mv) {
           add(bitmap, [alpha, value]);
         }
       }
@@ -263,7 +265,7 @@ export class Algebra<T> {
   negate(mv: MultiVector<T>): MultiVector<T> {
     this.checkMine(mv);
     return new MultiVector(this, "negate", add => {
-      for (const {bitmap, value} of mv.getComponents()) {
+      for (const {bitmap, value} of mv) {
         add(bitmap, [value], true);
       }
     }).markAsUnit(mv.knownUnit);
@@ -272,7 +274,7 @@ export class Algebra<T> {
   gradeInvolution(mv: MultiVector<T>): MultiVector<T> {
     this.checkMine(mv);
     return new MultiVector(this, "gradeInvolution", add => {
-      for (const {bitmap, value} of mv.getComponents()) {
+      for (const {bitmap, value} of mv) {
         add(bitmap, [value], bitCount(bitmap) & 1);
       }
     }).markAsUnit(mv.knownUnit);
@@ -281,7 +283,7 @@ export class Algebra<T> {
   reverse(mv: MultiVector<T>): MultiVector<T> {
     this.checkMine(mv);
     return new MultiVector(this, "reverse", add => {
-      for (const {bitmap, value} of mv.getComponents()) {
+      for (const {bitmap, value} of mv) {
         add(bitmap, [value], bitCount(bitmap) & 2);
       }
     }).markAsUnit(mv.knownUnit);
@@ -308,7 +310,7 @@ export class Algebra<T> {
 
     this.ctx.space();
     const variable = this.ctx.makeVar("normSquared");
-    for (const {bitmap, value} of mv.getComponents()) {
+    for (const {bitmap, value} of mv) {
       const mf = this.metricFactors(bitmap);
       if (mf !== null) {
         variable.add([...mf, value, value]);
@@ -331,7 +333,7 @@ export class Algebra<T> {
   protected singleEuclidean(mv: MultiVector<T>): number | null {
     this.checkMine(mv);
     let foundBlade: number | null = null;
-    for (const {bitmap, value} of mv.getComponents()) {
+    for (const {bitmap, value} of mv) {
       if (value === 0) continue;
       if (foundBlade !== null) return null;
       foundBlade = bitmap;
@@ -403,7 +405,7 @@ export class Algebra<T> {
   extractGrade(grade: number, mv: MultiVector<T>): MultiVector<T> {
     this.checkMine(mv);
     return new MultiVector(this, "extract" + grade, add => {
-      for (const {bitmap, value} of mv.getComponents()) {
+      for (const {bitmap, value} of mv) {
         if (bitCount(bitmap) === grade) {
           add(bitmap, [value]);
         }
@@ -419,7 +421,7 @@ export class Algebra<T> {
     return new MultiVector(this, "plus", add => {
       for (const mv of mvs) {
         this.checkMine(mv);
-        for (const {bitmap, value} of mv.getComponents()) {
+        for (const {bitmap, value} of mv) {
           add(bitmap, [value]);
         }
       }
@@ -432,8 +434,8 @@ export class Algebra<T> {
     this.checkMine(b);
     let skipped = false;
     return new MultiVector(this, kind + "Prod", add => {
-      for (const {bitmap: bmA, value: valA} of a.getComponents()) {
-        for (const {bitmap: bmB, value: valB} of b.getComponents()) {
+      for (const {bitmap: bmA, value: valA} of a) {
+        for (const {bitmap: bmB, value: valB} of b) {
           if (includeProduct(kind, bmA, bmB)) {
             const mf = this.metricFactors(bmA & bmB);
             if (mf !== null) {
@@ -493,7 +495,7 @@ export class Algebra<T> {
     this.checkMine(b);
     this.ctx.space();
     const variable = this.ctx.makeVar("scalarProd");
-    for (const {bitmap, value: valA} of a.getComponents()) {
+    for (const {bitmap, value: valA} of a) {
       const valB = b.value(bitmap);
       if (valB !== 0) {
         const mf = this.metricFactors(bitmap);
@@ -516,10 +518,10 @@ export class Algebra<T> {
     if (norm2 === 0) {
       return new MultiVector(this, "expNull", add => {
         add(0, [1]);
-        for (const {bitmap, value} of A.getComponents()) {
+        for (const {bitmap, value} of A) {
           add(bitmap, [value]);
         }
-      }).markAsUnit(A.getComponents().every(({value}) => value === 0));
+      }).markAsUnit([...A].every(({value}) => value === 0));
     } else {
       // TODO detect and handle negative or zero norm2 at runtime
       const {ctx} = this;
@@ -529,7 +531,7 @@ export class Algebra<T> {
       const sinByAlpha = ctx.scalarFunc2("/", sin, alpha);
       return new MultiVector(this, "exp", add => {
         add(0, [cos]);
-        for (const {bitmap, value} of A.getComponents()) {
+        for (const {bitmap, value} of A) {
           add(bitmap, [sinByAlpha, value]);
         }
       })
