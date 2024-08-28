@@ -103,7 +103,7 @@ export class WebGLContext implements Context<string> {
   }
 }
 
-const binopLongName: Partial<Record<BinOp, String>> = {
+const binopLongName: Record<BinOp, String> = {
   "+": "plus",
   "-": "minus",
   "*": "times",
