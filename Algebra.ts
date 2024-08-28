@@ -161,10 +161,7 @@ export class Algebra<T> {
     if (bitmapToString.length !== 1 << nDimensions) {
       throw new Error("sizes of metric and component names do not fit");
     }
-    const {stringToBitmap} = this;
-    bitmapToString.forEach((name, bm) => {
-      stringToBitmap[name] = bm;
-    });
+    bitmapToString.forEach((name, bm) => this.stringToBitmap[name] = bm);
 
     this.fullBitmap = (1 << nDimensions) - 1;
   }
