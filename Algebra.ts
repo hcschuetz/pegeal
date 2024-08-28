@@ -306,6 +306,7 @@ export class Algebra<T> {
     // TODO If the entire multivector and the relevant metric factors
     // are given as numbers, precalculate the result.
 
+    this.ctx.space();
     const variable = this.ctx.makeVar("normSquared");
     for (const {bitmap, value} of mv.getComponents()) {
       const mf = this.metricFactors(bitmap);
@@ -490,6 +491,7 @@ export class Algebra<T> {
   scalarProduct(a: MultiVector<T>, b: MultiVector<T>): Factor<T> {
     this.checkMine(a);
     this.checkMine(b);
+    this.ctx.space();
     const variable = this.ctx.makeVar("scalarProd");
     for (const {bitmap, value: valA} of a.getComponents()) {
       const valB = b.value(bitmap);
