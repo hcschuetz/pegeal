@@ -10,10 +10,10 @@ export interface Var<T> {
 export type BinOp = "+" | "-" | "*" | "/";
 
 export interface Context<T> {
-  space(): void;
   makeVar(nameHint: string): Var<T>;
   scalarFunc(name: string, ...args: Factor<T>[]): Factor<T>;
   binop(name: BinOp, f1: Factor<T>, f2: Factor<T>): Factor<T>;
+  space(): void;
 }
 
 export class MultiVector<T> implements Iterable<[number, Factor<T>]> {

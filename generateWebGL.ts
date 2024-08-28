@@ -66,10 +66,6 @@ export class WebGLContext implements Context<string> {
     this.text += newText + "\n";
   }
 
-  space() {
-    this.emit("");
-  }
-
   makeVar(nameHint: string) {
     return new VarImpl(this, `${nameHint}_${this.count++}`);
   }
@@ -100,6 +96,10 @@ export class WebGLContext implements Context<string> {
     const varName = `${binopLongName[name]}_${this.count++}`;
     this.emit(`\nfloat ${varName} = ${formatFactor(f1)} ${name} ${formatFactor(f2)};`);
     return varName;
+  }
+
+  space() {
+    this.emit("");
   }
 }
 

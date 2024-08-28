@@ -18,8 +18,6 @@ class VarImpl implements Var<never> {
 
 export class EvalContext implements Context<never> {
 
-  space(): void {}
-
   makeVar(nameHint: string): Var<never> {
     return new VarImpl();
   }
@@ -36,4 +34,6 @@ export class EvalContext implements Context<never> {
       case "/": return f1 / f2;
     }
   }
+
+  space(): void {}
 }
