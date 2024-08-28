@@ -415,7 +415,10 @@ export class Algebra<T> {
   }
 
   plus(...mvs: MultiVector<T>[]): MultiVector<T> {
-    if (mvs.length === 1) return mvs[0];
+    if (mvs.length === 1) {
+      this.checkMine(mvs[0]);
+      return mvs[0];
+    }
     return new MultiVector(this, "plus", add => {
       for (const mv of mvs) {
         this.checkMine(mv);
