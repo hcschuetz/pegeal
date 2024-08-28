@@ -721,7 +721,7 @@ ${alg.exp(blade)}`);
 
   const ctx = new WebGLContext();
 
-  const three = ctx.scalarFunc("abs", ctx.scalarFunc2("-", 7, 10));
+  const three = ctx.scalarFunc("abs", ctx.binop("-", 7, 10));
   ctx.emit(`// should be 3 (evaluated): ${three}`);
 
   p(ctx.text);

@@ -1,4 +1,4 @@
-import { Context, ScalarFuncName, ScalarFunc2Name, Var, Term } from "./Algebra";
+import { Context, ScalarFuncName, ScalarFunc2Name, Var, Term, BinOp } from "./Algebra";
 
 class VarImpl implements Var<never> {
   #value = 0;
@@ -29,12 +29,15 @@ export class EvalContext implements Context<never> {
   }
 
   scalarFunc2(name: ScalarFunc2Name, f1: number, f2: number): number {
+    return Math[name](f1, f2);
+  }
+
+  binop(name: BinOp, f1: number, f2: number): number {
     switch (name) {
       case "+": return f1 + f2;
       case "-": return f1 - f2;
       case "*": return f1 * f2;
       case "/": return f1 / f2;
-      default: return Math[name](f1, f2);
     }
   }
 }

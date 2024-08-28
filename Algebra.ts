@@ -8,13 +8,15 @@ export interface Var<T> {
 
 // Extend these as needed
 export type ScalarFuncName = "abs" | "sign" | "sqrt" | "cos" | "sin" | "cosh" | "sinh";
-export type ScalarFunc2Name = "+" | "-" | "*" | "/" | "atan2" | "max" | "min";
+export type ScalarFunc2Name = "atan2" | "max" | "min";
+export type BinOp = "+" | "-" | "*" | "/";
 
 export interface Context<T> {
   space(): void;
   makeVar(nameHint: string): Var<T>;
   scalarFunc(name: ScalarFuncName, f: Factor<T>): Factor<T>;
   scalarFunc2(name: ScalarFunc2Name, f1: Factor<T>, f2: Factor<T>): Factor<T>;
+  binop(name: BinOp, f1: Factor<T>, f2: Factor<T>): Factor<T>;
 }
 
 export class MultiVector<T> implements Iterable<[number, Factor<T>]> {
@@ -367,7 +369,7 @@ export class Algebra<T> {
     if (norm2 === 0) {
       throw new Error(`trying to invert null vector ${mv}`);
     }
-    return this.scale(this.ctx.scalarFunc2("/", 1, norm2), mv);
+    return this.scale(this.ctx.binop("/", 1, norm2), mv);
   }
 
   /** **This is only correct for versors!** */
@@ -388,7 +390,7 @@ export class Algebra<T> {
       throw new Error(`trying to normalize null vector ${mv}`);
     }
     return this.scale(
-      ctx.scalarFunc2("/", 1,
+      ctx.binop("/", 1,
         ctx.scalarFunc("sqrt",
           // Use the absolute value for compatibility with the
           // [DFM07] reference implementation.  Does it actually make sense?
@@ -522,7 +524,7 @@ export class Algebra<T> {
       const alpha = ctx.scalarFunc("sqrt", norm2);
       const cos = ctx.scalarFunc("cos", alpha);
       const sin = ctx.scalarFunc("sin", alpha);
-      const sinByAlpha = ctx.scalarFunc2("/", sin, alpha);
+      const sinByAlpha = ctx.binop("/", sin, alpha);
       return new MultiVector(this, "exp", add => {
         add(0, [cos]);
         for (const [bitmap, value] of A) {
@@ -552,7 +554,7 @@ export class Algebra<T> {
     if (R2Norm == 0) throw new Error("division by zero in log computation");
     // TODO optimize away atan2 call if R0 == 0.
     const atan = ctx.scalarFunc2("atan2", R2Norm, R0);
-    const scalarFactor = ctx.scalarFunc2("/", atan, R2Norm);
+    const scalarFactor = ctx.binop("/", atan, R2Norm);
     return this.scale(scalarFactor, R2);
   }
 
@@ -578,20 +580,20 @@ export class Algebra<T> {
     a = this.normalize(a);
     b = this.normalize(b);
     const Omega = this.getAngle(a, b);
-    const scale = ctx.scalarFunc2("/", 1, ctx.scalarFunc("sin", Omega));
+    const scale = ctx.binop("/", 1, ctx.scalarFunc("sin", Omega));
     return (t: Factor<T>) => (
       this.scale(
         scale,
         this.plus(
           this.scale(
             ctx.scalarFunc("sin",
-              ctx.scalarFunc2("*", ctx.scalarFunc2("-", 1, t), Omega)
+              ctx.binop("*", ctx.binop("-", 1, t), Omega)
             ),
             a
           ),
           this.scale(
             ctx.scalarFunc("sin",
-              ctx.scalarFunc2("*", t, Omega)
+              ctx.binop("*", t, Omega)
             ),
             b
           )

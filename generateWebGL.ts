@@ -1,4 +1,4 @@
-import { Term, Factor, ScalarFuncName, ScalarFunc2Name, Var, Context } from "./Algebra";
+import { Term, Factor, ScalarFuncName, ScalarFunc2Name, Var, Context, BinOp } from "./Algebra";
 import { EvalContext } from "./evalExpr";
 
 function formatFactor(f: Factor<string>): string {
@@ -95,16 +95,24 @@ export class WebGLContext implements Context<string> {
       return this.evalCtx.scalarFunc2(name, f1, f2);
     }
 
-    const varName = `${scalarFunc2LongName[name] ?? name}_${this.count++}`;
-    const expr = /^[a-z]/i.test(name)
-      ? `${name}(${formatFactor(f1)}, ${formatFactor(f2)})`
-      : `${formatFactor(f1)} ${name} ${formatFactor(f2)}`;
-    this.emit(`\nfloat ${varName} = ${expr};`);
+    const varName = `${name}_${this.count++}`;
+    this.emit(`\nfloat ${varName} = ${name}(${formatFactor(f1)}, ${formatFactor(f2)});`);
+    return varName;
+  }
+
+  binop(name: BinOp, f1: Factor<string>, f2: Factor<string>) {
+    // See the comment at the beginning of scalarFunc(...).
+    if (typeof f1 === "number" && typeof f2 === "number") {
+      return this.evalCtx.binop(name, f1, f2);
+    }
+
+    const varName = `${binopLongName[name]}_${this.count++}`;
+    this.emit(`\nfloat ${varName} = ${formatFactor(f1)} ${name} ${formatFactor(f2)};`);
     return varName;
   }
 }
 
-const scalarFunc2LongName: Partial<Record<ScalarFunc2Name, String>> = {
+const binopLongName: Partial<Record<BinOp, String>> = {
   "+": "plus",
   "-": "minus",
   "*": "times",
