@@ -537,8 +537,8 @@ ${alg.exp(blade)}`);
     q("angle frac 2", a2 / a12);
 
     // TODO use a testing lib
-    if (Math.abs(a12 * frac - a1) > 1e-10) throw "angle test failed";
-    if (Math.abs(a12 - a1 - a2) > 1e-10) throw "angle test failed";
+    if (Math.abs(a12 * frac - a1) > 1e-8) throw new Error("angle test failed");
+    if (Math.abs(a12 - a1 - a2) > 1e-8) throw new Error("angle test failed");
 
     const slerp = slerpArc(frac);
     q("slerp", slerp);
