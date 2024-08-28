@@ -342,7 +342,7 @@ export class Algebra<T> {
   }
 
   norm(mv: MultiVector<T>): Factor<T> {
-    if (mv.knownUnit) return 1; // TODO What if `normSquared` is -1?
+    if (mv.knownUnit) return 1;
 
     const se = this.singleEuclidean(mv);
     if (se !== null) return this.ctx.scalarFunc("abs", mv.value(se));
@@ -445,6 +445,10 @@ export class Algebra<T> {
       }
     }).markAsUnit(!skipped && a.knownUnit && b.knownUnit);
     // TODO Check if the geometric product of units is really always a unit.
+
+    // We do not  restrict "unitness propagation" to geometric products.
+    // It suffices if the product happens to behave like a geometric product
+    // for the given input vectors (i.e., no skipped component pairs).
   }
 
   /** Like `product2`, but for an arbitrary number of multivectors */
