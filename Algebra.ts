@@ -527,21 +527,13 @@ export class Algebra<T> {
       const cos = ctx.scalarFunc("cos", alpha);
       const sin = ctx.scalarFunc("sin", alpha);
       const sinByAlpha = ctx.scalarFunc2("/", sin, alpha);
-      const components = A.getComponents();
       return new MultiVector(this, "exp", add => {
         add(0, [cos]);
-        for (const {bitmap, value} of components) {
+        for (const {bitmap, value} of A.getComponents()) {
           add(bitmap, [sinByAlpha, value]);
         }
       })
-      .markAsUnit(
-        // testing if relevant coordinates are Euclidian
-        components.every(({bitmap}) =>
-          bitList(bitmap).every(i =>
-            this.metric[i] === 1
-          )
-        )
-      );
+      .markAsUnit(true); // this is even correct with a non-Euclidean metric
     }
   }
 

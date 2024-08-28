@@ -33,6 +33,10 @@ const q_ = (coords: string) => (label: string, x: MultiVector<never> | number | 
     }
 }
 
+/** Copy multivector without the unit mark. */
+const hideUnit = <T>(alg: Algebra<T>, mv: MultiVector<T>) =>
+  alg.plus(alg.zero(), mv);
+
 // -----------------------------------------------------------------------------
 // Usage Examples
 
@@ -749,9 +753,7 @@ ${alg.exp(blade)}`);
     const normalized = alg.normalize(mv);
     ctx.emit(`// normalized: ` + normalized);
     ctx.emit(`// norm(normalized): ` + alg.norm(normalized));
-    // "plus" copies the normalized multivector without the unit mark.
-    ctx.emit(`// norm(normalized) [computed]: ` + alg.norm(alg.plus(normalized, alg.zero())));
-    ctx.emit(`// norm(normalized)**2 [computed]: ` + alg.scalarProduct(normalized, alg.reverse(normalized)));
+    ctx.emit(`// norm(normalized) [computed]: ` + alg.norm(hideUnit(alg, normalized)));
   });
 
   p(ctx.text);
@@ -774,8 +776,12 @@ ${alg.exp(blade)}`);
   const exp = alg.exp(B);
   q("exp", exp);
   q("|exp|", alg.norm(exp));
-  q("|exp| [computed]", alg.norm(alg.plus(alg.zero(), exp)));
-  q("|exp|**2 [computed]", alg.scalarProduct(exp, alg.reverse(exp)));
+  q("|exp| [computed]", alg.norm(hideUnit(alg, exp)));
 
-  q("exp(exw)", alg.exp(alg.mv("exw", {xw: 1})));
+  const EXW = alg.mv("exw", {xw: 1})
+  const expEXW = alg.exp(EXW);
+  q("exp(EXW)", expEXW);
+  q("exp(EXW) w/o unit mark", hideUnit(alg, expEXW));
+  q("|exp(EXW)|", alg.norm(expEXW));
+  q("|exp(EXW)| [computed]", alg.norm(hideUnit(alg, expEXW)));
 }
