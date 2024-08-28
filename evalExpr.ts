@@ -10,12 +10,8 @@ class VarImpl implements Var<never> {
     this.#value += term.reduce((x, y) => x * y, negate ? -1 : 1);
   }
 
-  freeze() {
-    this.#frozen = true;
-  }
-
   value(): number {
-    if (!this.#frozen) throw new Error("trying to read non-frozen variable");
+    this.#frozen = true; // no more updates after the value has been read
     return this.#value;
   }
 }

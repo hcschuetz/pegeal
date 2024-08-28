@@ -46,16 +46,13 @@ class VarImpl implements Var<string> {
     this.#created = true;
   }
 
-  freeze() {
-    if (this.#created && this.#numericPart !== 0) {
-      this.ctx.emit(`      ${this.name} += ${formatFactor(this.#numericPart)};`);
-      this.#numericPart = 0;
-    }
-    this.#frozen = true;
-  }
-
   value() {
-    if (!this.#frozen) throw new Error("trying to read non-frozen variable");
+    if (!this.#frozen) {
+      if (this.#created && this.#numericPart !== 0) {
+        this.ctx.emit(`      ${this.name} += ${formatFactor(this.#numericPart)};`);
+      }
+      this.#frozen = true; // no more updates after read access!
+    }
     return this.#created ? this.name : this.#numericPart;
   }
 }

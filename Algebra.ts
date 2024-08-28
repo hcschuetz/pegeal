@@ -3,7 +3,6 @@ export type Term<T> = Factor<T>[];
 
 export interface Var<T> {
   add(term: Term<T>, negate?: any): void;
-  freeze(): void;
   value(): Factor<T>;
 }
 
@@ -38,8 +37,6 @@ export class MultiVector<T> {
       }
       variable.add(term, negate);
     });
-    // ###TODO freeze variables automatically upon first value access.
-    this.#components.forEach(variable => variable.freeze());
   }
 
   value(bm: number): Factor<T> { return this.#components[bm]?.value() ?? 0; }
@@ -316,7 +313,6 @@ export class Algebra<T> {
         variable.add([...mf, value, value]);
       }
     }
-    variable.freeze();
     return variable.value();
   }
 
@@ -500,7 +496,6 @@ export class Algebra<T> {
         }
       }
     }
-    variable.freeze();
     return variable.value();
   }
 
