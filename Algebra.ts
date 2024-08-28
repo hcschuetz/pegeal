@@ -179,8 +179,9 @@ export class Algebra<T> {
     return result;
   }
 
-  checkMine(mv: MultiVector<T>): void {
+  checkMine(mv: MultiVector<T>): MultiVector<T> {
     if (mv.alg !== this) throw new Error("trying to use foreign multivector");
+    return mv;
   }
 
   mv(nameHint: string, obj: Record<string, Factor<T>>) {
@@ -218,9 +219,9 @@ export class Algebra<T> {
   outermorphism(mv: MultiVector<T>, matrix: (Factor<T> | undefined)[][]): MultiVector<T> {
     // See `doc/Outermorphism.md` for explanations.
 
-    // no `this.checkMine(mv);` here as `mv` may actually come from elsewhere
     const {nDimensions} = this;
     return new MultiVector(this, "morph", add => {
+      // no `this.checkMine(mv)` here as `mv` may actually come from elsewhere
       for (const [bitmapIn, f] of mv) {
         function recur(i: number, bitmapOut: number, flips: number, product: Factor<T>[]) {
           const iBit = 1 << i;
@@ -252,10 +253,9 @@ export class Algebra<T> {
 
   /** The scalar `alpha` should be given as a target-code expression. */
   scale(alpha: Factor<T>, mv: MultiVector<T>): MultiVector<T> {
-    this.checkMine(mv);
     return new MultiVector(this, "scale", add => {
       if (alpha !== 0) {
-        for (const [bitmap, value] of mv) {
+        for (const [bitmap, value] of this.checkMine(mv)) {
           add(bitmap, [alpha, value]);
         }
       }
@@ -263,27 +263,24 @@ export class Algebra<T> {
   }
 
   negate(mv: MultiVector<T>): MultiVector<T> {
-    this.checkMine(mv);
     return new MultiVector(this, "negate", add => {
-      for (const [bitmap, value] of mv) {
+      for (const [bitmap, value] of this.checkMine(mv)) {
         add(bitmap, [value], true);
       }
     }).markAsUnit(mv.knownUnit);
   }
 
   gradeInvolution(mv: MultiVector<T>): MultiVector<T> {
-    this.checkMine(mv);
     return new MultiVector(this, "gradeInvolution", add => {
-      for (const [bitmap, value] of mv) {
+      for (const [bitmap, value] of this.checkMine(mv)) {
         add(bitmap, [value], bitCount(bitmap) & 1);
       }
     }).markAsUnit(mv.knownUnit);
   }
 
   reverse(mv: MultiVector<T>): MultiVector<T> {
-    this.checkMine(mv);
     return new MultiVector(this, "reverse", add => {
-      for (const [bitmap, value] of mv) {
+      for (const [bitmap, value] of this.checkMine(mv)) {
         add(bitmap, [value], bitCount(bitmap) & 2);
       }
     }).markAsUnit(mv.knownUnit);
@@ -331,9 +328,8 @@ export class Algebra<T> {
    * Use this for to simplify/optimize 
    */
   protected singleEuclidean(mv: MultiVector<T>): number | null {
-    this.checkMine(mv);
     let foundBlade: number | null = null;
-    for (const [bitmap, value] of mv) {
+    for (const [bitmap, value] of this.checkMine(mv)) {
       if (value === 0) continue;
       if (foundBlade !== null) return null;
       foundBlade = bitmap;
@@ -345,6 +341,7 @@ export class Algebra<T> {
   }
 
   norm(mv: MultiVector<T>): Factor<T> {
+    this.checkMine(mv);
     if (mv.knownUnit) return 1;
 
     const se = this.singleEuclidean(mv);
@@ -403,9 +400,8 @@ export class Algebra<T> {
   }
 
   extractGrade(grade: number, mv: MultiVector<T>): MultiVector<T> {
-    this.checkMine(mv);
     return new MultiVector(this, "extract" + grade, add => {
-      for (const [bitmap, value] of mv) {
+      for (const [bitmap, value] of this.checkMine(mv)) {
         if (bitCount(bitmap) === grade) {
           add(bitmap, [value]);
         }
@@ -415,13 +411,11 @@ export class Algebra<T> {
 
   plus(...mvs: MultiVector<T>[]): MultiVector<T> {
     if (mvs.length === 1) {
-      this.checkMine(mvs[0]);
-      return mvs[0];
+      return this.checkMine(mvs[0]);
     }
     return new MultiVector(this, "plus", add => {
       for (const mv of mvs) {
-        this.checkMine(mv);
-        for (const [bitmap, value] of mv) {
+        for (const [bitmap, value] of this.checkMine(mv)) {
           add(bitmap, [value]);
         }
       }
