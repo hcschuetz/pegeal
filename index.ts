@@ -797,6 +797,8 @@ ${alg.exp(blade)}`);
 
   const a = alg.mv("a", {x: "a.x", y: "a.y"});
   const b = alg.mv("b", {x: "b.x"});
+  // const a = alg.mv("a", {x: 1, y: 2});
+  // const b = alg.mv("b", {x: 2, y: 4});
   const slerpAB = alg.slerp(a, b);
 
   ctx.emit(`----`);

@@ -613,16 +613,23 @@ export class Algebra<T> {
     const Omega = this.getAngle(a, b);
     const scale = ctx.binop("/", 1, ctx.scalarFunc("sin", Omega));
     return (t: Factor<T>) => {
-      const scaleA = ctx.binop("*", scale,
-        ctx.scalarFunc("sin", ctx.binop("*", ctx.binop("-", 1, t), Omega))
+      const scaleA = this.times(scale,
+        ctx.scalarFunc("sin", this.times(ctx.binop("-", 1, t), Omega))
       );
-      const scaleB = ctx.binop("*", scale,
-        ctx.scalarFunc("sin", ctx.binop("*", t                   , Omega))
+      const scaleB = this.times(scale,
+        ctx.scalarFunc("sin", this.times(t                   , Omega))
       );
       return (
         this.plus(this.scale(scaleA, a), this.scale(scaleB, b)).markAsUnit()
         // Unitness is not detected by the lower-level operations.
       );
     }
+  }
+
+  // TODO similar optimizations for other scalar operators/functions
+  times(a: Factor<T>, b: Factor<T>): Factor<T> {
+    // This is not absolutely correct.  If one operator is 0 and the other
+    // one is NaN or infinity, the unoptimized computation would not return 0.
+    return a === 0 || b === 0 ? 0 : this.ctx.binop("*", a, b);
   }
 }
