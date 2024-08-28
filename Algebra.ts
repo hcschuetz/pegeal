@@ -600,32 +600,31 @@ export class Algebra<T> {
     );
   }
 
+  /**
+   * Spherical linear interpolation
+   * 
+   * The two arguments should be linearly independent 1-vectors.
+   * (TODO Support the case that they point in the same direction.
+   * When pointing in opposite directions, select an arbitrary arc?)
+   * 
+   * For interpolation on a circle arc the two input vectors should have
+   * the same magnitude, namely the circle's radius.
+   */
   slerp(a: MultiVector<T>, b: MultiVector<T>) {
     const {ctx} = this;
-    a = this.normalize(a);
-    b = this.normalize(b);
     const Omega = this.getAngle(a, b);
     const scale = ctx.binop("/", 1, ctx.scalarFunc("sin", Omega));
-    return (t: Factor<T>) => (
-      this.scale(
-        scale,
-        this.plus(
-          this.scale(
-            ctx.scalarFunc("sin",
-              ctx.binop("*", ctx.binop("-", 1, t), Omega)
-            ),
-            a
-          ),
-          this.scale(
-            ctx.scalarFunc("sin",
-              ctx.binop("*", t, Omega)
-            ),
-            b
-          )
-        )
-      )
-      // Unitness is not detected by the lower-level operations.
-      .markAsUnit()
-    );
+    return (t: Factor<T>) => {
+      const scaleA = ctx.binop("*", scale,
+        ctx.scalarFunc("sin", ctx.binop("*", ctx.binop("-", 1, t), Omega))
+      );
+      const scaleB = ctx.binop("*", scale,
+        ctx.scalarFunc("sin", ctx.binop("*", t                   , Omega))
+      );
+      return (
+        this.plus(this.scale(scaleA, a), this.scale(scaleB, b)).markAsUnit()
+        // Unitness is not detected by the lower-level operations.
+      );
+    }
   }
 }

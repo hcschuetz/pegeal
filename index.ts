@@ -785,3 +785,30 @@ ${alg.exp(blade)}`);
   q("|exp(EXW)|", alg.norm(expEXW));
   q("|exp(EXW)| [computed]", alg.norm(hideUnit(alg, expEXW)));
 }
+{
+  p(`
+// ------------------------------------------
+// slerp - WebGL
+`);
+
+  const ctx = new WebGLContext();
+  const coords = "xyz";
+  const alg = new Algebra([1,1,5], ctx, makeLetterNames(coords));
+
+  const a = alg.mv("a", {x: "a.x", y: "a.y"});
+  const b = alg.mv("b", {x: "b.x"});
+  const slerpAB = alg.slerp(a, b);
+
+  ctx.emit(`----`);
+  ctx.emit(`0: ${slerpAB(0)}`);
+  ctx.emit(`----`);
+  ctx.emit(`1/3: ${slerpAB(1/3)}`);
+  ctx.emit(`----`);
+  ctx.emit(`2/3: ${slerpAB(2/3)}`);
+  ctx.emit(`----`);
+  ctx.emit(`1: ${slerpAB(1)}`);
+  ctx.emit(`----`);
+  ctx.emit(`t: ${slerpAB("t")}`);
+
+  p(ctx.text);
+}
