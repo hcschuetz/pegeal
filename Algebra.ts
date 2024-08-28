@@ -157,13 +157,12 @@ export class Algebra<T> {
     readonly bitmapToString: string[],
   ) {
     const nDimensions = this.nDimensions = metric.length;
+    this.fullBitmap = (1 << nDimensions) - 1;
 
     if (bitmapToString.length !== 1 << nDimensions) {
       throw new Error("sizes of metric and component names do not fit");
     }
     bitmapToString.forEach((name, bm) => this.stringToBitmap[name] = bm);
-
-    this.fullBitmap = (1 << nDimensions) - 1;
   }
 
   /** Return a term for the metric or 0 if the term is always 0. */
