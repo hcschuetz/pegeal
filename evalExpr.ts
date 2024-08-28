@@ -1,17 +1,13 @@
-import { Context, Var, Term, BinOp } from "./Algebra";
+import { Context, Var, Term, BinOp, AbstractVar } from "./Algebra";
 
-class VarImpl implements Var<never> {
+class VarImpl extends AbstractVar<never> {
   #value = 0;
-  #frozen = false;
 
-  add(term: Term<never>, negate = false): void {
-    if (this.#frozen) throw new Error("trying to update frozen variable");
-
+  addImpl(term: Term<never>, negate = false): void {
     this.#value += term.reduce((x, y) => x * y, negate ? -1 : 1);
   }
 
-  value(): number {
-    this.#frozen = true; // no more updates after the value has been read
+  valueImpl(): number {
     return this.#value;
   }
 }

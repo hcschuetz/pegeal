@@ -1,4 +1,4 @@
-import { Term, Factor, Var, Context, BinOp } from "./Algebra";
+import { Term, Factor, Var, Context, BinOp, AbstractVar } from "./Algebra";
 import { EvalContext } from "./evalExpr";
 
 function formatFactor(f: Factor<string>): string {
@@ -11,19 +11,18 @@ function formatFactor(f: Factor<string>): string {
   }
 }
 
-class VarImpl implements Var<string> {
+class VarImpl extends AbstractVar<string> {
   #created = false;
   #numericPart = 0;
-  #frozen = false;
 
   constructor(
     readonly ctx: WebGLContext,
     readonly name: string
-  ) {}
+  ) {
+    super();
+  }
 
-  add(term: Term<string>, negate = false) {
-    if (this.#frozen) throw new Error("trying to update frozen variable");
-
+  addImpl(term: Term<string>, negate = false) {
     if (term.some(f => f === 0)) return;
 
     // We could easily eliminate 1 factors:
@@ -46,13 +45,13 @@ class VarImpl implements Var<string> {
     this.#created = true;
   }
 
-  value() {
-    if (!this.#frozen) {
-      if (this.#created && this.#numericPart !== 0) {
-        this.ctx.emit(`      ${this.name} += ${formatFactor(this.#numericPart)};`);
-      }
-      this.#frozen = true; // no more updates after read access!
+  onFreeze(): void {
+    if (this.#created && this.#numericPart !== 0) {
+      this.ctx.emit(`      ${this.name} += ${formatFactor(this.#numericPart)};`);
     }
+  }
+
+  valueImpl() {
     return this.#created ? this.name : this.#numericPart;
   }
 }

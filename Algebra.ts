@@ -6,6 +6,27 @@ export interface Var<T> {
   value(): Factor<T>;
 }
 
+export abstract class AbstractVar<T> implements Var<T> {
+  #frozen = false;
+
+  abstract addImpl(term: Term<T>, negate?: any): void;
+  onFreeze() {}
+  abstract valueImpl(): Factor<T>;
+
+  add(term: Term<T>, negate?: any): void {
+    if (this.#frozen) throw new Error("trying to update frozen variable");
+    this.addImpl(term, negate);
+  }
+
+  value(): Factor<T> {
+    if (!this.#frozen) {
+      this.onFreeze();
+      this.#frozen = true;
+    }
+    return this.valueImpl();
+  }
+}
+
 // Extend these as needed
 export type BinOp = "+" | "-" | "*" | "/";
 
