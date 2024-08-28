@@ -571,16 +571,14 @@ export class Algebra<T> {
     return this.norm(this.plus(a, this.negate(b)));
   }
   
-  /** **EXPECTS 1-VECTORS.  DOES IT ASSUME A EUCLIDEAN METRIC?** */
+  /** **EXPECTS 1-VECTORS** */
   getAngle(a: MultiVector<T>, b: MultiVector<T>): Factor<T> {
-    const prod = this.geometricProduct(this.normalize(a), this.normalize(b));
     return this.ctx.scalarFunc("atan2",
-      this.norm(this.extractGrade(2, prod)),
-      prod.value(0)
+      this.norm(this.wedgeProduct(a, b)),
+      this.scalarProduct(a, b),
     );
   }
 
-  /** **DOES THIS ASSUME A EUCLIDEAN METRIC?** */
   slerp(a: MultiVector<T>, b: MultiVector<T>) {
     const {ctx} = this;
     a = this.normalize(a);
