@@ -7,15 +7,12 @@ export interface Var<T> {
 }
 
 // Extend these as needed
-export type ScalarFuncName = "abs" | "sign" | "sqrt" | "cos" | "sin" | "cosh" | "sinh";
-export type ScalarFunc2Name = "atan2" | "max" | "min";
 export type BinOp = "+" | "-" | "*" | "/";
 
 export interface Context<T> {
   space(): void;
   makeVar(nameHint: string): Var<T>;
-  scalarFunc(name: ScalarFuncName, f: Factor<T>): Factor<T>;
-  scalarFunc2(name: ScalarFunc2Name, f1: Factor<T>, f2: Factor<T>): Factor<T>;
+  scalarFunc(name: string, ...args: Factor<T>[]): Factor<T>;
   binop(name: BinOp, f1: Factor<T>, f2: Factor<T>): Factor<T>;
 }
 
@@ -358,7 +355,7 @@ export class Algebra<T> {
       // TODO Check for "truly" negative squared norm?
       // But how to do this in gernerated code?
       // Or just take the absolute value of `normSquared` (as in `normalize`)?
-      this.ctx.scalarFunc2("max", 0, this.normSquared(mv))
+      this.ctx.scalarFunc("max", 0, this.normSquared(mv))
     );
   }
 
@@ -553,7 +550,7 @@ export class Algebra<T> {
     const R2Norm = this.norm(R2);
     if (R2Norm == 0) throw new Error("division by zero in log computation");
     // TODO optimize away atan2 call if R0 == 0.
-    const atan = ctx.scalarFunc2("atan2", R2Norm, R0);
+    const atan = ctx.scalarFunc("atan2", R2Norm, R0);
     const scalarFactor = ctx.binop("/", atan, R2Norm);
     return this.scale(scalarFactor, R2);
   }
@@ -568,7 +565,7 @@ export class Algebra<T> {
   /** **EXPECTS 1-VECTORS.  DOES IT ASSUME A EUCLIDEAN METRIC?** */
   getAngle(a: MultiVector<T>, b: MultiVector<T>): Factor<T> {
     const prod = this.geometricProduct(this.normalize(a), this.normalize(b));
-    return this.ctx.scalarFunc2("atan2",
+    return this.ctx.scalarFunc("atan2",
       this.norm(this.extractGrade(2, prod)),
       prod.value(0)
     );
