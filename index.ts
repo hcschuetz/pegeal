@@ -25,7 +25,7 @@ const q_ = (coords: string) => (label: string, x: MultiVector<never> | number | 
       return;
     default:
       p(label + " =" + (x.knownUnit ? " [unit]" : ""));
-      for (const {bitmap: bm, value: val} of x) {
+      for (const [bm, val] of x) {
         p(`  ${
           coords.split("").map((c, i) => (1 << i) & bm ? c : "_").join("")
         }: ${val.toFixed(8).replace(/^(?!-)/, "+").replace(/\.?0*$/, "")}`);
@@ -231,8 +231,8 @@ and
 
   function isNormalizable(m: MultiVector<never>): boolean {
     const nonScalars: number[] = [];
-    for (const {bitmap: bmA, value: valA} of m) {
-      for (const {bitmap: bmB, value: valB} of m) {
+    for (const [bmA, valA] of m) {
+      for (const [bmB, valB] of m) {
         // Test only needed for bmA !== bmB and even in that case we need it only
         // for (A, B) or (B, A), not for both:
         if (bmA >= bmB) continue;
