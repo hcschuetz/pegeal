@@ -19,9 +19,6 @@ export interface Context<T> {
 export class MultiVector<T> implements Iterable<[number, Factor<T>]> {
   #components: Var<T>[] = [];
 
-  /** Do we know (at code-generation time) that this multivector has norm 1? */
-  knownUnit = false;
-
   constructor(
     readonly alg: Algebra<T>,
     readonly name: string,
@@ -48,7 +45,12 @@ export class MultiVector<T> implements Iterable<[number, Factor<T>]> {
     }
   }
 
-  markAsUnit(mark: boolean): MultiVector<T> {
+  /** Do we know (at code-generation time) that this multivector has norm 1? */
+  #knownUnit = false;
+  public get knownUnit() {
+    return this.#knownUnit;
+  }
+  public set knownUnit(mark) {
     // // Debug code looking for non-unit multivectors being marked as unit:
     // if (mark && this.alg.ctx instanceof EvalContext) {
     //   const THIS = this as any as MultiVector<never>;
@@ -67,6 +69,11 @@ export class MultiVector<T> implements Iterable<[number, Factor<T>]> {
     //   }
     // }
 
+    this.#knownUnit = mark;
+  }
+
+  /** Fluent wrapper around `this.knownUnit = ...` */
+  markAsUnit(mark: boolean = true): MultiVector<T> {
     this.knownUnit = mark;
     return this;
   }
@@ -200,7 +207,7 @@ export class Algebra<T> {
     return new MultiVector(this, "zero", () => {});
   };
   one(): MultiVector<T> {
-    return new MultiVector(this, "one", add => add(0, [])).markAsUnit(true);
+    return new MultiVector(this, "one", add => add(0, [])).markAsUnit();
   }
   pseudoScalar(): MultiVector<T> {
     return new MultiVector(this, "ps", add => add(this.fullBitmap, []))
@@ -380,7 +387,7 @@ export class Algebra<T> {
     if (se !== null) {
       return new MultiVector(this, "normSE", add => add(se, [
         ctx.scalarFunc("sign", mv.value(se))
-      ])).markAsUnit(true);
+      ])).markAsUnit();
     }
 
     const normSq = this.normSquared(mv);
@@ -396,7 +403,7 @@ export class Algebra<T> {
         )
       ),
       mv
-    ).markAsUnit(true);
+    ).markAsUnit();
   }
 
   extractGrade(grade: number, mv: MultiVector<T>): MultiVector<T> {
@@ -451,7 +458,7 @@ export class Algebra<T> {
   /** Like `product2`, but for an arbitrary number of multivectors */
   private product(kind: ProductKind, mvs: MultiVector<T>[]): MultiVector<T> {
     return mvs.length === 0
-      ? new MultiVector(this, kind + "1", add => add(0, [])).markAsUnit(true)
+      ? new MultiVector(this, kind + "1", add => add(0, [])).markAsUnit()
       : mvs.reduce((acc, mv) => this.product2(kind, acc, mv));
   }
 
@@ -504,7 +511,7 @@ export class Algebra<T> {
   /**
    * **EXPERIMENTAL!**
    * 
-   * **EXPECTS A 2-BLADE AND POSITIVE-DEFINITE METRIC**
+   * **EXPECTS A 2-BLADE AND POSITIVE-SEMIDEFINITE METRIC**
    */
   exp(A: MultiVector<T>): MultiVector<T> {
     // Notice that [DFM09] p. 185 use A**2, which is -norm2 for a 2-blade.
@@ -515,7 +522,9 @@ export class Algebra<T> {
         for (const [bitmap, value] of A) {
           add(bitmap, [value]);
         }
-      }).markAsUnit([...A].every(([_, value]) => value === 0));
+      })
+      // TODO can we mark this as unit unconditionally?
+      .markAsUnit([...A].every(([_, value]) => value === 0));
     } else {
       // TODO detect and handle negative or zero norm2 at runtime
       const {ctx} = this;
@@ -528,8 +537,7 @@ export class Algebra<T> {
         for (const [bitmap, value] of A) {
           add(bitmap, [sinByAlpha, value]);
         }
-      })
-      .markAsUnit(true); // this is even correct with a non-Euclidean metric
+      }).markAsUnit(); // this is even correct with a non-Euclidean metric
     }
   }
 
@@ -598,7 +606,7 @@ export class Algebra<T> {
         )
       )
       // Unitness is not detected by the lower-level operations.
-      .markAsUnit(true)
+      .markAsUnit()
     );
   }
 }
