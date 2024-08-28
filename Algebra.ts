@@ -190,13 +190,13 @@ export class Algebra<T> {
 
   mv(nameHint: string, obj: Record<string, Factor<T>>) {
     return new MultiVector(this, nameHint, add => {
-      Object.entries(obj).forEach(([key, val]) => {
+      for (const [key, val] of Object.entries(obj)) {
         const bm = this.stringToBitmap[key];
         if (bm === undefined) {
           throw new Error(`unexpected key in mv data: ${key}`);
         }
         add(bm, [val]);
-      });
+      }
     });
   }
 
