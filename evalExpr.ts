@@ -19,7 +19,11 @@ export class EvalContext implements Context<never> {
   }
 
   scalarFunc(name: string, ...args: number[]): number {
-    return (Math as any)[name](...args);
+    switch (name) {
+      case "inversesqrt": return 1 / Math.sqrt(args[0]);
+      // TODO support more WebGL2 functions here
+      default: return (Math as any)[name](...args);
+    }
   }
 
   binop(name: BinOp, f1: number, f2: number): number {

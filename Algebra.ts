@@ -416,12 +416,10 @@ export class Algebra<T> {
       throw new Error(`trying to normalize null vector ${mv}`);
     }
     return this.scale(
-      ctx.binop("/", 1,
-        ctx.scalarFunc("sqrt",
-          // Use the absolute value for compatibility with the
-          // [DFM07] reference implementation.  Does it actually make sense?
-          true ? ctx.scalarFunc("abs", normSq) : normSq
-        )
+      ctx.scalarFunc("inversesqrt",
+        // Use the absolute value for compatibility with the
+        // [DFM07] reference implementation.  Does it actually make sense?
+        true ? ctx.scalarFunc("abs", normSq) : normSq
       ),
       mv
     ).markAsUnit();
