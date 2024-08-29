@@ -31,7 +31,7 @@ class VarImpl extends AbstractVar<string> {
     // and it should be easy for that code's compiler to optimize 1s away.
 
     if (term.every(f => typeof f === "number")) {
-      this.#numericPart += term.reduce((x, y) => x * y, 1);
+      this.#numericPart += term.reduce((x, y) => x * y, negate ? -1 : 1);
       return;
     }
 
