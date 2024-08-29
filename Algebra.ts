@@ -145,19 +145,21 @@ type ProductKind = "wedge" | "geom" | "contrL" | "contrR" | "dot" | "scalar";
  * (represented as bitmaps) should be included in the product.
  */
 const includeProduct = (kind: ProductKind, bmA: number, bmB: number): boolean  => {
-                                                          // condition on the | [DFM09]-style (i.e. grade-based) test using
-                                                          // sets of involved | gA   := bitcount(bmA)
-                                                          // basis vectors    | gB   := bitcount(bmB)
-                                                          //                  | gOut := bitcount(bmA ^ bmB) // "^" is XOR, not wedge!
-  switch (kind) {                                         // -----------------+------------------------------------------------------
-    case "wedge" : return !(bmA & bmB);                   // A ⋂ B = {}       | gOut === gA + gB
-    case "geom"  : return true;                           // true             | true
-    case "contrL": return !(bmA & ~bmB);                  // A ⊂ B            | gOut === gB - gA
-    case "contrR": return !(~bmA & bmB);                  // A ⊃ B            | gOut === gA - gB
-    case "dot"   : return !(bmA & ~bmB) || !(~bmA & bmB); // A ⊂ B or A ⊃ B   | gOut === gB - gA || gOut === gA - gB
-    case "scalar": return !(bmA ^ bmB);                   // A = B            | gOut === 0
-// Notice that the "scalar" case could have been written in a way analogous to "dot":
-//  case "scalar": return !(bmA & ~bmB) && !(~bmA & bmB); // A ⊂ B and A ⊃ B  | gOut === gB - gA && gOut === gA - gB
+                                                          // condition on    | grade-based test using
+                                                          // the sets of     | gA   := bitcount(bmA)
+                                                          // input basis     | gB   := bitcount(bmB)
+                                                          // vectors         | gOut := bitcount(bmA ^ bmB)
+  switch (kind) {                                         // ----------------+----------------------------
+    case "geom"  : return true;                           // true            | true
+    case "wedge" : return !(bmA & bmB);                   // A ⋂ B = {}      | gOut === gA + gB
+    case "contrL": return !(bmA & ~bmB);                  // A ⊂ B           | gOut === gB - gA
+    case "contrR": return !(~bmA & bmB);                  // A ⊃ B           | gOut === gA - gB
+    case "scalar": return !(bmA ^ bmB);                   // A = B           | gOut === 0
+    case "dot"   : return !(bmA & ~bmB) || !(~bmA & bmB); // A ⊂ B or A ⊃ B  | gOut === |gA - gB|
+
+// The "scalar" and "dot" cases could be written as follows to emphasize their analogy:
+//  case "scalar": return !(bmA & ~bmB) && !(~bmA & bmB); // A ⊂ B and A ⊃ B | gOut === gB - gA && gOut === gA - gB
+//  case "dot"   : return !(bmA & ~bmB) || !(~bmA & bmB); // A ⊂ B or  A ⊃ B | gOut === gB - gA || gOut === gA - gB
   }
 }
 
