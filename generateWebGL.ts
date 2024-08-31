@@ -70,8 +70,8 @@ export class WebGLContext implements Context<string> {
   }
 
   scalarFunc(name: string, ...args: Factor<string>[]) {
-    // If the actual value of f is known, evaluate the function call at
-    // code-generation time.  Most of the time we could simply leave this
+    // If the actual values of the args are known, evaluate the function call
+    // at code-generation time.  Most of the time we could simply leave this
     // optimization to the WebGL compiler.  But occasionally it helps to
     // evaluate such calls here:
     // - Detect NaN and infinity in the generated code, not at runtime.
