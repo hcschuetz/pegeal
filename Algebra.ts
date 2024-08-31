@@ -634,4 +634,245 @@ export class Algebra<T> {
     // one is NaN or infinity, the unoptimized computation would not return 0.
     return a === 0 || b === 0 ? 0 : this.ctx.binop("*", a, b);
   }
+
+  /**
+   * Specialization of
+   * `geometricProduct(operator, operand, reverse(operator))`
+   * 
+   * **THE OPERATOR IS EXPECTED TO BE A UNIT VERSOR**
+   */
+  sandwich(operator: MultiVector<T>, operand: MultiVector<T>): MultiVector<T> {
+    this.checkMine(operand);
+    this.checkMine(operator);
+    let gradeMap = [...operand].reduce((acc, [bm]) => acc | (1 << bitCount(bm)), 0);
+    return new MultiVector(this, "sandwich", add => {
+      for (const [bmA, valA] of operator) {
+        for (const [bmB, valB] of operand) {
+          const mfAB = this.metricFactors(bmA & bmB);
+          if (mfAB !== null) {
+            const bmAB = bmA ^ bmB;
+            const flipsAB = productFlips(bmA, bmB);
+            for (const [bmC, valC] of operator) {
+              const mfAB_C = this.metricFactors(bmAB & bmC);
+              if (mfAB_C !== null) {
+                const bmOut = bmAB ^ bmC;
+                // Sandwiching preserves the grade(s) of the operand.
+                // So we can omit output terms with grades not occurring
+                // in the operand.
+                // TODO Implement a more general, less ad-hoc solution?
+                // (There might be result components for which some but not
+                // all terms cancel out.)
+                if ((1 << bitCount(bmOut)) & gradeMap) {
+                  const flips =
+                    flipsAB + productFlips(bmAB, bmC) + ((bitCount(bmC) & 2) >> 1);
+                  add(bmOut, [...mfAB, ...mfAB_C, valA, valB, valC], flips & 1);
+                }
+              }
+            }
+          }
+        }
+      }
+    }).markAsUnit(operator.knownUnit && operand.knownUnit);
+  }
+
+  sandwich2(operator: MultiVector<T>, operand: MultiVector<T>): MultiVector<T> {
+    this.checkMine(operand);
+    this.checkMine(operator);
+    let gradeMap = [...operand].reduce((acc, [bm]) => acc | (1 << bitCount(bm)), 0);
+    return new MultiVector(this, "sandwich", add => {
+      for (const [bmA, valA] of operator) {
+        for (const [bmB, valB] of operand) {
+          for (const [bmC, valC] of operator) {
+            const bmAB = bmA ^ bmB;
+            const bmOut = bmAB ^ bmC;
+            const flips =
+              productFlips(bmA, bmB) + productFlips(bmAB, bmC) + (bitCount(bmC) >> 1);
+  	        const mfAB = this.metricFactors(bmA & bmB);
+            const mfAB_C = this.metricFactors(bmAB & bmC);
+            if (
+              mfAB !== null &&
+              mfAB_C !== null &&
+              ((1 << bitCount(bmOut)) & gradeMap)
+            ) {
+              add(bmOut, [...mfAB, ...mfAB_C, valA, valB, valC], flips & 1);
+            }
+          }
+        }
+      }
+    }).markAsUnit(operator.knownUnit && operand.knownUnit);
+  }
+
+  sandwichX(operators: MultiVector<T>[], operand: MultiVector<T>): MultiVector<T> {
+    for (const vector of operators) this.checkMine(vector);
+    this.checkMine(operand);
+
+    const tree = new ProdTree<T>();    
+
+    const recur = (
+      operatorIdx: number,
+      bms: number[],
+      values: Term<T>,
+      revFlips: number,
+    ): void => {
+      if (operatorIdx >= 0) {
+        const v = operators[operatorIdx];
+        for (const [bmLeft, valueLeft] of v) {
+          for (const [bmRight, valueRight] of v) {
+            recur(
+              operatorIdx - 1,
+              [bmLeft, ...bms, bmRight],
+              [valueLeft, ...values, valueRight],
+              revFlips + ((bitCount(bmRight) & 2) >> 1),
+            );
+          }
+        }
+      } else {
+        // TODO compute flipsTotal/mvTotal/bmTotal during the recursion ?
+        let flipsTotal = revFlips;
+        let mfTotal: Term<T> = [];
+        let bmTotal = 0;
+        for (const bm of bms) {
+          flipsTotal += productFlips(bmTotal, bm);
+          const mf = this.metricFactors(bmTotal & bm);
+          if (mf === null) return;
+          mfTotal.push(...mf);
+          bmTotal ^= bm;
+        }
+        tree.add(bmTotal, [...values, ...mfTotal], flipsTotal);
+      }
+    }
+
+    for (const [bm, value] of operand) {
+      recur(operators.length - 1, [bm], [value], 0);
+    }
+
+    tree.optimize();
+
+    return new MultiVector(this, "sandwichX", add => {
+      tree.traverse<Factor<T> | undefined>(undefined,
+        (state, name) => state === undefined ? name : this.times(state, name),
+        (state, bitmap, leaf) => {
+          add(bitmap, [state ?? 1, leaf.numProd], leaf.negate);
+        },
+      );
+    })
+  }
+}
+
+type ProdTreeLeaf<T> = {
+  numProd: number,
+  negate: boolean,
+};
+
+type ProdTreeNode<T> = {
+  leavess: ProdTreeLeaf<T>[][],
+  children: Map<T, ProdTreeNode<T>>;
+};
+
+class ProdTree<T> {
+  root: ProdTreeNode<T> = {
+    leavess: [],
+    children: new Map<T, ProdTreeNode<T>>(),
+  };
+
+  add(bitmap: number, term: Term<T>, flips: number) {
+    const [numbers, names] = extractNumbers(term);
+    // Multiplication on the computer is not associative, which makes it hard
+    // to detect cancelling candidates. Sorting the numbers avoids this problem.
+    const numProd = numbers.sort().reduce((x, y) => x * y, 1);
+    // Sorting the names in order to move branching to deeper tree levels
+    // and thus to improve sharing common calculation results.
+    // For now we do not care about the actual sort order and we just use the
+    // JS default.  TODO A little more optimization might be achieved by
+    // putting frequently-occurring names early in the list.
+    names.sort();
+
+    // TODO make this iterative
+    function recur(node: ProdTreeNode<T>, nameIdx: number): void {
+      if (nameIdx === names.length) {
+        const {leavess} = node;
+        let leaves = leavess[bitmap];
+        if (leaves === undefined) {
+          leaves = [];
+          leavess[bitmap] = leaves;
+        }
+        leaves.push({numProd, negate: Boolean(flips & 1)});
+      } else {
+        const {children} = node;
+        const name = names[nameIdx];
+        let child = children.get(name);
+        if (child === undefined) {
+          child = {leavess: [], children: new Map<T, ProdTreeNode<T>>()};
+          children.set(name, child);
+        }
+        recur(child, nameIdx + 1);
+      }
+    };
+
+    recur(this.root, 0);
+  }
+
+  optimize() {
+    function recur(node: ProdTreeNode<T>) {
+      node.leavess.forEach((leaves, i) => {
+        let sum = leaves.reduce(
+          (acc, {numProd, negate}) => acc + numProd * (negate ? -1 : 1),
+          0
+        );
+        leaves.length = 0;
+        if (sum !== 0) { // TODO or sufficiently close to 0
+          leaves.push({numProd: sum, negate: false});
+        }
+      });
+      for (const [key, value] of node.children.entries()) {
+        recur(value);
+      }
+    }
+
+    recur(this.root);
+  }
+
+  traverse<U>(
+    initialState: U,
+    handleChild: (state: U, name: T) => U,
+    handleLeaf: (state: U, bitmap: number, leaf: ProdTreeLeaf<T>) => void,
+  ) {
+    function recur(node: ProdTreeNode<T>, state: U) {
+      node.leavess.forEach((leaves, bitmap) => {
+        for (const leaf of leaves) {
+          handleLeaf(state, bitmap, leaf);
+        }
+      });
+      for (const [key, child] of node.children.entries()) {
+        recur(child, handleChild(state, key));
+      }
+    }
+
+    recur(this.root, initialState);
+  }
+
+  toString() {
+    const lines: string[] = [];
+    function recur(indent: string, node: ProdTreeNode<T>) {
+      lines.push(indent + JSON.stringify(node.leavess));
+      for (const [name, child] of node.children.entries()) {
+        lines.push(indent + name + ":");
+        recur(indent + ". ", child);
+      }
+    }
+    recur("", this.root);
+    return lines.join("\n");
+  }
+}
+
+function extractNumbers<T>(list: Term<T>): [number[], T[]] {
+  const numbers: number[] = [], rest: T[] = [];
+  for (const x of list) {
+    if (typeof x === "number") {
+      numbers.push(x);
+    } else {
+      rest.push(x);
+    }
+  }
+  return [numbers, rest];
 }

@@ -814,3 +814,47 @@ ${alg.exp(blade)}`);
 
   p(ctx.text);
 }
+{
+  p(`
+// ------------------------------------------
+// sandwich - WebGL
+`);
+
+  const ctx = new WebGLContext();
+  const coords = "xyz";
+  const alg = new Algebra(euclidean(coords), ctx, makeLetterNames(coords));
+
+  for (const [a, b, c] of [
+    [alg.mv("a", {x: "ax", y: "ay"}), alg.mv("b", {x: "bx", y: "by", z: "bz"}), alg.mv("c", {x: "cx", y: "cy"})],
+    [alg.mv("a", {x: 1   , y: 1   }), alg.mv("b", {x: 1   , y: 1   , z: 1   }), alg.mv("c", {x: 1.1 , y: 3.3 })],
+  ]) {
+    ctx.emit(`// a: ${a}`);
+    ctx.emit(`// b: ${b}`);
+    ctx.emit(`// c: ${c}`);
+    const ba = alg.geometricProduct(b, a);
+    ctx.emit(`// ba: ${ba}`);
+    const rotor = alg.normalize(ba);
+    ctx.emit(`// rotor: ${rotor}`);
+    ctx.emit(`// rotor~: ${alg.reverse(rotor)}`);
+    ctx.emit(`// c: ${c}`);
+    ctx.emit(`// control : ${alg.geometricProduct(rotor, c, alg.reverse(rotor))}`);
+    ctx.emit(`// sandwich: ${alg.sandwich(rotor, c)}`);
+    ctx.emit(`// sandwich2: ${alg.sandwich2(rotor, c)}`);
+    const a0 = alg.normalize(a);
+    const b0 = alg.normalize(b);
+    ctx.emit(`// sandwichX: ${alg.sandwichX([b0, a0], c)}`);
+    ctx.emit(`// sandwichX: ${alg.sandwichX([rotor], c)}`);
+
+    for(const [name, value] of Object.entries({a, b, ba, rotor})) {
+      ctx.emit(`\n// ${name}: ${value}`);
+      ctx.emit(`// |${name}|**2: ${alg.normSquared(value)}`);
+      ctx.emit(`// |${name}|**2: ${alg.sandwichX([value], alg.one())}`);  
+    }
+    ctx.emit(`\n// a b: ${a} ${b}`);
+    ctx.emit(`// |ab|**2: ${alg.normSquared(alg.geometricProduct(a, b))}`);
+    ctx.emit(`// |a b|**2: ${alg.sandwichX([a, b], alg.one())}`);  
+    ctx.emit("---------------------");
+  }
+
+  p(ctx.text);
+}
