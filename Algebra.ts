@@ -154,8 +154,11 @@ const incl: Record<string, ProdInclude> = {
   wedge : (bmA, bmB) => !(bmA & bmB),
   contrL: (bmA, bmB) => !(bmA & ~bmB),
   contrR: (bmA, bmB) => !(~bmA & bmB),
-  scalar: (bmA, bmB) => bmA === bmB, // or: !(bmA ^ bmB)
-// ...or, to emphasize the analogy to "dot":  !(bmA & ~bmB) && !(~bmA & bmB)
+  scalar: (bmA, bmB) => bmA === bmB,
+  // ...or, to emphasize the analogy to wedge:
+  //                    !(bmA ^ bmB)
+  // ...or, to emphasize the analogy to dot:
+  //                    !(bmA & ~bmB) && !(~bmA & bmB)
   dot   : (bmA, bmB) => !(bmA & ~bmB) || !(~bmA & bmB),
 }
 
@@ -178,8 +181,9 @@ const incl: Record<string, ProdInclude> = {
 // scalar            | A ⊂ B and A ⊃ B | gOut === gB - gA && gOut === gA - gB
 // dot               | A ⊂ B or  A ⊃ B | gOut === gB - gA || gOut === gA - gB
 // ------------------+-----------------+----------------------------------------
-// Notice that the set conditions (and thus also the bitmap conditions) can be
-// formulated without using a result property like gOut.
+// Notice that the set-based conditions (and thus also the bitmap conditions)
+// can be formulated using just the inputs whereas the grade-based conditions
+// also need the result property gOut.
 
 /**
  * The number of adjacent transpositions needed for the product of
