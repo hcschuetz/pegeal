@@ -693,6 +693,17 @@ export class Algebra<T> {
     }).markAsUnit(operator.knownUnit && operand.knownUnit);
   }
 
+  sandwich1(operator: MultiVector<T>, operand: MultiVector<T>): MultiVector<T> {
+    // same grade-dropping hack as in .sandwich(...), but re-using product methods
+    // (and, at least for now, a more simplistic test implementation.)
+    const gradeTest: ProdInclude = (bmA, bmB) =>
+      [...operand].some(([bm]) => bitCount(bm) === bitCount(bmA & bmB));
+    return this.product2(gradeTest,
+      this.geometricProduct(operator, operand),
+      this.reverse(operator)
+    )
+  }
+
   sandwich2(operator: MultiVector<T>, operand: MultiVector<T>): MultiVector<T> {
     this.checkMine(operand);
     this.checkMine(operator);

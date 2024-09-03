@@ -839,6 +839,7 @@ ${alg.exp(blade)}`);
     ctx.emit(`// c: ${c}`);
     ctx.emit(`// control : ${alg.geometricProduct(rotor, c, alg.reverse(rotor))}`);
     ctx.emit(`// sandwich: ${alg.sandwich(rotor, c)}`);
+    ctx.emit(`// sandwich1: ${alg.sandwich1(rotor, c)}`);
     ctx.emit(`// sandwich2: ${alg.sandwich2(rotor, c)}`);
     const a0 = alg.normalize(a);
     const b0 = alg.normalize(b);
