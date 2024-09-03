@@ -798,6 +798,10 @@ type ProdTreeLeaf<T> = {
 };
 
 type ProdTreeNode<T> = {
+  // Attention:
+  // - leavess is a sparse array whose indices are bitmaps of output
+  //   base-blades
+  // - each element of leavess is a plain list whose indices are irrelevant
   leavess: ProdTreeLeaf<T>[][],
   children: Map<T, ProdTreeNode<T>>;
 };
@@ -820,7 +824,8 @@ class ProdTree<T> {
     // putting frequently-occurring names early in the list.
     names.sort();
 
-    // TODO make this iterative
+    // TODO make this iterative?
+    // (or leave it recursive just for analogy with the other ProdTree methods?)
     function recur(node: ProdTreeNode<T>, nameIdx: number): void {
       if (nameIdx === names.length) {
         const {leavess} = node;
