@@ -138,30 +138,48 @@ export function bitCount(bitmap: number) {
   return result;
 }
 
-type ProductKind = "wedge" | "geom" | "contrL" | "contrR" | "dot" | "scalar";
-
 /**
- * For each product kind a test whether the product of two basis blades
- * (represented as bitmaps) should be included in the product.
+ * Test whether the product of two base blades should be included in a
+ * multivector product.
+ * 
+ * Instances of this function type should have a name that is suitable as an
+ * identifier.
  */
-const includeProduct = (kind: ProductKind, bmA: number, bmB: number): boolean  => {
-                                                          // condition on    | grade-based test using
-                                                          // the sets of     | gA   := bitcount(bmA)
-                                                          // input basis     | gB   := bitcount(bmB)
-                                                          // vectors         | gOut := bitcount(bmA ^ bmB)
-  switch (kind) {                                         // ----------------+----------------------------
-    case "geom"  : return true;                           // true            | true
-    case "wedge" : return !(bmA & bmB);                   // A ⋂ B = {}      | gOut === gA + gB
-    case "contrL": return !(bmA & ~bmB);                  // A ⊂ B           | gOut === gB - gA
-    case "contrR": return !(~bmA & bmB);                  // A ⊃ B           | gOut === gA - gB
-    case "scalar": return !(bmA ^ bmB);                   // A = B           | gOut === 0
-    case "dot"   : return !(bmA & ~bmB) || !(~bmA & bmB); // A ⊂ B or A ⊃ B  | gOut === |gA - gB|
+type ProdInclude = (bmA: number, bmB: number) => boolean;
 
-// The "scalar" and "dot" cases could be written as follows to emphasize their analogy:
-//  case "scalar": return !(bmA & ~bmB) && !(~bmA & bmB); // A ⊂ B and A ⊃ B | gOut === gB - gA && gOut === gA - gB
-//  case "dot"   : return !(bmA & ~bmB) || !(~bmA & bmB); // A ⊂ B or  A ⊃ B | gOut === gB - gA || gOut === gA - gB
-  }
+// For each product kind a test whether the product of two basis blades
+// (represented as bitmaps) should be included in the product.
+const incl: Record<string, ProdInclude> = {
+  geom  : (        ) => true,
+  wedge : (bmA, bmB) => !(bmA & bmB),
+  contrL: (bmA, bmB) => !(bmA & ~bmB),
+  contrR: (bmA, bmB) => !(~bmA & bmB),
+  scalar: (bmA, bmB) => bmA === bmB, // or: !(bmA ^ bmB)
+// ...or, to emphasize the analogy to "dot":  !(bmA & ~bmB) && !(~bmA & bmB)
+  dot   : (bmA, bmB) => !(bmA & ~bmB) || !(~bmA & bmB),
 }
+
+// The bitmap operations above correspond to the following conditions on
+// basis-vector sets and grades:
+// ------------------+-----------------+----------------------------------------
+// product kind      | condition on    | grade-based test using
+//                   | the sets of     | gA   := bitcount(bmA)
+//                   | input basis     | gB   := bitcount(bmB)
+//                   | vectors         | gOut := bitcount(bmA ^ bmB)
+// ------------------+-----------------+----------------------------------------
+// geometric         | true            | true
+// wedge             | A ⋂ B = {}      | gOut === gA + gB
+// left contraction  | A ⊂ B           | gOut === gB - gA
+// right contraction | A ⊃ B           | gOut === gA - gB
+// scalar            | A = B           | gOut === 0
+// dot               | A ⊂ B or A ⊃ B  | gOut === |gA - gB|
+// ------------------+-----------------+----------------------------------------
+// To emphasize their analogy, the "scalar" and "dot" cases could be defined as:
+// scalar            | A ⊂ B and A ⊃ B | gOut === gB - gA && gOut === gA - gB
+// dot               | A ⊂ B or  A ⊃ B | gOut === gB - gA || gOut === gA - gB
+// ------------------+-----------------+----------------------------------------
+// Notice that the set conditions (and thus also the bitmap conditions) can be
+// formulated without using a result property like gOut.
 
 /**
  * The number of adjacent transpositions needed for the product of
@@ -451,14 +469,14 @@ export class Algebra<T> {
   }
 
   /** The core functionality for all kinds of products */
-  private product2(kind: ProductKind, a: MultiVector<T>, b: MultiVector<T>): MultiVector<T> {
+  product2(include: ProdInclude, a: MultiVector<T>, b: MultiVector<T>): MultiVector<T> {
     this.checkMine(a);
     this.checkMine(b);
     let skipped = false;
-    return new MultiVector(this, kind + "Prod", add => {
+    return new MultiVector(this, include.name + "Prod", add => {
       for (const [bmA, valA] of a) {
         for (const [bmB, valB] of b) {
-          if (includeProduct(kind, bmA, bmB)) {
+          if (include(bmA, bmB)) {
             const mf = this.metricFactors(bmA & bmB);
             if (mf !== null) {
               add(bmA ^ bmB, [...mf, valA, valB], productFlips(bmA, bmB) & 1);
@@ -477,30 +495,30 @@ export class Algebra<T> {
   }
 
   /** Like `product2`, but for an arbitrary number of multivectors */
-  private product(kind: ProductKind, mvs: MultiVector<T>[]): MultiVector<T> {
+  product(include: ProdInclude, mvs: MultiVector<T>[]): MultiVector<T> {
     return mvs.length === 0
-      ? new MultiVector(this, kind + "1", add => add(0, [])).markAsUnit()
-      : mvs.reduce((acc, mv) => this.product2(kind, acc, mv));
+      ? new MultiVector(this, include + "1", add => add(0, [])).markAsUnit()
+      : mvs.reduce((acc, mv) => this.product2(include, acc, mv));
   }
 
   wedgeProduct(...mvs: MultiVector<T>[]): MultiVector<T> {
-    return this.product("wedge", mvs);
+    return this.product(incl.wedge, mvs);
   }
 
   geometricProduct(...mvs: MultiVector<T>[]): MultiVector<T> {
-    return this.product("geom", mvs);
+    return this.product(incl.geom, mvs);
   }
 
   contractLeft(a: MultiVector<T>, b: MultiVector<T>): MultiVector<T> {
-    return this.product2("contrL", a, b);
+    return this.product2(incl.contrL, a, b);
   }
 
   contractRight(a: MultiVector<T>, b: MultiVector<T>): MultiVector<T> {
-    return this.product2("contrR", a, b);
+    return this.product2(incl.contrR, a, b);
   }
 
   dotProduct(a: MultiVector<T>, b: MultiVector<T>): MultiVector<T> {
-    return this.product2("dot", a, b);
+    return this.product2(incl.dot, a, b);
   }
 
   /**
@@ -508,7 +526,7 @@ export class Algebra<T> {
    * (At most the scalar component is filled.)
    */
   scalarProductMV(a: MultiVector<T>, b: MultiVector<T>): MultiVector<T> {
-    return this.product2("scalar", a, b);
+    return this.product2(incl.scalar, a, b);
   }
 
   /** Implementation returning an object of scalar type. */
