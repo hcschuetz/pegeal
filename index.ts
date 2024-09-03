@@ -826,7 +826,8 @@ ${alg.exp(blade)}`);
 
   for (const [a, b, c] of [
     [alg.mv("a", {x: "ax", y: "ay"}), alg.mv("b", {x: "bx", y: "by", z: "bz"}), alg.mv("c", {x: "cx", y: "cy"})],
-    [alg.mv("a", {x: 1   , y: 1   }), alg.mv("b", {x: 1   , y: 1   , z: 1   }), alg.mv("c", {x: 1.1 , y: 3.3 })],
+    // [alg.mv("a", {x: 1   , y: 1   }), alg.mv("b", {x: 1   , y: 1   , z: 1   }), alg.mv("c", {x: "cx", y: "cy"})],
+    // [alg.mv("a", {x: 1   , y: 1   }), alg.mv("b", {x: 1   , y: 1   , z: 1   }), alg.mv("c", {x: 1.1 , y: 3.3 })],
   ]) {
     ctx.emit(`// a: ${a}`);
     ctx.emit(`// b: ${b}`);
@@ -857,9 +858,10 @@ ${alg.exp(blade)}`);
     ctx.emit("---------------------");
   }
 
-  ctx.emit(` ${alg.sandwich1(alg.mv("a", {x: "ax", y: "ay"}), alg.mv("b", {x: "bx", y: "by", z: "bz"}))})`),
-  ctx.emit(` ${alg.sandwich1(alg.mv("a", {x: 1, y: 1}), alg.mv("b", {x: 1, y: 1, z: 1}))})`),
-  ctx.emit(` ${alg.sandwichX([alg.mv("a", {x: "ax", y: "ay"})], alg.mv("b", {x: "bx", y: "by", z: "bz"}))})`),
+  ctx.emit(`// sw1: ${alg.sandwich1(alg.mv("a", {x: "ax", y: "ay"}), alg.mv("b", {x: "bx", y: "by", z: "bz"}))})`),
+  ctx.emit(`// sw1: ${alg.sandwich1(alg.mv("a", {x: 1, y: 1}), alg.mv("b", {x: 1, y: 1, z: 1}))})`),
+  ctx.emit(`// swX: ${alg.sandwichX([alg.mv("a", {x: 1, y: 1})], alg.mv("b", {x: 1, y: 1, z: 1}))})`),
+  ctx.emit(`// swX: ${alg.sandwichX([alg.mv("a", {x: "ax", y: "ay"})], alg.mv("b", {x: "bx", y: "by", z: "bz"}))})`),
 
   p(ctx.text);
 }
