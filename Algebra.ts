@@ -852,18 +852,24 @@ class ProdTree<T> {
 
   optimize() {
     function recur(node: ProdTreeNode<T>) {
-      node.leavess.forEach((leaves, i) => {
+      const leavessOut: ProdTreeLeaf<T>[][] = [];
+      node.leavess.forEach((leaves, bm) => {
         let sum = leaves.reduce(
           (acc, {numProd, negate}) => acc + numProd * (negate ? -1 : 1),
           0
         );
-        leaves.length = 0;
         if (sum !== 0) { // TODO or sufficiently close to 0
-          leaves.push({numProd: sum, negate: false});
+          leavessOut[bm] = [{numProd: sum, negate: false}];
         }
       });
+      node.leavess = leavessOut;
+
       for (const [key, value] of node.children.entries()) {
         recur(value);
+        // Drop subtree if it's essentially empty after optimization:
+        if (value.leavess.length === 0 && value.children.size === 0) {
+          node.children.delete(key);
+        }
       }
     }
 

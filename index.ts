@@ -857,5 +857,9 @@ ${alg.exp(blade)}`);
     ctx.emit("---------------------");
   }
 
+  ctx.emit(` ${alg.sandwich1(alg.mv("a", {x: "ax", y: "ay"}), alg.mv("b", {x: "bx", y: "by", z: "bz"}))})`),
+  ctx.emit(` ${alg.sandwich1(alg.mv("a", {x: 1, y: 1}), alg.mv("b", {x: 1, y: 1, z: 1}))})`),
+  ctx.emit(` ${alg.sandwichX([alg.mv("a", {x: "ax", y: "ay"})], alg.mv("b", {x: "bx", y: "by", z: "bz"}))})`),
+
   p(ctx.text);
 }
