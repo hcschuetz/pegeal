@@ -701,7 +701,7 @@ export class Algebra<T> {
     // same grade-dropping hack as in .sandwich(...), but re-using product methods
     // (and, at least for now, a more simplistic test implementation.)
     const gradeTest: ProdInclude = (bmA, bmB) =>
-      [...operand].some(([bm]) => bitCount(bm) === bitCount(bmA & bmB));
+      [...operand].some(([bm]) => bitCount(bm) === bitCount(bmA ^ bmB));
     return this.product2(gradeTest,
       this.geometricProduct(operator, operand),
       this.reverse(operator)
