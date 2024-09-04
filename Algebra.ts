@@ -651,10 +651,16 @@ export class Algebra<T> {
   }
 
   // TODO similar optimizations for other scalar operators/functions
-  times(a: Factor<T>, b: Factor<T>): Factor<T> {
+  times(...factors: Factor<T>[]): Factor<T> {
     // This is not absolutely correct.  If one operator is 0 and the other
     // one is NaN or infinity, the unoptimized computation would not return 0.
-    return a === 0 || b === 0 ? 0 : this.ctx.binop("*", a, b);
+    factors = factors.filter(f => f !== 1);
+    return (
+      factors.some(f => f === 0) ? 0 :
+      factors.length === 0 ? 1 :
+      // TODO multiply numeric factors at generation time?
+      factors.reduce((acc, f) => this.ctx.binop("*", acc, f))
+    );
   }
 
   /**
