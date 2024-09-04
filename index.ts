@@ -824,11 +824,12 @@ ${alg.exp(blade)}`);
   const coords = "xyz";
   const alg = new Algebra(euclidean(coords), ctx, makeLetterNames(coords));
 
-  for (const [a, b, c] of [
-    [alg.mv("a", {x: "ax", y: "ay"}), alg.mv("b", {x: "bx", y: "by", z: "bz"}), alg.mv("c", {x: "cx", y: "cy"})],
-    // [alg.mv("a", {x: 1   , y: 1   }), alg.mv("b", {x: 1   , y: 1   , z: 1   }), alg.mv("c", {x: "cx", y: "cy"})],
-    // [alg.mv("a", {x: 1   , y: 1   }), alg.mv("b", {x: 1   , y: 1   , z: 1   }), alg.mv("c", {x: 1.1 , y: 3.3 })],
+  for (const create of [
+    () => [alg.mv("a", {x: "ax", y: "ay"}), alg.mv("b", {x: "bx", y: "by", z: "bz"}), alg.mv("c", {x: "cx", y: "cy"})],
+    () => [alg.mv("a", {x: 1   , y: 1   }), alg.mv("b", {x: 1   , y: 1   , z: 1   }), alg.mv("c", {x: "cx", y: "cy"})],
+    () => [alg.mv("a", {x: 1   , y: 1   }), alg.mv("b", {x: 1   , y: 1   , z: 1   }), alg.mv("c", {x: 1.1 , y: 3.3 })],
   ]) {
+    const [a, b, c] = create();
     ctx.emit(`// a: ${a}`);
     ctx.emit(`// b: ${b}`);
     ctx.emit(`// c: ${c}`);
@@ -838,30 +839,35 @@ ${alg.exp(blade)}`);
     ctx.emit(`// rotor: ${rotor}`);
     ctx.emit(`// rotor~: ${alg.reverse(rotor)}`);
     ctx.emit(`// c: ${c}`);
-    ctx.emit(`// control : ${alg.geometricProduct(rotor, c, alg.reverse(rotor))}`);
     ctx.emit(`// sandwich: ${alg.sandwich(rotor, c)}`);
     ctx.emit(`// sandwich1: ${alg.sandwich1(rotor, c)}`);
-    ctx.emit(`// sandwich2: ${alg.sandwich2(rotor, c)}`);
+    // console.log(ctx.text); process.exit();
     const a0 = alg.normalize(a);
     const b0 = alg.normalize(b);
-    ctx.emit(`// sandwichX: ${alg.sandwichX([b0, a0], c)}`);
-    ctx.emit(`// sandwichX: ${alg.sandwichX([rotor], c)}`);
 
     for(const [name, value] of Object.entries({a, b, ba, rotor})) {
       ctx.emit(`\n// ${name}: ${value}`);
       ctx.emit(`// |${name}|**2: ${alg.normSquared(value)}`);
-      ctx.emit(`// |${name}|**2: ${alg.sandwichX([value], alg.one())}`);  
+      ctx.emit(`// |${name}|**2: ${alg.sandwich(value, alg.one())}`);  
     }
-    ctx.emit(`\n// a b: ${a} ${b}`);
-    ctx.emit(`// |ab|**2: ${alg.normSquared(alg.geometricProduct(a, b))}`);
-    ctx.emit(`// |a b|**2: ${alg.sandwichX([a, b], alg.one())}`);  
     ctx.emit("---------------------");
   }
 
-  ctx.emit(`// sw1: ${alg.sandwich1(alg.mv("a", {x: "ax", y: "ay"}), alg.mv("b", {x: "bx", y: "by", z: "bz"}))})`),
-  ctx.emit(`// sw1: ${alg.sandwich1(alg.mv("a", {x: 1, y: 1}), alg.mv("b", {x: 1, y: 1, z: 1}))})`),
-  ctx.emit(`// swX: ${alg.sandwichX([alg.mv("a", {x: 1, y: 1})], alg.mv("b", {x: 1, y: 1, z: 1}))})`),
-  ctx.emit(`// swX: ${alg.sandwichX([alg.mv("a", {x: "ax", y: "ay"})], alg.mv("b", {x: "bx", y: "by", z: "bz"}))})`),
+  // Minimalistic example where the cancelling performed by `alg.sandwich(...)`
+  // omits the zero-valued xyz component:
+  for (const create of [
+    () => [alg.mv("a", {x: 1, y: 1}), alg.mv("b", {z: 1})],
+    () => [alg.mv("a", {x: "ax", y: "ay"}), alg.mv("b", {z: "bz"})],
+  ]) {
+    let [a, b] = create();
+    a = alg.normalize(a);
+    b = alg.normalize(b);
+    ctx.emit(`// a: ${a})`);
+    ctx.emit(`// b: ${b})`);
+    ctx.emit(`// sandwich: ${alg.sandwich(a, b)})`);
+    ctx.emit(`// sandwich1: ${alg.sandwich1(a, b)})`);
+    ctx.emit("---------------------");
+  }
 
   p(ctx.text);
 }

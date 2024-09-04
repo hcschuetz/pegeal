@@ -664,265 +664,78 @@ export class Algebra<T> {
   }
 
   /**
-   * Specialization of
-   * `geometricProduct(operator, operand, reverse(operator))`
+   * Like `this.geometricProduct(operator, operand, this.reverse(operator))`
+   * but cancelling terms that can be detected at code-generation time
+   * to be negations of each other.
    * 
-   * **THE OPERATOR IS EXPECTED TO BE A UNIT VERSOR**
+   * **THE OPERATOR IS EXPECTED TO BE A VERSOR**, typically a unit versor
+   * for a mirror/rotation operation without stretching/shrinking.
    */
   sandwich(operator: MultiVector<T>, operand: MultiVector<T>): MultiVector<T> {
-    this.checkMine(operand);
     this.checkMine(operator);
-    let gradeMap = [...operand].reduce((acc, [bm]) => acc | (1 << bitCount(bm)), 0);
-    return new MultiVector(this, "sandwich", add => {
-      for (const [bmA, valA] of operator) {
-        for (const [bmB, valB] of operand) {
-          const mfAB = this.metricFactors(bmA & bmB);
-          if (mfAB !== null) {
-            const bmAB = bmA ^ bmB;
-            const flipsAB = productFlips(bmA, bmB);
-            for (const [bmC, valC] of operator) {
-              const mfAB_C = this.metricFactors(bmAB & bmC);
-              if (mfAB_C !== null) {
-                const bmOut = bmAB ^ bmC;
-                // Sandwiching preserves the grade(s) of the operand.
-                // So we can omit output terms with grades not occurring
-                // in the operand.
-                // TODO Implement a more general, less ad-hoc solution?
-                // (There might be result components for which some but not
-                // all terms cancel out.)
-                if ((1 << bitCount(bmOut)) & gradeMap) {
-                  const flips =
-                    flipsAB + productFlips(bmAB, bmC) + ((bitCount(bmC) & 2) >> 1);
-                  add(bmOut, [...mfAB, ...mfAB_C, valA, valB, valC], flips & 1);
-                }
-              }
-            }
-          }
-        }
-      }
-    }).markAsUnit(operator.knownUnit && operand.knownUnit);
-  }
-
-  sandwich1(operator: MultiVector<T>, operand: MultiVector<T>): MultiVector<T> {
-    // same grade-dropping hack as in .sandwich(...), but re-using product methods
-    // (and, at least for now, a more simplistic test implementation.)
-    const gradeTest: ProdInclude = (bmA, bmB) =>
-      [...operand].some(([bm]) => bitCount(bm) === bitCount(bmA ^ bmB));
-    return this.product2(gradeTest,
-      this.geometricProduct(operator, operand),
-      this.reverse(operator)
-    )
-  }
-
-  sandwich2(operator: MultiVector<T>, operand: MultiVector<T>): MultiVector<T> {
     this.checkMine(operand);
-    this.checkMine(operator);
-    let gradeMap = [...operand].reduce((acc, [bm]) => acc | (1 << bitCount(bm)), 0);
-    return new MultiVector(this, "sandwich", add => {
-      for (const [bmA, valA] of operator) {
-        for (const [bmB, valB] of operand) {
-          for (const [bmC, valC] of operator) {
-            const bmAB = bmA ^ bmB;
-            const bmOut = bmAB ^ bmC;
+    return new MultiVector<T>(this, "sandwich", add => {
+      // TODO take metric into account
+      const lrVals: Record<string, Factor<T>> = {};
+      const lirVals: Record<string, {bm: number, term: Term<T>, count: number}> = {}
+      for (const [lBitmap, lVal] of operator) {
+        for (const [rBitmap, rVal] of operator) {
+          const lrMetric = this.metricFactors(lBitmap & rBitmap);
+          if (lrMetric === null) continue;
+
+          // Here is the core idea of the sandwich optimization:
+          // Blade product terms such as
+          //   bm1:val1 * ... * bm2:val2
+          //   bm2:val2 * ... * bm1:val1
+          // with bm1:val1 and bm2:val2 occurring in the operator may cancel
+          // each other out due to opposite polarity.
+          // The sorting in the following line ensures that [bm1, bm2] and
+          // [bm2, bm1] become identical keys.  So the corresponding terms are
+          // grouped together and we can detect cancelling terms.
+          const lrKey = [lBitmap, rBitmap].sort().join(",");
+          const lrVal = lrVals[lrKey] ?? (
+            // TODO emit the multiplication only if the product is actually used later
+            // (Or just leave it to the next compilation/optimization step
+            // to drop unused calculations?)
+            lrVals[lrKey] = this.times(lVal, rVal, ...lrMetric)
+          );
+
+          for (const [iBitmap, iVal] of operand) {
+            const lr_iMetric = this.metricFactors((lBitmap ^ rBitmap) & iBitmap);
+            if (lr_iMetric === null) continue;
+            const liBitmap = lBitmap ^ iBitmap;
+            const lirBitmap = liBitmap ^ rBitmap;
+
             const flips =
-              productFlips(bmA, bmB) + productFlips(bmAB, bmC) + (bitCount(bmC) >> 1);
-  	        const mfAB = this.metricFactors(bmA & bmB);
-            const mfAB_C = this.metricFactors(bmAB & bmC);
-            if (
-              mfAB !== null &&
-              mfAB_C !== null &&
-              ((1 << bitCount(bmOut)) & gradeMap)
-            ) {
-              add(bmOut, [...mfAB, ...mfAB_C, valA, valB, valC], flips & 1);
-            }
+              productFlips(lBitmap, iBitmap)
+            + productFlips(liBitmap, rBitmap)
+            + ((bitCount(rBitmap) >> 1) & 1);
+            const flipFactor = flips & 1 ? -1 : 1;
+
+            const lirKey = lrKey + "," + iBitmap;
+            const lirVal =
+              lirVals[lirKey] ??
+              (lirVals[lirKey] = {bm: lirBitmap, term: [lrVal, iVal, ...lr_iMetric], count: 0});
+            lirVal.count += flipFactor;
+            if (lirVal.count === 0) delete lirVals[lirKey];
           }
         }
+      }
+      // Currently we emit statements like
+      //     float A  = B1 * C;
+      //           A += B2 * C;
+      // TODO Group this to something more efficient like
+      //     float B  = B1
+      //           B += B2
+      //     float A  = B * C
+      for (const [, {bm, term, count}] of Object.entries(lirVals)) {
+        add(bm, [...term, Math.abs(count)].filter(f => f !== 1), Math.sign(count) < 0);
       }
     }).markAsUnit(operator.knownUnit && operand.knownUnit);
   }
 
-  sandwichX(operators: MultiVector<T>[], operand: MultiVector<T>): MultiVector<T> {
-    for (const vector of operators) this.checkMine(vector);
-    this.checkMine(operand);
-
-    const tree = new ProdTree<T>();    
-
-    const recur = (
-      operatorIdx: number,
-      bms: number[],
-      values: Term<T>,
-      revFlips: number,
-    ): void => {
-      if (operatorIdx >= 0) {
-        const v = operators[operatorIdx];
-        for (const [bmLeft, valueLeft] of v) {
-          for (const [bmRight, valueRight] of v) {
-            recur(
-              operatorIdx - 1,
-              [bmLeft, ...bms, bmRight],
-              [valueLeft, ...values, valueRight],
-              revFlips + ((bitCount(bmRight) & 2) >> 1),
-            );
-          }
-        }
-      } else {
-        // TODO compute flipsTotal/mvTotal/bmTotal during the recursion ?
-        let flipsTotal = revFlips;
-        let mfTotal: Term<T> = [];
-        let bmTotal = 0;
-        for (const bm of bms) {
-          flipsTotal += productFlips(bmTotal, bm);
-          const mf = this.metricFactors(bmTotal & bm);
-          if (mf === null) return;
-          mfTotal.push(...mf);
-          bmTotal ^= bm;
-        }
-        tree.add(bmTotal, [...values, ...mfTotal], flipsTotal);
-      }
-    }
-
-    for (const [bm, value] of operand) {
-      recur(operators.length - 1, [bm], [value], 0);
-    }
-
-    tree.optimize();
-
-    return new MultiVector(this, "sandwichX", add => {
-      tree.traverse<Factor<T> | undefined>(undefined,
-        (state, name) => state === undefined ? name : this.times(state, name),
-        (state, bitmap, leaf) => {
-          add(bitmap, [state ?? 1, leaf.numProd], leaf.negate);
-        },
-      );
-    })
+  /** Straight-forward implementation, for comparison with `.sandwich(...)` */
+  sandwich1(operator: MultiVector<T>, operand: MultiVector<T>): MultiVector<T> {
+    return this.geometricProduct(operator, operand, this.reverse(operator));
   }
-}
-
-type ProdTreeLeaf<T> = {
-  numProd: number,
-  negate: boolean,
-};
-
-type ProdTreeNode<T> = {
-  // Attention:
-  // - leavess is a sparse array whose indices are bitmaps of output
-  //   base-blades
-  // - each element of leavess is a plain list whose indices are irrelevant
-  leavess: ProdTreeLeaf<T>[][],
-  children: Map<T, ProdTreeNode<T>>;
-};
-
-class ProdTree<T> {
-  root: ProdTreeNode<T> = {
-    leavess: [],
-    children: new Map<T, ProdTreeNode<T>>(),
-  };
-
-  add(bitmap: number, term: Term<T>, flips: number) {
-    const [numbers, names] = extractNumbers(term);
-    // Multiplication on the computer is not associative, which makes it hard
-    // to detect cancelling candidates. Sorting the numbers avoids this problem.
-    const numProd = numbers.sort().reduce((x, y) => x * y, 1);
-    // Sorting the names in order to move branching to deeper tree levels
-    // and thus to improve sharing common calculation results.
-    // For now we do not care about the actual sort order and we just use the
-    // JS default.  TODO A little more optimization might be achieved by
-    // putting frequently-occurring names early in the list.
-    names.sort();
-
-    // TODO make this iterative?
-    // (or leave it recursive just for analogy with the other ProdTree methods?)
-    function recur(node: ProdTreeNode<T>, nameIdx: number): void {
-      if (nameIdx === names.length) {
-        const {leavess} = node;
-        let leaves = leavess[bitmap];
-        if (leaves === undefined) {
-          leaves = [];
-          leavess[bitmap] = leaves;
-        }
-        leaves.push({numProd, negate: Boolean(flips & 1)});
-      } else {
-        const {children} = node;
-        const name = names[nameIdx];
-        let child = children.get(name);
-        if (child === undefined) {
-          child = {leavess: [], children: new Map<T, ProdTreeNode<T>>()};
-          children.set(name, child);
-        }
-        recur(child, nameIdx + 1);
-      }
-    };
-
-    recur(this.root, 0);
-  }
-
-  optimize() {
-    function recur(node: ProdTreeNode<T>) {
-      const leavessOut: ProdTreeLeaf<T>[][] = [];
-      node.leavess.forEach((leaves, bm) => {
-        let sum = leaves.reduce(
-          (acc, {numProd, negate}) => acc + numProd * (negate ? -1 : 1),
-          0
-        );
-        if (sum !== 0) { // TODO or sufficiently close to 0
-          leavessOut[bm] = [{numProd: sum, negate: false}];
-        }
-      });
-      node.leavess = leavessOut;
-
-      for (const [key, value] of node.children.entries()) {
-        recur(value);
-        // Drop subtree if it's essentially empty after optimization:
-        if (value.leavess.length === 0 && value.children.size === 0) {
-          node.children.delete(key);
-        }
-      }
-    }
-
-    recur(this.root);
-  }
-
-  traverse<U>(
-    initialState: U,
-    handleChild: (state: U, name: T) => U,
-    handleLeaf: (state: U, bitmap: number, leaf: ProdTreeLeaf<T>) => void,
-  ) {
-    function recur(node: ProdTreeNode<T>, state: U) {
-      node.leavess.forEach((leaves, bitmap) => {
-        for (const leaf of leaves) {
-          handleLeaf(state, bitmap, leaf);
-        }
-      });
-      for (const [key, child] of node.children.entries()) {
-        recur(child, handleChild(state, key));
-      }
-    }
-
-    recur(this.root, initialState);
-  }
-
-  toString() {
-    const lines: string[] = [];
-    function recur(indent: string, node: ProdTreeNode<T>) {
-      lines.push(indent + JSON.stringify(node.leavess));
-      for (const [name, child] of node.children.entries()) {
-        lines.push(indent + name + ":");
-        recur(indent + ". ", child);
-      }
-    }
-    recur("", this.root);
-    return lines.join("\n");
-  }
-}
-
-function extractNumbers<T>(list: Term<T>): [number[], T[]] {
-  const numbers: number[] = [], rest: T[] = [];
-  for (const x of list) {
-    if (typeof x === "number") {
-      numbers.push(x);
-    } else {
-      rest.push(x);
-    }
-  }
-  return [numbers, rest];
 }
