@@ -459,6 +459,19 @@ export class Algebra<T> {
     });
   }
 
+  extract(
+    test: (bm: number, value: Factor<T>) => boolean,
+    mv: MultiVector<T>,
+  ): MultiVector<T> {
+    return new MultiVector(this, "extract", add => {
+      for (const [bitmap, value] of this.checkMine(mv)) {
+        if (test(bitmap, value)) {
+          add(bitmap, [value]);
+        }
+      }
+    });
+  }
+
   plus(...mvs: MultiVector<T>[]): MultiVector<T> {
     if (mvs.length === 1) {
       return this.checkMine(mvs[0]);
