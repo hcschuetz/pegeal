@@ -689,8 +689,8 @@ export class Algebra<T> {
     this.checkMine(operand);
     return new MultiVector<T>(this, "sandwich", add => {
       // TODO take metric into account
-      const lrVals: Record<string, Factor<T>> = {};
-      const lirVals: Record<string, {bm: number, term: Term<T>, count: number}> = {}
+      const lrVals: Record<string, () => Factor<T>> = {};
+      const lirVals: Record<string, {bm: number, lrVal: () => Factor<T>, term: Term<T>, count: number}> = {}
       for (const [lBitmap, lVal] of operator) {
         for (const [rBitmap, rVal] of operator) {
           const lrMetric = this.metricFactors(lBitmap & rBitmap);
@@ -710,7 +710,7 @@ export class Algebra<T> {
             // TODO emit the multiplication only if the product is actually used later
             // (Or just leave it to the next compilation/optimization step
             // to drop unused calculations?)
-            lrVals[lrKey] = this.times(lVal, rVal, ...lrMetric)
+            lrVals[lrKey] = lazy(() => this.times(lVal, rVal, ...lrMetric))
           );
 
           for (const [iBitmap, iVal] of operand) {
@@ -728,7 +728,7 @@ export class Algebra<T> {
             const lirKey = lrKey + "," + iBitmap;
             const lirVal =
               lirVals[lirKey] ??
-              (lirVals[lirKey] = {bm: lirBitmap, term: [lrVal, iVal, ...lr_iMetric], count: 0});
+              (lirVals[lirKey] = {bm: lirBitmap, lrVal, term: [iVal, ...lr_iMetric], count: 0});
             lirVal.count += flipFactor;
             if (lirVal.count === 0) delete lirVals[lirKey];
           }
@@ -741,8 +741,8 @@ export class Algebra<T> {
       //     float B  = B1
       //           B += B2
       //     float A  = B * C
-      for (const [, {bm, term, count}] of Object.entries(lirVals)) {
-        add(bm, [...term, Math.abs(count)].filter(f => f !== 1), Math.sign(count) < 0);
+      for (const [, {bm, lrVal, term, count}] of Object.entries(lirVals)) {
+        add(bm, [lrVal(), ...term, Math.abs(count)].filter(f => f !== 1), Math.sign(count) < 0);
       }
     }).markAsUnit(operator.knownUnit && operand.knownUnit);
   }
@@ -750,5 +750,17 @@ export class Algebra<T> {
   /** Straight-forward implementation, for comparison with `.sandwich(...)` */
   sandwich1(operator: MultiVector<T>, operand: MultiVector<T>): MultiVector<T> {
     return this.geometricProduct(operator, operand, this.reverse(operator));
+  }
+}
+
+function lazy<T>(exec: () => T): () => T {
+  let result: T;
+  let done = false;
+  return () => {
+    if (!done) {
+      result = exec();
+      done = true;
+    }
+    return result;
   }
 }
