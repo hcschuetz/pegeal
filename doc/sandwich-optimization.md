@@ -62,34 +62,40 @@ built-in function that evaluates to an optimized version of `p q ~p`.
 The code generator might produce the following unoptimized code:
 ```js
 // r := sandwich(p, q)
-aux1 = p_x * p_x;
-aux2 = p_x * p_y;
-aux3 = p_y * p_x;
-aux4 = p_y * p_y;
-r_z   = - aux1 * q_z - aux4 * q_z;
-r_xyz = - aux3 * q_z + aux2 * q_z;
+pp_x_x = p_x * p_x;
+pp_x_y = p_x * p_y;
+pp_y_x = p_y * p_x;
+pp_y_y = p_y * p_y;
+r_z   = - pp_x_x * q_z - pp_y_y * q_z;
+r_xyz = - pp_y_x * q_z + pp_x_y * q_z;
 ```
+Notice that in a way we are first multiplying the two occurrences of `p` in the
+sandwich and then multiply the result of this (`pp`) with `q`.
+This cannot be done on the multivector level, but it is possible on the
+component level, where we can apply signs corresponding to basis-vector
+permutations in a flexible way.
+(Signs cannot yet be applied in the computation of `pp`, but only in the
+computation of the final result `r`.)
+
 Now the optimization proceeds as follows:
-- Drop `aux3` and replace it with `aux2`, which has the same value.
-- In the expression for `r_xyz` detect that it contains the term `aux2 * q_z`
+- Drop `pp_y_x` and replace it with `pp_x_y`, which has the same value.
+- In the expression for `r_xyz` detect that it contains the term `pp_x_y * q_z`
   twice, once with a sign of -1 and once with a sign of +1.
-- Transform the expression to `(-1 + 1) * (aux2 * q_z) = 0 * (aux2 * q_z) = 0`.
+- Transform the expression to
+  `(-1 + 1) * (pp_x_y * q_z) = 0 * (pp_x_y * q_z) = 0`.
 - Drop `r_xyz` as it is known to be 0.
-- Drop `aux2` as it is no more used.
+- Drop `pp_x_y` as it is no more used.
 
 So the optimized code looks like this:
 ```js
 // r := sandwich(p, q)
-aux1 = p_x * p_x;
-aux4 = p_y * p_y;
-r_z = - aux1 * q_z - aux4 * q_z;
+pp_x_x = p_x * p_x;
+pp_y_y = p_y * p_y;
+r_z = - pp_x_x * q_z - pp_y_y * q_z;
 ```
-Notice that this could be optimized even more to
+Notice that the last assignment could be optimized even more to
 ```js
-// r := sandwich(p, q)
-aux1 = p_x * p_x;
-aux4 = p_y * p_y;
-r_z = - (aux1 + aux4) * q_z;
+r_z = (- pp_x_x - pp_y_y) * q_z;
 ```
 but this step has not yet been implemented.  (It is only a minor optimization
 and not needed to get rid of `r_xyz`.)
