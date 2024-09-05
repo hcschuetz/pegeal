@@ -686,30 +686,31 @@ export class Algebra<T> {
    */
   sandwich(operator: MultiVector<T>): (operand: MultiVector<T>) => MultiVector<T> {
     this.checkMine(operator);
+    const lrVals: Record<string, () => Factor<T>> = {};
+    for (const [lBitmap, lVal] of operator) {
+      for (const [rBitmap, rVal] of operator) {
+        if (lBitmap > rBitmap) continue;
+
+        const lrMetric = this.metricFactors(lBitmap & rBitmap);
+        if (lrMetric === null) continue;
+
+        const lrKey = `${lBitmap},${rBitmap}`;
+        if (!Object.hasOwn(lrVals, lrKey)) {
+          lrVals[lrKey] = lazy(() => this.times(lVal, rVal, ...lrMetric))
+        }
+      }
+    }
     return operand => {
       this.checkMine(operand);
       return new MultiVector<T>(this, "sandwich", add => {
-        const lrVals: Record<string, () => Factor<T>> = {};
         const lirVals: Record<string, {bm: number, lrVal: () => Factor<T>, term: Term<T>, count: number}> = {}
-        for (const [lBitmap, lVal] of operator) {
-          for (const [rBitmap, rVal] of operator) {
+        for (const [lBitmap] of operator) {
+          for (const [rBitmap] of operator) {  
             const lrMetric = this.metricFactors(lBitmap & rBitmap);
             if (lrMetric === null) continue;
 
-            // Here is the core idea of the sandwich optimization:
-            // Blade product terms such as
-            //   bm1:val1 * ... * bm2:val2
-            //   bm2:val2 * ... * bm1:val1
-            // with bm1:val1 and bm2:val2 occurring in the operator may cancel
-            // each other out due to opposite polarity.
-            // The sorting in the following line ensures that [bm1, bm2] and
-            // [bm2, bm1] become identical keys.  So the corresponding terms are
-            // grouped together and we can detect cancelling terms.
             const lrKey = [lBitmap, rBitmap].sort().join(",");
-            const lrVal = lrVals[lrKey] ?? (
-              lrVals[lrKey] = lazy(() => this.times(lVal, rVal, ...lrMetric))
-            );
-
+            const lrVal = lrVals[lrKey];
             for (const [iBitmap, iVal] of operand) {
               const lr_iMetric = this.metricFactors((lBitmap ^ rBitmap) & iBitmap);
               if (lr_iMetric === null) continue;
@@ -731,13 +732,6 @@ export class Algebra<T> {
             }
           }
         }
-        // Currently we emit statements like
-        //     float A  = B1 * C;
-        //           A += B2 * C;
-        // TODO Group this to something more efficient like
-        //     float B  = B1
-        //           B += B2
-        //     float A  = B * C
         for (const [, {bm, lrVal, term, count}] of Object.entries(lirVals)) {
           add(bm, [lrVal(), ...term, Math.abs(count)].filter(f => f !== 1), Math.sign(count) < 0);
         }
