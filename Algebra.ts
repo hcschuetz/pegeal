@@ -683,8 +683,18 @@ export class Algebra<T> {
    * 
    * **THE OPERATOR IS EXPECTED TO BE A VERSOR**, typically a unit versor
    * for a mirror/rotation operation without stretching/shrinking.
+   * 
+   * The function is curried, so that the same operator can be "applied" to
+   * multiple operands, sharing some intermediate values that only depend
+   * on the operator.
+   * 
+   * If the dummy flag is set, no output to the result multivector is generated,
+   * but the intermediate values needed for the given operand will be computed.
+   * (This is useful if you apply the second step of the curried function
+   * in a loop, but you want to force the computation of the intermediate
+   * values before entering the loop.)
    */
-  sandwich(operator: MultiVector<T>): (operand: MultiVector<T>) => MultiVector<T> {
+  sandwich(operator: MultiVector<T>): (operand: MultiVector<T>, options?: {dummy?: boolean}) => MultiVector<T> {
     this.checkMine(operator);
     // We use name prefixes l, i, and r for the left, inner, and right part
     // of a sandwich product.
@@ -702,8 +712,9 @@ export class Algebra<T> {
         }
       }
     }
-    return operand => {
+    return (operand, options = {}) => {
       this.checkMine(operand);
+      const {dummy = false} = options;
       return new MultiVector<T>(this, "sandwich", add => {
         const lirVals: Record<string, {bm: number, lrVal: () => Factor<T>, term: Term<T>, count: number}> = {}
         for (const [lBitmap] of operator) {
@@ -735,9 +746,12 @@ export class Algebra<T> {
           }
         }
         for (const [, {bm, lrVal, term, count}] of Object.entries(lirVals)) {
-          add(bm, [lrVal(), ...term, Math.abs(count)].filter(f => f !== 1), Math.sign(count) < 0);
+          const lrValue = lrVal();
+          if (!dummy) {
+            add(bm, [lrValue, ...term, Math.abs(count)].filter(f => f !== 1), Math.sign(count) < 0);
+          }
         }
-      }).markAsUnit(operator.knownUnit && operand.knownUnit);
+      }).markAsUnit(operator.knownUnit && operand.knownUnit && !dummy);
     };
   }
 

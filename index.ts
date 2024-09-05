@@ -866,6 +866,7 @@ ${alg.exp(blade)}`);
     ctx.emit(`// a: ${a})`);
     ctx.emit(`// b: ${b})`);
     const sw_a = alg.sandwich(a);
+    ctx.emit(`// sandwich/dummy: ${sw_a(alg.mv("dummy", {z: "dummy"}), {dummy: true})}`);
     ctx.emit(`// sandwich: ${sw_a(b)})`);
     ctx.emit(`// sandwich: ${sw_a(alg.negate(b))})`);
     ctx.emit(`// sandwich1: ${alg.sandwich1(a, b)})`);
