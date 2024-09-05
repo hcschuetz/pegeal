@@ -745,7 +745,7 @@ export class Algebra<T> {
             }
           }
         }
-        for (const [, {bm, lrVal, term, count}] of Object.entries(lirVals)) {
+        for (const {bm, lrVal, term, count} of Object.values(lirVals)) {
           const lrValue = lrVal();
           if (!dummy) {
             add(bm, [lrValue, ...term, Math.abs(count)].filter(f => f !== 1), Math.sign(count) < 0);
