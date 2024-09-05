@@ -106,14 +106,37 @@ Notes on the implementation:
   The unoptimized code as an intermediate step and the code transformations
   above are only used for explanatory purposes.
 - The implementation supports pseudo-Euclidean metrics.
+- Often one "operator" `p` is applied to a bunch of "operands" `q1`, `q2`, ...,
+  that is, we have calls `sandwich(p, q1)`, `sandwich(p, q2)`, ...
+  The `aux...` variables above only depend on `p`, not on the second argument
+  of `sandwich`.  So, as another optimization, we compute them only once.
+
+  This is achieved by "currying" the `sandwich` function.  The first call
+  ```
+  sandwich_p := sandwich(p);
+  ```
+  returns a function which can be invoked in turn with the operands:
+  ```
+  ... := sandwich_p(q1);
+  ... := sandwich_p(q2);
+  ...
+  ```
+  The `aux...` variables are re-used across these calls.
 
 ## Unsorted
 
 - Support not only `p q ~p` but also `p q /p`.
-- The squared norm `|p|**2` can be written as `p ~p = p 1 ~p = sandwich(p, 1)`.
-- Often we apply the same rotor (or other operator) to a bunch of multivectors:
-  `sandwich(p, q1)`, `sandwich(p, q2)`, `sandwich(p, q3)`, ...
-  Here we should compute the `aux...` variables (which only depend on `p`) only
-  once and re-use them for the various sandwich applications.
+- For a versor `p` the squared norm `|p|**2` can be written as
+  `p ~p = p 1 ~p = sandwich(p, 1)`.
+  Thus `/p = p / |p|**2 = p / sandwich(p, 1)`.
 
-  TODO Implement by currying `sandwich`.
+  With currying we get
+  ```js
+  p q /p
+  // using `/p = ~p / (p ~p)`
+  = (p q ~p) / (p ~p)
+  = (p q ~p) / (p 1 ~p)
+  = sandwich(p, q) / sandwich(p, 1)
+  // with `sandwich_p := sandwich(p)`
+  = sandwich_p(q) / sandwich_p(1)
+  ```
