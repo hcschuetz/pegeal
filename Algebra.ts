@@ -688,7 +688,6 @@ export class Algebra<T> {
     this.checkMine(operator);
     this.checkMine(operand);
     return new MultiVector<T>(this, "sandwich", add => {
-      // TODO take metric into account
       const lrVals: Record<string, () => Factor<T>> = {};
       const lirVals: Record<string, {bm: number, lrVal: () => Factor<T>, term: Term<T>, count: number}> = {}
       for (const [lBitmap, lVal] of operator) {
@@ -707,9 +706,6 @@ export class Algebra<T> {
           // grouped together and we can detect cancelling terms.
           const lrKey = [lBitmap, rBitmap].sort().join(",");
           const lrVal = lrVals[lrKey] ?? (
-            // TODO emit the multiplication only if the product is actually used later
-            // (Or just leave it to the next compilation/optimization step
-            // to drop unused calculations?)
             lrVals[lrKey] = lazy(() => this.times(lVal, rVal, ...lrMetric))
           );
 
