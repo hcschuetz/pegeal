@@ -839,7 +839,7 @@ ${alg.exp(blade)}`);
     ctx.emit(`// rotor: ${rotor}`);
     ctx.emit(`// rotor~: ${alg.reverse(rotor)}`);
     ctx.emit(`// c: ${c}`);
-    ctx.emit(`// sandwich: ${alg.sandwich(rotor, c)}`);
+    ctx.emit(`// sandwich: ${alg.sandwich(rotor)(c)}`);
     ctx.emit(`// sandwich1: ${alg.sandwich1(rotor, c)}`);
     // console.log(ctx.text); process.exit();
     const a0 = alg.normalize(a);
@@ -848,7 +848,7 @@ ${alg.exp(blade)}`);
     for(const [name, value] of Object.entries({a, b, ba, rotor})) {
       ctx.emit(`\n// ${name}: ${value}`);
       ctx.emit(`// |${name}|**2: ${alg.normSquared(value)}`);
-      ctx.emit(`// |${name}|**2: ${alg.sandwich(value, alg.one())}`);  
+      ctx.emit(`// |${name}|**2: ${alg.sandwich(value)(alg.one())}`);  
     }
     ctx.emit("---------------------");
   }
@@ -864,7 +864,7 @@ ${alg.exp(blade)}`);
     b = alg.normalize(b);
     ctx.emit(`// a: ${a})`);
     ctx.emit(`// b: ${b})`);
-    ctx.emit(`// sandwich: ${alg.sandwich(a, b)})`);
+    ctx.emit(`// sandwich: ${alg.sandwich(a)(b)})`);
     ctx.emit(`// sandwich1: ${alg.sandwich1(a, b)})`);
     ctx.emit("---------------------");
   }
