@@ -686,6 +686,8 @@ export class Algebra<T> {
    */
   sandwich(operator: MultiVector<T>): (operand: MultiVector<T>) => MultiVector<T> {
     this.checkMine(operator);
+    // We use name prefixes l, i, and r for the left, inner, and right part
+    // of a sandwich product.
     const lrVals: Record<string, () => Factor<T>> = {};
     for (const [lBitmap, lVal] of operator) {
       for (const [rBitmap, rVal] of operator) {
