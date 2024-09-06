@@ -875,3 +875,34 @@ ${alg.exp(blade)}`);
 
   p(ctx.text);
 }
+{
+  console.log(`
+// ------------------------------------------
+// Inverse Check
+`);
+
+  const ctx = new WebGLContext();
+  const coords = "xyzw";
+  const alg = new Algebra([1,1,1,-1], ctx, makeLetterNames(coords));
+
+  for (const v of [
+    alg.mv("scalar", {1: 7}),
+    alg.mv("a", {x: 7}),
+    alg.mv("b", {w: 7}),
+    // Some of these produce 0 components.
+    alg.mv("c", {x: 3, y: 4}),
+    alg.mv("d", {x: 3, w: 4}),
+    alg.mv("e", {xy: 7}),
+    alg.mv("f", {xw: 7}),
+    alg.mv("g", {xw: 7, yw: 3}),
+    alg.mv("h", {1: 4, xy: 7, xz: 3, yz: 2}),
+  ]) {
+    ctx.emit(`// ---------------`);
+    ctx.emit(`// v: ${v}`);
+    ctx.emit(`// inv(v): ${alg.inverse(v)}`);
+    ctx.emit(`// inv(v)*v: ${alg.geometricProduct(alg.inverse(v), v)}`);
+    ctx.emit(`// v*inv(v): ${alg.geometricProduct(v, alg.inverse(v))}`);
+  }
+
+  console.log(ctx.text);
+}

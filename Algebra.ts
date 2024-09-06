@@ -415,11 +415,25 @@ export class Algebra<T> {
   /** **This is only correct for versors!** */
   inverse(mv: MultiVector<T>): MultiVector<T> {
     if (mv.knownUnit) return mv;
+    // TODO provide nicer check for number of components
+    if ([...mv].length === 1) {
+      // TODO check the optimization of the single-component case for
+      // correctness again
+      return new MultiVector(this, "inverse", add => {
+        for (const [bm, val] of mv) {
+          const mf = this.metricFactors(bm);
+          if (mf === null) {
+            throw new Error(`trying to invert null vector ${mv}`);
+          }
+          add(bm, [this.ctx.binop("/", 1, this.times(val, ...mf))], bitCount(bm) & 2);
+        }
+      });
+    }
     const norm2 = this.normSquared(mv);
     if (norm2 === 0) {
       throw new Error(`trying to invert null vector ${mv}`);
     }
-    return this.scale(this.ctx.binop("/", 1, norm2), mv);
+    return this.scale(this.ctx.binop("/", 1, norm2), this.reverse(mv));
   }
 
   /** **This is only correct for versors!** */
