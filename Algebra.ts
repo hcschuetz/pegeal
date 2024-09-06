@@ -755,11 +755,11 @@ export class Algebra<T> {
                 lirVals[lirKey] ??
                 (lirVals[lirKey] = {bm: lirBitmap, lrVal, term: [iVal, ...lr_iMetric], count: 0});
               lirVal.count += flipFactor;
-              if (lirVal.count === 0) delete lirVals[lirKey];
             }
           }
         }
         for (const {bm, lrVal, term, count} of Object.values(lirVals)) {
+          if (count === 0) continue;
           const lrValue = lrVal();
           if (!dummy) {
             add(bm, [lrValue, ...term, Math.abs(count)].filter(f => f !== 1), Math.sign(count) < 0);
