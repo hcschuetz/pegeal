@@ -1,4 +1,4 @@
-import { Term, Factor, Var, Context, BinOp, AbstractVar } from "./Algebra";
+import { Term, Factor, Context, BinOp, AbstractVar } from "./Algebra";
 import { EvalContext } from "./evalExpr";
 
 function formatFactor(f: Factor<string>): string {
