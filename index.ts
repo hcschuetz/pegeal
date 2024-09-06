@@ -857,7 +857,7 @@ ${alg.exp(blade)}`);
   // Minimalistic example where the cancelling performed by `alg.sandwich(...)`
   // omits the zero-valued xyz component:
   for (const create of [
-    () => [alg.mv("a", {x: Math.SQRT1_2, y: Math.SQRT1_2}), alg.mv("b", {z: 1})],
+    () => [alg.mv("a", {x: Math.SQRT1_2, y: Math.SQRT1_2}).markAsUnit(), alg.mv("b", {z: 1}).markAsUnit()],
     () => [alg.mv("a", {x: "ax", y: "ay"}), alg.mv("b", {z: "bz"})],
   ]) {
     let [a, b] = create();
@@ -866,9 +866,9 @@ ${alg.exp(blade)}`);
     ctx.emit(`// a: ${a})`);
     ctx.emit(`// b: ${b})`);
     const sw_a = alg.sandwich(a);
-    ctx.emit(`// sandwich/dummy: ${sw_a(alg.mv("dummy", {z: "dummy"}), {dummy: true})}`);
+    ctx.emit(`// sandwich/dummy: ${sw_a(alg.mv("dummy", {z: "1.0"}), {dummy: true})}`);
     ctx.emit(`// sandwich: ${sw_a(b)})`);
-    ctx.emit(`// sandwich: ${sw_a(alg.negate(b))})`);
+    ctx.emit(`// sandwich/neg: ${sw_a(alg.negate(b))})`);
     ctx.emit(`// sandwich1: ${alg.sandwich1(a, b)})`);
     ctx.emit("---------------------");
   }
