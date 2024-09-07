@@ -1,7 +1,12 @@
+import fs from "node:fs";
+import zlib from "node:zlib";
+import binaryen from "binaryen";
+
 import { Algebra, Context, bitCount, MultiVector, productFlips, Factor } from "./Algebra";
 import { makeLetterNames, makeNumberedNames } from "./componentNaming";
 import { WebGLContext } from "./generateWebGL";
 import { EvalContext } from "./evalExpr";
+import { LocalRef, WASMContext } from "./generateWASM";
 
 const euclidean = (coords: number | string | string[]) =>
   (
@@ -942,6 +947,179 @@ ${alg.exp(blade)}`);
       if (alg.normSquared(alg.plus(prod, alg.negate(alg.one()))) > 1e-30) {
         throw "testing 'inverse' failed";
       }
+    }
+  }
+}
+{
+  console.log(`
+// ------------------------------------------
+// WASM generation
+`);
+
+  const mod = new binaryen.Module();
+  mod.setFeatures(binaryen.Features.Multivalue);
+  const ctx = new WASMContext(mod);
+  const coords = "xyzw";
+  const alg = new Algebra([1,333,1,-1], ctx, makeLetterNames(coords));
+
+  // Params must be generated before variables for proper var numbering.
+  // (Notice that alg.mv(...) already creates vars!)
+  const paramsByHint = Object.fromEntries(
+    "h.1 h.xy h.xz h.yz e.x e.w" // d.z
+    .split(" ").map(name => [name, ctx.param(name)])
+  );
+
+  const h = alg.mv("h", {
+    1: paramsByHint["h.1"], xy: paramsByHint["h.xy"], xz: paramsByHint["h.xz"], yz: paramsByHint["h.yz"]
+  });
+  const inputs = [
+    // alg.mv("d", {x: 2.22, z: paramsByHint["d.z"], w: 4.44}),
+    alg.mv("e", {x: paramsByHint["e.x"], w: paramsByHint["e.w"]}),
+  ];
+
+  const sandwich_h = alg.sandwich(h);
+  const invNorm = ctx.binop("/", 1, sandwich_h(alg.one()).value(0));
+  const results = inputs.map(inp => alg.scale(invNorm, sandwich_h(inp)));
+  // TODO make use of the bitmaps in result
+  ctx.body.push(
+    mod.return(mod.tuple.make(
+      results.flatMap(res => [...res].map(([,val]) => ctx.formatFactor(val)))
+    ))
+  );
+
+  const fn = mod.addFunction(
+    "myTest",
+    binaryen.createType(ctx.paramHints.map(() => binaryen.f64)),
+    binaryen.createType(new Array(results.flatMap(res => [...res]).length).fill(binaryen.f64)),
+    ctx.localVars,
+    mod.block(null, ctx.body),
+  );
+  mod.addFunctionExport("myTest", "myTestExt");
+  p(`// valid: ${Boolean(mod.validate())}`);
+  // TODO instead of .optimize(), add the needed passes to .runPasses([...])
+  // (Some passes of .optimize() are apparently undone by my subsequent
+  // passes.  So we should not run them in the first place.)
+  mod.optimize();
+  // Make the output more readable:
+  mod.runPasses([
+    // See https://github.com/WebAssembly/binaryen/blob/main/src/passes/pass.cpp
+    // for available passes.
+    "flatten",
+    "simplify-locals-notee",
+    "ssa",
+    // running the last two paths again produces nicer code (in some cases):
+    "simplify-locals-notee",
+    "ssa",
+    "vacuum", // removes `(nop)`s, but not unused variables
+    "coalesce-locals", // removes most unused variables
+  ]);
+
+  writeAndStat("./out.wst", mod.emitText());
+  const binary = mod.emitBinary();
+  writeAndStat("./out.wasm", binary);
+
+  {
+    const {name, params, body} = binaryen.getFunctionInfo(fn);
+    const paramTypes = binaryen.expandType(params)
+    const header = `function ${name}(${
+      ctx.paramHints.map((hint, i) => `\n  float v${i} /* ${hint} */`).join(",")
+    }\n  // ${
+      paramTypes.length
+    }${
+      paramTypes.length === ctx.paramHints.length ? "" :
+      " [### param number mismatch ###]"
+    }\n) : [${
+      results.flatMap((res, i) => [...res].map(([bm]) => `\n  float /* out[${i}].${alg.bitmapToString[bm]} */`).join(","))
+    }\n]`;
+    const prettyLines: string[] = [header];
+    prettyStmt(body, line => prettyLines.push(line));
+    const pretty = prettyLines.join("\n");
+    writeAndStat("./out.mylang", pretty);
+    p();
+    p(pretty);
+  }
+
+  function writeAndStat(where: string, what: string | Uint8Array) {
+    fs.writeFileSync(where, what);
+    p(`// ${where}: ${what.length} (brotli ${zlib.brotliCompressSync(what).length})`);
+  }
+
+  function prettyStmt(stmt: binaryen.ExpressionRef, emit: (line: string) => unknown): void {
+    const stmtInfo = binaryen.getExpressionInfo(stmt);
+    switch (stmtInfo.id) {
+      case binaryen.NopId: {
+        break;
+      }
+      case binaryen.LocalSetId: {
+        const {isTee, index, value} = stmtInfo as binaryen.LocalSetInfo;
+        if (isTee) emit("### tee not supported");
+        // This assumes single-assignment form:
+        indent(`float v${index} = ${prettyExpr(value)};`, emit)
+        break;
+      }
+      case binaryen.ReturnId:
+        const {value} = stmtInfo as binaryen.ReturnInfo;
+        indent(`return ${prettyExpr(value)};`, emit);
+        break;
+      case binaryen.BlockId: {
+        const {children} = stmtInfo as binaryen.BlockInfo;
+        emit("{");
+        for (const child of children) {
+          prettyStmt(child, line => emit("  " + line));
+        }
+        emit("}");
+        break;
+      }
+      case binaryen.UnreachableId: {
+        emit("// unreachable");
+        break;
+      }
+      default: {
+        emit("### statement " + stmtInfo.id);
+        break;
+      }
+    }
+  }
+
+  function indent(text: string, emit: (line: string) => unknown): void {
+    text.split("\n").forEach(emit);
+  }
+
+  function prettyExpr(expr: binaryen.ExpressionRef): string {
+    const exprInfo = binaryen.getExpressionInfo(expr);
+    switch(exprInfo.id) {
+      case binaryen.ConstId: {
+        const {value} = exprInfo as binaryen.ConstInfo;
+        return `${value}`;
+      }
+      case binaryen.LocalGetId: {
+        const {index} = exprInfo as binaryen.LocalGetInfo;
+        return `v${index}`;
+      }
+      case binaryen.UnaryId: {
+        const {op, value} = exprInfo as binaryen.UnaryInfo;
+        switch (op) {
+          case binaryen.NegFloat64: return `(-${prettyExpr(value)})`;
+          default: return "### unary " + op;
+        }
+      }
+      case binaryen.BinaryId: {
+        const {op, left, right} = exprInfo as binaryen.BinaryInfo;
+        const opString =
+          op === binaryen.AddFloat64 ? "+" :
+          op === binaryen.SubFloat64 ? "-" :
+          op === binaryen.MulFloat64 ? "*" :
+          op === binaryen.DivFloat64 ? "/" :
+          "### binop " + op;
+        return `(${prettyExpr(left)} ${opString} ${prettyExpr(right)})`;
+      }
+      case binaryen.TupleMakeId: {
+        const {operands} = exprInfo as binaryen.TupleMakeInfo;
+        // TODO properly indent line breaks within elem output
+        return `[\n   ${operands.map(elem => prettyExpr(elem)).join(",\n   ")}\n]`;
+      }
+
+      default: return "### expr " + exprInfo.id;
     }
   }
 }
