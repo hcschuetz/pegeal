@@ -3,9 +3,9 @@ import zlib from "node:zlib";
 
 import B from "binaryen";
 
-import { WASMContext } from "../generateWASM";
-import { Algebra } from "../Algebra";
-import { makeLetterNames } from "../componentNaming";
+import { WASMContext } from "../src/generateWASM";
+import { Algebra } from "../src/Algebra";
+import { makeLetterNames } from "../src/componentNaming";
 import { p } from "./utils";
 
 console.log(`// WASM generation\n`);

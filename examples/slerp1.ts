@@ -1,7 +1,7 @@
-import { Algebra, Context } from "../Algebra";
-import { makeLetterNames } from "../componentNaming";
-import { EvalContext } from "../evalExpr";
-import { WebGLContext } from "../generateWebGL";
+import { Algebra, Context } from "../src/Algebra";
+import { makeLetterNames } from "../src/componentNaming";
+import { EvalContext } from "../src/evalExpr";
+import { WebGLContext } from "../src/generateWebGL";
 import { euclidean, p, q_ } from "./utils";
 
 p(`// Slerp - WebGL + eval\n`);

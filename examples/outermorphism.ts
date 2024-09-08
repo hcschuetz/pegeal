@@ -1,8 +1,8 @@
 import { euclidean, p, q_ } from "./utils";
-import { Algebra, Context } from "../Algebra";
-import { makeLetterNames } from "../componentNaming";
-import { WebGLContext } from "../generateWebGL";
-import { EvalContext } from "../evalExpr";
+import { Algebra, Context } from "../src/Algebra";
+import { makeLetterNames } from "../src/componentNaming";
+import { WebGLContext } from "../src/generateWebGL";
+import { EvalContext } from "../src/evalExpr";
 
 p(`// Outermorphism - WebGL and eval\n`);
 

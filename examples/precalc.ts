@@ -1,4 +1,4 @@
-import { WebGLContext } from "../generateWebGL";
+import { WebGLContext } from "../src/generateWebGL";
 import { p } from "./utils";
 
 p(`// precalculate - WebGL\n`);

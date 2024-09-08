@@ -1,6 +1,6 @@
-import { Algebra, Factor } from "../Algebra";
-import { makeLetterNames } from "../componentNaming";
-import { WebGLContext } from "../generateWebGL";
+import { Algebra, Factor } from "../src/Algebra";
+import { makeLetterNames } from "../src/componentNaming";
+import { WebGLContext } from "../src/generateWebGL";
 import { hideUnit, p } from "./utils";
 
 p(`// norm and normalization, special cases - WebGL\n`);

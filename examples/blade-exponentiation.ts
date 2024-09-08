@@ -1,6 +1,6 @@
-import { Algebra } from "../Algebra";
-import { makeLetterNames } from "../componentNaming";
-import { WebGLContext } from "../generateWebGL";
+import { Algebra } from "../src/Algebra";
+import { makeLetterNames } from "../src/componentNaming";
+import { WebGLContext } from "../src/generateWebGL";
 import { euclidean, p } from "./utils";
 
 p(`// Blade Exponentiation - WebGL\n`);

@@ -1,6 +1,6 @@
-import { Algebra } from "../Algebra";
-import { makeNumberedNames } from "../componentNaming";
-import { EvalContext } from "../evalExpr";
+import { Algebra } from "../src/Algebra";
+import { makeNumberedNames } from "../src/componentNaming";
+import { EvalContext } from "../src/evalExpr";
 import { euclidean, p } from "./utils";
 
 p(`// A context using component names like "e1_8_11"\n`);

@@ -1,4 +1,4 @@
-import { Algebra, MultiVector } from "../Algebra";
+import { Algebra, MultiVector } from "../src/Algebra";
 
 export const euclidean = (coords: number | string | string[]) =>
   (

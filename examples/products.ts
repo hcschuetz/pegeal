@@ -1,6 +1,6 @@
-import { Algebra } from "../Algebra";
-import { makeLetterNames } from "../componentNaming";
-import { EvalContext } from "../evalExpr";
+import { Algebra } from "../src/Algebra";
+import { makeLetterNames } from "../src/componentNaming";
+import { EvalContext } from "../src/evalExpr";
 import { p, q_ } from "./utils";
 
 {
