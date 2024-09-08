@@ -1,4 +1,4 @@
-import { Algebra, MultiVector } from "../src/Algebra";
+import { Algebra, Multivector } from "../src/Algebra";
 
 export const euclidean = (coords: number | string | string[]) =>
   (
@@ -11,7 +11,7 @@ export const TAU = 2 * Math.PI;
 export const deg = (x: number, p?: number) => `${(x * (360 / TAU)).toFixed(p)}°`;
 
 export const p = console.log;
-export const q_ = (coords: string) => (label: string, x: MultiVector<never> | number | string | undefined) => {
+export const q_ = (coords: string) => (label: string, x: Multivector<never> | number | string | undefined) => {
   switch (typeof x) {
     case "undefined":
     case "string":
@@ -31,5 +31,5 @@ export const q_ = (coords: string) => (label: string, x: MultiVector<never> | nu
 }
 
 /** Copy multivector without the unit mark. */
-export const hideUnit = <T>(alg: Algebra<T>, mv: MultiVector<T>) =>
+export const hideUnit = <T>(alg: Algebra<T>, mv: Multivector<T>) =>
   alg.plus(alg.zero(), mv);

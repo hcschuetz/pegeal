@@ -1,4 +1,4 @@
-import { Algebra, MultiVector } from "../src/Algebra";
+import { Algebra, Multivector } from "../src/Algebra";
 import { makeLetterNames } from "../src/componentNaming";
 import { EvalContext } from "../src/evalExpr";
 import { p } from "./utils";
@@ -35,7 +35,7 @@ for (const v of [
   for (const [label, prod] of [
     ["inv(v)*v", alg.geometricProduct(alg.inverse(v), v)],
     ["v*inv(v)", alg.geometricProduct(v, alg.inverse(v))],
-  ] as [string, MultiVector<never>][]) {
+  ] as [string, Multivector<never>][]) {
     p(`${label}: ${prod}`);
     if (alg.normSquared(alg.plus(prod, alg.negate(alg.one()))) > 1e-30) {
       throw "testing 'inverse' failed";

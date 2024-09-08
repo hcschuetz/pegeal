@@ -1,4 +1,4 @@
-import { Algebra, bitCount, MultiVector, productFlips } from "../src/Algebra";
+import { Algebra, bitCount, Multivector, productFlips } from "../src/Algebra";
 import { makeLetterNames } from "../src/componentNaming";
 import { EvalContext } from "../src/evalExpr";
 import { euclidean, p } from "./utils";
@@ -9,7 +9,7 @@ p(`// An example where my simple normalizability test fails:
 
 // TODO Is this still an issue?
 
-function isNormalizable(m: MultiVector<never>): boolean {
+function isNormalizable(m: Multivector<never>): boolean {
   const nonScalars: number[] = [];
   for (const [bmA, valA] of m) {
     for (const [bmB, valB] of m) {
