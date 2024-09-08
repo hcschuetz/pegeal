@@ -277,7 +277,7 @@ export class Algebra<T> {
     return new Multivector(this, "morph", add => {
       // no `this.checkMine(mv)` here as `mv` may actually come from elsewhere
       for (const [bitmapIn, f] of mv) {
-        function recur(i: number, bitmapOut: number, flips: number, product: Scalar<T>[]) {
+        function recur(i: number, bitmapOut: number, flips: number, product: Term<T>) {
           const iBit = 1 << i;
           if (iBit > bitmapIn) {
             // Fully traversed bitmapIn.  Contribute to the output:
