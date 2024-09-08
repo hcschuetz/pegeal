@@ -41,7 +41,11 @@ export class MultiVector<T> implements Iterable<[number, Factor<T>]> {
   constructor(
     readonly alg: Algebra<T>,
     readonly name: string,
-    initialize: (add: (bm: number, term: Term<T>, negate?: any) => unknown) => unknown,
+    initialize: (
+      // `negate` is semantically a boolean, but for convenience we
+      // accept any value and use its truthiness.
+      add: (bm: number, term: Term<T>, negate?: any) => unknown,
+    ) => unknown,
   ) {
     alg.ctx.space();
     initialize((bm, term, negate?) => {
