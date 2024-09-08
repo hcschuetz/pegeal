@@ -1,3 +1,3 @@
 import _runExamples from "./examples/_runExamples";
 
-_runExamples();
+await _runExamples();
