@@ -983,7 +983,7 @@ ${alg.exp(blade)}`);
   // TODO make use of the bitmaps in result
   ctx.body.push(
     mod.return(mod.tuple.make(
-      results.flatMap(res => [...res].map(([,val]) => ctx.formatFactor(val)))
+      results.flatMap(res => [...res].map(([,val]) => ctx.convertFactor(val)))
     ))
   );
 

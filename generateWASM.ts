@@ -46,7 +46,7 @@ class VarImpl extends AbstractVar<VarRef> {
   }
 
   addImpl(term: Term<VarRef>, negate = false) {
-    const {mod, body, formatFactor} = this.ctx;
+    const {mod, body, convertFactor} = this.ctx;
     if (term.some(f => f === 0)) return;
 
     // We could easily eliminate 1 factors:
@@ -61,7 +61,7 @@ class VarImpl extends AbstractVar<VarRef> {
 
     const expr =
       term.length === 0 ? mod.f64.const(1) :
-      term.map(formatFactor).reduce((acc, factor) => mod.f64.mul(acc, factor));
+      term.map(convertFactor).reduce((acc, factor) => mod.f64.mul(acc, factor));
     const signedExpr = negate ? mod.f64.neg(expr) : expr;
     if (!this.#created) {
       this.#varRef = this.ctx.newLocal();
@@ -118,8 +118,11 @@ export class WASMContext implements Context<VarRef> {
     return new LocalRef(this, localVarNum);
   }
 
-  /** formatFactor is a bound function, so it can be used as `[...].map(formatFactor)` */
-  formatFactor = (f: Factor<VarRef>) => {
+  /**
+   * `convertFactor` is a bound function so that it can be used as
+   * `[...].map(this.convertFactor)`
+   */
+  convertFactor = (f: Factor<VarRef>) => {
     switch (typeof f) {
       case "number": return this.mod.f64.const(f);
       case "object": return this.mod.local.get(f.varNum, binaryen.f64);
@@ -127,13 +130,13 @@ export class WASMContext implements Context<VarRef> {
   }
   
   scalarOp(name: string, ...args: Factor<VarRef>[]) {
-    const {mod, formatFactor} = this;
+    const {mod, convertFactor} = this;
     const localVar = this.newLocal();
     this.body.push(
       mod.local.set(localVar.varNum,
         Object.hasOwn(binopName, name)
-        ? mod.f64[binopName[name]](formatFactor(args[0]),formatFactor(args[1]))
-        : mod.call(name, args.map(formatFactor), binaryen.f64)
+        ? mod.f64[binopName[name]](convertFactor(args[0]),convertFactor(args[1]))
+        : mod.call(name, args.map(convertFactor), binaryen.f64)
       )
     );
     return localVar;
