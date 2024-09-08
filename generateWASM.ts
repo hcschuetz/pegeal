@@ -1,6 +1,5 @@
 import binaryen from "binaryen";
 import { Term, Factor, Context, AbstractVar } from "./Algebra";
-import scalarOp from "./scalarOp";
 
 interface VarRef {
   readonly varNum: number;
@@ -129,17 +128,6 @@ export class WASMContext implements Context<VarRef> {
   
   scalarOp(name: string, ...args: Factor<VarRef>[]) {
     const {mod, formatFactor} = this;
-    // If the actual values of the args are known, evaluate the function call
-    // at code-generation time.  Most of the time we could simply leave this
-    // optimization to the WebGL compiler.  But occasionally it helps to
-    // evaluate such calls here:
-    // - Detect NaN and infinity in the generated code, not at runtime.
-    // - Certain results (typially 0 or 1) may allow for further optimizations
-    //   by the code generator.
-    if (args.every(arg => typeof arg === "number")) {
-      return scalarOp(name, ...args);
-    }
-
     const localVar = this.newLocal();
     this.body.push(
       mod.local.set(localVar.varNum,

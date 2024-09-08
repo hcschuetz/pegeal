@@ -1,3 +1,5 @@
+import scalarOp from "./scalarOp";
+
 export type Factor<T> = number | T;
 export type Term<T> = Factor<T>[];
 
@@ -393,9 +395,9 @@ export class Algebra<T> {
     if (mv.knownUnit) return 1;
 
     const se = this.singleEuclidean(mv);
-    if (se !== null) return this.ctx.scalarOp("abs", mv.value(se));
+    if (se !== null) return this.scalarOp("abs", mv.value(se));
 
-    return this.ctx.scalarOp("sqrt",
+    return this.scalarOp("sqrt",
       // As in the [DFM07] reference implementation we floor the squared norm
       // to 0 to avoid problems when the squared norm is slightly below 0 due
       // to rounding errors.
@@ -404,7 +406,7 @@ export class Algebra<T> {
       // TODO Check for "truly" negative squared norm?
       // But how to do this in gernerated code?
       // Or just take the absolute value of `normSquared` (as in `normalize`)?
-      this.ctx.scalarOp("max", 0, this.normSquared(mv))
+      this.scalarOp("max", 0, this.normSquared(mv))
     );
   }
 
@@ -421,7 +423,7 @@ export class Algebra<T> {
           if (mf === null) {
             throw new Error(`trying to invert null vector ${mv}`);
           }
-          add(bm, [this.ctx.scalarOp("/", 1, this.times(val, ...mf))], bitCount(bm) & 2);
+          add(bm, [this.scalarOp("/", 1, this.times(val, ...mf))], bitCount(bm) & 2);
         }
       });
     }
@@ -429,19 +431,17 @@ export class Algebra<T> {
     if (norm2 === 0) {
       throw new Error(`trying to invert null vector ${mv}`);
     }
-    return this.scale(this.ctx.scalarOp("/", 1, norm2), this.reverse(mv));
+    return this.scale(this.scalarOp("/", 1, norm2), this.reverse(mv));
   }
 
   /** **This is only correct for versors!** */
   normalize(mv: MultiVector<T>): MultiVector<T> {
-    const {ctx} = this;
-
     if (mv.knownUnit) return mv;
 
     const se = this.singleEuclidean(mv);
     if (se !== null) {
       return new MultiVector(this, "normSE", add => add(se, [
-        ctx.scalarOp("sign", mv.value(se))
+        this.scalarOp("sign", mv.value(se))
       ])).markAsUnit();
     }
 
@@ -450,10 +450,10 @@ export class Algebra<T> {
       throw new Error(`trying to normalize null vector ${mv}`);
     }
     return this.scale(
-      ctx.scalarOp("inversesqrt",
+      this.scalarOp("inversesqrt",
         // Use the absolute value for compatibility with the
         // [DFM07] reference implementation.  Does it actually make sense?
-        true ? ctx.scalarOp("abs", normSq) : normSq
+        true ? this.scalarOp("abs", normSq) : normSq
       ),
       mv
     ).markAsUnit();
@@ -593,11 +593,10 @@ export class Algebra<T> {
       .markAsUnit([...A].every(([_, value]) => value === 0));
     } else {
       // TODO detect and handle negative or zero norm2 at runtime
-      const {ctx} = this;
-      const alpha = ctx.scalarOp("sqrt", norm2);
-      const cos = ctx.scalarOp("cos", alpha);
-      const sin = ctx.scalarOp("sin", alpha);
-      const sinByAlpha = ctx.scalarOp("/", sin, alpha);
+      const alpha = this.scalarOp("sqrt", norm2);
+      const cos = this.scalarOp("cos", alpha);
+      const sin = this.scalarOp("sin", alpha);
+      const sinByAlpha = this.scalarOp("/", sin, alpha);
       return new MultiVector(this, "exp", add => {
         add(0, [cos]);
         for (const [bitmap, value] of A) {
@@ -616,7 +615,6 @@ export class Algebra<T> {
   // Notice that R can also be seen as a unit quaternion,
   // except that the xz component is the negative j component.
   log(R: MultiVector<T>): MultiVector<T> {
-    const {ctx} = this;
     /** The cosine of the half angle, that is, the real part of the quaternion */
     const R0 = R.value(0);
     /** The imaginary part of the quaternion */
@@ -625,8 +623,8 @@ export class Algebra<T> {
     const R2Norm = this.norm(R2);
     if (R2Norm == 0) throw new Error("division by zero in log computation");
     // TODO optimize away atan2 call if R0 == 0.
-    const atan = ctx.scalarOp("atan2", R2Norm, R0);
-    const scalarFactor = ctx.scalarOp("/", atan, R2Norm);
+    const atan = this.scalarOp("atan2", R2Norm, R0);
+    const scalarFactor = this.scalarOp("/", atan, R2Norm);
     return this.scale(scalarFactor, R2);
   }
 
@@ -639,7 +637,7 @@ export class Algebra<T> {
   
   /** **EXPECTS 1-VECTORS** */
   getAngle(a: MultiVector<T>, b: MultiVector<T>): Factor<T> {
-    return this.ctx.scalarOp("atan2",
+    return this.scalarOp("atan2",
       this.norm(this.wedgeProduct(a, b)),
       this.scalarProduct(a, b),
     );
@@ -656,15 +654,14 @@ export class Algebra<T> {
    * the same magnitude, namely the circle's radius.
    */
   slerp(a: MultiVector<T>, b: MultiVector<T>) {
-    const {ctx} = this;
     const Omega = this.getAngle(a, b);
-    const scale = ctx.scalarOp("/", 1, ctx.scalarOp("sin", Omega));
+    const scale = this.scalarOp("/", 1, this.scalarOp("sin", Omega));
     return (t: Factor<T>) => {
       const scaleA = this.times(scale,
-        ctx.scalarOp("sin", this.times(ctx.scalarOp("-", 1, t), Omega))
+        this.scalarOp("sin", this.times(this.scalarOp("-", 1, t), Omega))
       );
       const scaleB = this.times(scale,
-        ctx.scalarOp("sin", this.times(t                   , Omega))
+        this.scalarOp("sin", this.times(t                   , Omega))
       );
       return (
         this.plus(this.scale(scaleA, a), this.scale(scaleB, b)).markAsUnit()
@@ -682,7 +679,15 @@ export class Algebra<T> {
       factors.some(f => f === 0) ? 0 :
       factors.length === 0 ? 1 :
       // TODO multiply numeric factors at generation time?
-      factors.reduce((acc, f) => this.ctx.scalarOp("*", acc, f))
+      factors.reduce((acc, f) => this.scalarOp("*", acc, f))
+    );
+  }
+
+  scalarOp(name: string, ...args: Factor<T>[]) {
+    return (
+      args.every(arg => typeof arg === "number")
+      ? scalarOp(name, ...args)
+      : this.ctx.scalarOp(name, ...args)
     );
   }
 

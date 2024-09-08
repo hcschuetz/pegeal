@@ -20,6 +20,8 @@ export class EvalContext implements Context<never> {
   }
 
   scalarOp(name: string, ...args: number[]): number {
+    // If all args are numbers, the Algebra will directly evaluate the expression.
+    // So this function is not called.  Still we provide the full context API.
     return scalarOp(name, ...args);
   }
 
