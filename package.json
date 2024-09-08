@@ -3,7 +3,7 @@
   "version": "0.0.1",
   "main": "index.js",
   "scripts": {
-    "dev": "nodemon --trace-uncaught --enable-source-maps --import=tsx index.ts"
+    "dev": "nodemon --trace-uncaught --enable-source-maps --import=tsx examples/index.ts"
   },
   "author": "Heribert Schütz",
   "license": "MIT",
