@@ -1,6 +1,6 @@
 import binaryen from "binaryen";
 import { Term, Factor, Context, AbstractVar } from "./Algebra";
-import { EvalContext } from "./evalExpr";
+import scalarOp from "./scalarOp";
 
 interface VarRef {
   readonly varNum: number;
@@ -93,7 +93,6 @@ class VarImpl extends AbstractVar<VarRef> {
 }
 
 export class WASMContext implements Context<VarRef> {
-  private evalCtx = new EvalContext();
   localVars: binaryen.Type[] = [];
   body: binaryen.ExpressionRef[] = [];
   varNumUsed = false;
@@ -138,7 +137,7 @@ export class WASMContext implements Context<VarRef> {
     // - Certain results (typially 0 or 1) may allow for further optimizations
     //   by the code generator.
     if (args.every(arg => typeof arg === "number")) {
-      return this.evalCtx.scalarOp(name, ...args);
+      return scalarOp(name, ...args);
     }
 
     const localVar = this.newLocal();

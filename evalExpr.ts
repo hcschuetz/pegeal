@@ -1,4 +1,5 @@
 import { Context, Var, Term, AbstractVar } from "./Algebra";
+import scalarOp from "./scalarOp";
 
 class VarImpl extends AbstractVar<never> {
   #value = 0;
@@ -19,16 +20,7 @@ export class EvalContext implements Context<never> {
   }
 
   scalarOp(name: string, ...args: number[]): number {
-    switch (name) {
-      case "+": return args[0] + args[1];
-      case "-": return args[0] - args[1];
-      case "*": return args[0] * args[1];
-      case "/": return args[0] / args[1];
-      case "inversesqrt": return 1 / Math.sqrt(args[0]);
-      // TODO support more WebGL2 functions here
-      // TODO apply nArgs(...)?
-      default: return (Math as any)[name](...args);
-    }
+    return scalarOp(name, ...args);
   }
 
   space(): void {}

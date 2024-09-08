@@ -1,5 +1,5 @@
 import { Term, Factor, Context, AbstractVar } from "./Algebra";
-import { EvalContext } from "./evalExpr";
+import scalarOp from "./scalarOp";
 
 function formatFactor(f: Factor<string>): string {
   switch (typeof f) {
@@ -59,7 +59,6 @@ class VarImpl extends AbstractVar<string> {
 export class WebGLContext implements Context<string> {
   private count = 0;
   public text = "";
-  private evalCtx = new EvalContext();
 
   emit(newText: string) {
     this.text += newText + "\n";
@@ -78,7 +77,7 @@ export class WebGLContext implements Context<string> {
     // - Certain results (typially 0 or 1) may allow for further optimizations
     //   by the code generator.
     if (args.every(arg => typeof arg === "number")) {
-      return this.evalCtx.scalarOp(name, ...args);
+      return scalarOp(name, ...args);
     }
 
     if (Object.hasOwn(binopLongName, name)) {
