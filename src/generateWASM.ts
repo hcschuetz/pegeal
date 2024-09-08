@@ -1,5 +1,5 @@
 import B from "binaryen";
-import { Term, Factor, Context, AbstractVar } from "./Algebra";
+import { Term, Scalar, Context, AbstractVar } from "./Algebra";
 
 export class VarRef implements VarRef {
   constructor(readonly varNum: number) {}
@@ -90,14 +90,14 @@ export class WASMContext implements Context<VarRef> {
    * `convertFactor` is a bound function so that it can be used as
    * `[...].map(this.convertFactor)`
    */
-  convertFactor = (f: Factor<VarRef>) => {
+  convertFactor = (f: Scalar<VarRef>) => {
     switch (typeof f) {
       case "number": return this.mod.f64.const(f);
       case "object": return this.mod.local.get(f.varNum, B.f64);
     }
   }
   
-  scalarOp(name: string, ...args: Factor<VarRef>[]) {
+  scalarOp(name: string, ...args: Scalar<VarRef>[]) {
     const {mod, convertFactor} = this;
     const localVar = this.newLocal();
     this.body.push(

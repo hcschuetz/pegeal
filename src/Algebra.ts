@@ -1,11 +1,11 @@
 import scalarOp from "./scalarOp";
 
-export type Factor<T> = number | T;
-export type Term<T> = Factor<T>[];
+export type Scalar<T> = number | T;
+export type Term<T> = Scalar<T>[];
 
 export interface Var<T> {
   add(term: Term<T>, negate?: any): void;
-  value(): Factor<T>;
+  value(): Scalar<T>;
 }
 
 export abstract class AbstractVar<T> implements Var<T> {
@@ -13,14 +13,14 @@ export abstract class AbstractVar<T> implements Var<T> {
 
   abstract addImpl(term: Term<T>, negate?: any): void;
   onFreeze() {}
-  abstract valueImpl(): Factor<T>;
+  abstract valueImpl(): Scalar<T>;
 
   add(term: Term<T>, negate?: any): void {
     if (this.#frozen) throw new Error("trying to update frozen variable");
     this.addImpl(term, negate);
   }
 
-  value(): Factor<T> {
+  value(): Scalar<T> {
     if (!this.#frozen) {
       this.onFreeze();
       this.#frozen = true;
@@ -31,11 +31,11 @@ export abstract class AbstractVar<T> implements Var<T> {
 
 export interface Context<T> {
   makeVar(nameHint: string): Var<T>;
-  scalarOp(name: string, ...args: Factor<T>[]): Factor<T>;
+  scalarOp(name: string, ...args: Scalar<T>[]): Scalar<T>;
   space(): void;
 }
 
-export class MultiVector<T> implements Iterable<[number, Factor<T>]> {
+export class MultiVector<T> implements Iterable<[number, Scalar<T>]> {
   #components: Var<T>[] = [];
 
   constructor(
@@ -58,9 +58,9 @@ export class MultiVector<T> implements Iterable<[number, Factor<T>]> {
     });
   }
 
-  value(bm: number): Factor<T> { return this.#components[bm]?.value() ?? 0; }
+  value(bm: number): Scalar<T> { return this.#components[bm]?.value() ?? 0; }
 
-  *[Symbol.iterator](): Generator<[number, Factor<T>], void, unknown> {
+  *[Symbol.iterator](): Generator<[number, Scalar<T>], void, unknown> {
     for (const [bitmap, variable] of this.#components.entries()) {
       if (variable !== undefined) {
         yield [bitmap, variable.value()];
@@ -206,7 +206,7 @@ export class Algebra<T> {
   readonly stringToBitmap: Record<string, number> = {};
 
   constructor(
-    readonly metric: Factor<T>[],
+    readonly metric: Scalar<T>[],
     readonly ctx: Context<T>,
     readonly bitmapToString: string[],
   ) {
@@ -238,7 +238,7 @@ export class Algebra<T> {
     return mv;
   }
 
-  mv(nameHint: string, obj: Record<string, Factor<T>>) {
+  mv(nameHint: string, obj: Record<string, Scalar<T>>) {
     return new MultiVector(this, nameHint, add => {
       for (const [key, val] of Object.entries(obj)) {
         const bm = this.stringToBitmap[key];
@@ -270,14 +270,14 @@ export class Algebra<T> {
     )
   }
 
-  outermorphism(mv: MultiVector<T>, matrix: (Factor<T> | undefined)[][]): MultiVector<T> {
+  outermorphism(mv: MultiVector<T>, matrix: (Scalar<T> | undefined)[][]): MultiVector<T> {
     // See `doc/Outermorphism.md` for explanations.
 
     const {nDimensions} = this;
     return new MultiVector(this, "morph", add => {
       // no `this.checkMine(mv)` here as `mv` may actually come from elsewhere
       for (const [bitmapIn, f] of mv) {
-        function recur(i: number, bitmapOut: number, flips: number, product: Factor<T>[]) {
+        function recur(i: number, bitmapOut: number, flips: number, product: Scalar<T>[]) {
           const iBit = 1 << i;
           if (iBit > bitmapIn) {
             // Fully traversed bitmapIn.  Contribute to the output:
@@ -306,7 +306,7 @@ export class Algebra<T> {
   }
 
   /** The scalar `alpha` should be given as a target-code expression. */
-  scale(alpha: Factor<T>, mv: MultiVector<T>): MultiVector<T> {
+  scale(alpha: Scalar<T>, mv: MultiVector<T>): MultiVector<T> {
     return new MultiVector(this, "scale", add => {
       if (alpha !== 0) {
         for (const [bitmap, value] of this.checkMine(mv)) {
@@ -352,7 +352,7 @@ export class Algebra<T> {
   // other out.  Thus there are no sign flips here.
   // (It looks like the `reverse` operation is in the definition of
   // normSquared precisely for this purpose.)
-  normSquared(mv: MultiVector<T>): Factor<T> {
+  normSquared(mv: MultiVector<T>): Scalar<T> {
     this.checkMine(mv);
     if (mv.knownUnit) return 1; // TODO or -1?
 
@@ -394,7 +394,7 @@ export class Algebra<T> {
     return foundBlade;
   }
 
-  norm(mv: MultiVector<T>): Factor<T> {
+  norm(mv: MultiVector<T>): Scalar<T> {
     this.checkMine(mv);
     if (mv.knownUnit) return 1;
 
@@ -474,7 +474,7 @@ export class Algebra<T> {
   }
 
   extract(
-    test: (bm: number, value: Factor<T>) => boolean,
+    test: (bm: number, value: Scalar<T>) => boolean,
     mv: MultiVector<T>,
   ): MultiVector<T> {
     return new MultiVector(this, "extract", add => {
@@ -561,7 +561,7 @@ export class Algebra<T> {
   }
 
   /** Implementation returning an object of scalar type. */
-  scalarProduct(a: MultiVector<T>, b: MultiVector<T>): Factor<T> {
+  scalarProduct(a: MultiVector<T>, b: MultiVector<T>): Scalar<T> {
     this.checkMine(a);
     this.checkMine(b);
     this.ctx.space();
@@ -635,12 +635,12 @@ export class Algebra<T> {
   // ----------------------------------------------------
   // Utilities (TODO Separate them from the core methods?)
 
-  dist(a: MultiVector<T>, b: MultiVector<T>): Factor<T> {
+  dist(a: MultiVector<T>, b: MultiVector<T>): Scalar<T> {
     return this.norm(this.plus(a, this.negate(b)));
   }
   
   /** **EXPECTS 1-VECTORS** */
-  getAngle(a: MultiVector<T>, b: MultiVector<T>): Factor<T> {
+  getAngle(a: MultiVector<T>, b: MultiVector<T>): Scalar<T> {
     return this.scalarOp("atan2",
       this.norm(this.wedgeProduct(a, b)),
       this.scalarProduct(a, b),
@@ -660,7 +660,7 @@ export class Algebra<T> {
   slerp(a: MultiVector<T>, b: MultiVector<T>) {
     const Omega = this.getAngle(a, b);
     const scale = this.scalarOp("/", 1, this.scalarOp("sin", Omega));
-    return (t: Factor<T>) => {
+    return (t: Scalar<T>) => {
       const scaleA = this.times(scale,
         this.scalarOp("sin", this.times(this.scalarOp("-", 1, t), Omega))
       );
@@ -675,7 +675,7 @@ export class Algebra<T> {
   }
 
   // TODO similar optimizations for other scalar operators/functions
-  times(...factors: Factor<T>[]): Factor<T> {
+  times(...factors: Scalar<T>[]): Scalar<T> {
     // This is not absolutely correct.  If one operator is 0 and the other
     // one is NaN or infinity, the unoptimized computation would not return 0.
     factors = factors.filter(f => f !== 1);
@@ -687,7 +687,7 @@ export class Algebra<T> {
     );
   }
 
-  scalarOp(name: string, ...args: Factor<T>[]) {
+  scalarOp(name: string, ...args: Scalar<T>[]) {
     return (
       args.every(arg => typeof arg === "number")
       ? scalarOp(name, ...args)
@@ -717,7 +717,7 @@ export class Algebra<T> {
     this.checkMine(operator);
     // We use name prefixes l, i, and r for the left, inner, and right part
     // of a sandwich product.
-    const lrVals: Record<string, () => Factor<T>> = {};
+    const lrVals: Record<string, () => Scalar<T>> = {};
     for (const [lBitmap, lVal] of operator) {
       for (const [rBitmap, rVal] of operator) {
         if (lBitmap > rBitmap) continue;
@@ -735,7 +735,7 @@ export class Algebra<T> {
       this.checkMine(operand);
       const {dummy = false} = options;
       return new MultiVector<T>(this, "sandwich", add => {
-        const lirVals: Record<string, {bm: number, lrVal: () => Factor<T>, term: Term<T>, count: number}> = {}
+        const lirVals: Record<string, {bm: number, lrVal: () => Scalar<T>, term: Term<T>, count: number}> = {}
         for (const [lBitmap] of operator) {
           for (const [rBitmap] of operator) {  
             const lrMetric = this.metricFactors(lBitmap & rBitmap);

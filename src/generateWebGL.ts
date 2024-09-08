@@ -1,6 +1,6 @@
-import { Term, Factor, Context, AbstractVar } from "./Algebra";
+import { Term, Scalar, Context, AbstractVar } from "./Algebra";
 
-function formatFactor(f: Factor<string>): string {
+function formatFactor(f: Scalar<string>): string {
   switch (typeof f) {
     case "number": {
       const s = f.toString();
@@ -67,7 +67,7 @@ export class WebGLContext implements Context<string> {
     return new VarImpl(this, `${nameHint}_${this.count++}`);
   }
 
-  scalarOp(name: string, ...args: Factor<string>[]) {
+  scalarOp(name: string, ...args: Scalar<string>[]) {
     let varName: string
     if (Object.hasOwn(binopLongName, name)) {
       varName = `${binopLongName[name]}_${this.count++}`;

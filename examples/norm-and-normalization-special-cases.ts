@@ -1,4 +1,4 @@
-import { Algebra, Factor } from "../src/Algebra";
+import { Algebra, Scalar } from "../src/Algebra";
 import { makeLetterNames } from "../src/componentNaming";
 import { WebGLContext } from "../src/generateWebGL";
 import { hideUnit, p } from "./utils";
@@ -17,7 +17,7 @@ const alg = new Algebra([1,1,5], ctx, makeLetterNames(coords));
   {xz: "bar"},
   {x: 1, y: -2, z: 3},
   {x: 1, y: "two", z: 3},
-] as Record<string, Factor<string>>[]).forEach((data, i) => {
+] as Record<string, Scalar<string>>[]).forEach((data, i) => {
   ctx.space();
   ctx.emit("// -----------");
   const mv = alg.mv(`mv${i}`, data);
