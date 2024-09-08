@@ -16,8 +16,6 @@ export class ParamRef implements VarRef {
   }
 
   get varNum() { return this.paramNum; }
-
-  toString() { return `p${this.varNum}`; }
 }
 
 export class LocalRef implements VarRef {
@@ -30,8 +28,6 @@ export class LocalRef implements VarRef {
     this.ctx.varNumUsed = true;
     return this.ctx.paramHints.length + this.localVarNum;
   }
-
-  toString() { return `v${this.varNum}`; }
 }
 
 class VarImpl extends AbstractVar<VarRef> {
