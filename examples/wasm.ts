@@ -74,9 +74,9 @@ mod.runPasses([
   "ssa", // for readability only, omit for production
 ]);
 
-writeAndStat("./out.wst", mod.emitText());
+writeAndStat("out.wst", mod.emitText());
 const binary = mod.emitBinary();
-writeAndStat("./out.wasm", binary);
+writeAndStat("out.wasm", binary);
 
 {
   const {name, params, body} = B.getFunctionInfo(fn);
@@ -94,13 +94,14 @@ writeAndStat("./out.wasm", binary);
   const prettyLines: string[] = [header];
   prettyStmt(body, line => prettyLines.push(line));
   const pretty = prettyLines.join("\n");
-  writeAndStat("./out.mylang", pretty);
+  writeAndStat("out.mylang", pretty);
   p();
   p(pretty);
 }
 
 function writeAndStat(where: string, what: string | Uint8Array) {
-  fs.writeFileSync(where, what);
+  fs.mkdirSync("./output", { recursive: true });
+  fs.writeFileSync("./output/" + where, what);
   p(`// ${where}: ${what.length} (brotli ${zlib.brotliCompressSync(what).length})`);
 }
 
