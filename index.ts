@@ -956,6 +956,8 @@ ${alg.exp(blade)}`);
 // WASM generation
 `);
 
+  B.setFastMath(true);
+
   const mod = new B.Module();
   mod.setFeatures(B.Features.Multivalue);
 
@@ -996,6 +998,7 @@ ${alg.exp(blade)}`);
   );
   mod.addFunctionExport("myTest", "myTestExt");
   p(`// valid: ${Boolean(mod.validate())}`);
+
   // TODO instead of .optimize(), add the needed passes to .runPasses([...])
   // (Some passes of .optimize() are apparently undone by my subsequent
   // passes.  So we should not run them in the first place.)
@@ -1007,11 +1010,14 @@ ${alg.exp(blade)}`);
     "flatten",
     "simplify-locals-notee",
     "ssa",
-    // running the last two paths again produces nicer code (in some cases):
+    // simplifying again produces nicer code (in some cases):
     "simplify-locals-notee",
-    "ssa",
-    "vacuum", // removes `(nop)`s, but not unused variables
-    "coalesce-locals", // removes most unused variables
+    // I hoped that (with fastMath === true) this converts `a * c + b * c` to
+    // `(a + b) * c`, but it doesn't:
+    "optimize-instructions",
+    "vacuum", // removes `(nop)`s
+    "coalesce-locals", // removes (most) unused variables
+    "ssa", // for readability only, omit for production
   ]);
 
   writeAndStat("./out.wst", mod.emitText());
