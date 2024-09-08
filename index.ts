@@ -960,24 +960,24 @@ ${alg.exp(blade)}`);
   mod.setFeatures(B.Features.Multivalue);
 
   const ctx = new WASMContext(mod,
-    "h.1 h.xy h.xz h.yz e.x e.w" // d.z
+    "m_z g_x g_y g_z h_x h_y h_z e_x e_w" // d_z
     .split(" ")
   );
-  const coords = "xyzw";
-  const alg = new Algebra([1,333,1,-1], ctx, makeLetterNames(coords));
-
   const param = ctx.paramsByHint;
-  const h = alg.mv("h", {
-    1: param["h.1"], xy: param["h.xy"], xz: param["h.xz"], yz: param["h.yz"]
-  });
+  const coords = "xyzw";
+  const alg = new Algebra([1,333,param.m_z,-1], ctx, makeLetterNames(coords));
+
+  const g = alg.mv("g", {x: param.g_x, y: param.g_y, z: param.g_z});
+  const h = alg.mv("h", {x: param.h_x, y: param.h_y, z: param.h_z});
+  const gh = alg.geometricProduct(g, h);
   const inputs = [
-    // alg.mv("d", {x: 2.22, z: param["d.z"], w: 4.44}),
-    alg.mv("e", {x: param["e.x"], w: param["e.w"]}),
+    // alg.mv("d", {x: 2.22, z: param.d_z, w: 4.44}),
+    alg.mv("e", {x: param.e_x, w: param.e_w}),
   ];
 
-  const sandwich_h = alg.sandwich(h);
-  const invNorm = ctx.scalarOp("/", 1, sandwich_h(alg.one()).value(0));
-  const results = inputs.map(inp => alg.scale(invNorm, sandwich_h(inp)));
+  const sandwich_gh = alg.sandwich(gh);
+  const invNorm = ctx.scalarOp("/", 1, sandwich_gh(alg.one()).value(0));
+  const results = inputs.map(inp => alg.scale(invNorm, sandwich_gh(inp)));
   // TODO make use of the bitmaps in result
   ctx.body.push(
     mod.return(mod.tuple.make(
