@@ -1,5 +1,5 @@
 import binaryen from "binaryen";
-import { Term, Factor, Context, BinOp, AbstractVar } from "./Algebra";
+import { Term, Factor, Context, AbstractVar } from "./Algebra";
 import { EvalContext } from "./evalExpr";
 
 interface VarRef {
@@ -127,8 +127,8 @@ export class WASMContext implements Context<VarRef> {
     }
   }
   
-  scalarFunc(name: string, ...args: Factor<VarRef>[]) {
-    const {mod} = this;
+  scalarOp(name: string, ...args: Factor<VarRef>[]) {
+    const {mod, formatFactor} = this;
     // If the actual values of the args are known, evaluate the function call
     // at code-generation time.  Most of the time we could simply leave this
     // optimization to the WebGL compiler.  But occasionally it helps to
@@ -137,30 +137,16 @@ export class WASMContext implements Context<VarRef> {
     // - Certain results (typially 0 or 1) may allow for further optimizations
     //   by the code generator.
     if (args.every(arg => typeof arg === "number")) {
-      return this.evalCtx.scalarFunc(name, ...args);
+      return this.evalCtx.scalarOp(name, ...args);
     }
 
     const localVar = this.newLocal();
     this.body.push(
       mod.local.set(localVar.varNum,
-        mod.call(name, args.map(this.formatFactor), binaryen.f64)
+        Object.hasOwn(binopName, name)
+        ? mod.f64[binopName[name]](formatFactor(args[0]),formatFactor(args[1]))
+        : mod.call(name, args.map(formatFactor), binaryen.f64)
       )
-    );
-    return localVar;
-  }
-
-  binop(name: BinOp, f1: Factor<VarRef>, f2: Factor<VarRef>) {
-    // See the comment at the beginning of scalarFunc(...).
-    if (typeof f1 === "number" && typeof f2 === "number") {
-      return this.evalCtx.binop(name, f1, f2);
-    }
-
-    const localVar = this.newLocal();
-    this.body.push(
-      this.mod.local.set(localVar.varNum, this.mod.f64[binopName[name]](
-        this.formatFactor(f1),
-        this.formatFactor(f2)
-      ))
     );
     return localVar;
   }
@@ -168,7 +154,7 @@ export class WASMContext implements Context<VarRef> {
   space(): void {}
 }
 
-const binopName: Record<BinOp, "add" | "sub" | "mul" | "div"> = {
+const binopName: Record<string, "add" | "sub" | "mul" | "div"> = {
   "+": "add",
   "-": "sub",
   "*": "mul",

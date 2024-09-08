@@ -1,4 +1,4 @@
-import { Context, Var, Term, BinOp, AbstractVar } from "./Algebra";
+import { Context, Var, Term, AbstractVar } from "./Algebra";
 
 class VarImpl extends AbstractVar<never> {
   #value = 0;
@@ -18,20 +18,16 @@ export class EvalContext implements Context<never> {
     return new VarImpl();
   }
 
-  scalarFunc(name: string, ...args: number[]): number {
+  scalarOp(name: string, ...args: number[]): number {
     switch (name) {
+      case "+": return args[0] + args[1];
+      case "-": return args[0] - args[1];
+      case "*": return args[0] * args[1];
+      case "/": return args[0] / args[1];
       case "inversesqrt": return 1 / Math.sqrt(args[0]);
       // TODO support more WebGL2 functions here
+      // TODO apply nArgs(...)?
       default: return (Math as any)[name](...args);
-    }
-  }
-
-  binop(name: BinOp, f1: number, f2: number): number {
-    switch (name) {
-      case "+": return f1 + f2;
-      case "-": return f1 - f2;
-      case "*": return f1 * f2;
-      case "/": return f1 / f2;
     }
   }
 

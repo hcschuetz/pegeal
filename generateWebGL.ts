@@ -1,4 +1,4 @@
-import { Term, Factor, Context, BinOp, AbstractVar } from "./Algebra";
+import { Term, Factor, Context, AbstractVar } from "./Algebra";
 import { EvalContext } from "./evalExpr";
 
 function formatFactor(f: Factor<string>): string {
@@ -69,7 +69,7 @@ export class WebGLContext implements Context<string> {
     return new VarImpl(this, `${nameHint}_${this.count++}`);
   }
 
-  scalarFunc(name: string, ...args: Factor<string>[]) {
+  scalarOp(name: string, ...args: Factor<string>[]) {
     // If the actual values of the args are known, evaluate the function call
     // at code-generation time.  Most of the time we could simply leave this
     // optimization to the WebGL compiler.  But occasionally it helps to
@@ -78,22 +78,17 @@ export class WebGLContext implements Context<string> {
     // - Certain results (typially 0 or 1) may allow for further optimizations
     //   by the code generator.
     if (args.every(arg => typeof arg === "number")) {
-      return this.evalCtx.scalarFunc(name, ...args);
+      return this.evalCtx.scalarOp(name, ...args);
+    }
+
+    if (Object.hasOwn(binopLongName, name)) {
+      const varName = `${binopLongName[name]}_${this.count++}`;
+      this.emit(`\nfloat ${varName} = ${formatFactor(args[0])} ${name} ${formatFactor(args[1])};`);
+      return varName;
     }
 
     const varName = `${name}_${this.count++}`;
     this.emit(`\nfloat ${varName} = ${name}(${args.map(formatFactor).join(", ")});`);
-    return varName;
-  }
-
-  binop(name: BinOp, f1: Factor<string>, f2: Factor<string>) {
-    // See the comment at the beginning of scalarFunc(...).
-    if (typeof f1 === "number" && typeof f2 === "number") {
-      return this.evalCtx.binop(name, f1, f2);
-    }
-
-    const varName = `${binopLongName[name]}_${this.count++}`;
-    this.emit(`\nfloat ${varName} = ${formatFactor(f1)} ${name} ${formatFactor(f2)};`);
     return varName;
   }
 
@@ -102,7 +97,7 @@ export class WebGLContext implements Context<string> {
   }
 }
 
-const binopLongName: Record<BinOp, String> = {
+const binopLongName: Record<string, string> = {
   "+": "plus",
   "-": "minus",
   "*": "times",

@@ -726,7 +726,7 @@ ${alg.exp(blade)}`);
 
   const ctx = new WebGLContext();
 
-  const three = ctx.scalarFunc("abs", ctx.binop("-", 7, 10));
+  const three = ctx.scalarOp("abs", ctx.scalarOp("-", 7, 10));
   ctx.emit(`// should be 3 (evaluated): ${three}`);
 
   p(ctx.text);
@@ -978,7 +978,7 @@ ${alg.exp(blade)}`);
   ];
 
   const sandwich_h = alg.sandwich(h);
-  const invNorm = ctx.binop("/", 1, sandwich_h(alg.one()).value(0));
+  const invNorm = ctx.scalarOp("/", 1, sandwich_h(alg.one()).value(0));
   const results = inputs.map(inp => alg.scale(invNorm, sandwich_h(inp)));
   // TODO make use of the bitmaps in result
   ctx.body.push(

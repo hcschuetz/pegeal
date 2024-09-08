@@ -27,13 +27,9 @@ export abstract class AbstractVar<T> implements Var<T> {
   }
 }
 
-// Extend these as needed
-export type BinOp = "+" | "-" | "*" | "/";
-
 export interface Context<T> {
   makeVar(nameHint: string): Var<T>;
-  scalarFunc(name: string, ...args: Factor<T>[]): Factor<T>;
-  binop(name: BinOp, f1: Factor<T>, f2: Factor<T>): Factor<T>;
+  scalarOp(name: string, ...args: Factor<T>[]): Factor<T>;
   space(): void;
 }
 
@@ -397,9 +393,9 @@ export class Algebra<T> {
     if (mv.knownUnit) return 1;
 
     const se = this.singleEuclidean(mv);
-    if (se !== null) return this.ctx.scalarFunc("abs", mv.value(se));
+    if (se !== null) return this.ctx.scalarOp("abs", mv.value(se));
 
-    return this.ctx.scalarFunc("sqrt",
+    return this.ctx.scalarOp("sqrt",
       // As in the [DFM07] reference implementation we floor the squared norm
       // to 0 to avoid problems when the squared norm is slightly below 0 due
       // to rounding errors.
@@ -408,7 +404,7 @@ export class Algebra<T> {
       // TODO Check for "truly" negative squared norm?
       // But how to do this in gernerated code?
       // Or just take the absolute value of `normSquared` (as in `normalize`)?
-      this.ctx.scalarFunc("max", 0, this.normSquared(mv))
+      this.ctx.scalarOp("max", 0, this.normSquared(mv))
     );
   }
 
@@ -425,7 +421,7 @@ export class Algebra<T> {
           if (mf === null) {
             throw new Error(`trying to invert null vector ${mv}`);
           }
-          add(bm, [this.ctx.binop("/", 1, this.times(val, ...mf))], bitCount(bm) & 2);
+          add(bm, [this.ctx.scalarOp("/", 1, this.times(val, ...mf))], bitCount(bm) & 2);
         }
       });
     }
@@ -433,7 +429,7 @@ export class Algebra<T> {
     if (norm2 === 0) {
       throw new Error(`trying to invert null vector ${mv}`);
     }
-    return this.scale(this.ctx.binop("/", 1, norm2), this.reverse(mv));
+    return this.scale(this.ctx.scalarOp("/", 1, norm2), this.reverse(mv));
   }
 
   /** **This is only correct for versors!** */
@@ -445,7 +441,7 @@ export class Algebra<T> {
     const se = this.singleEuclidean(mv);
     if (se !== null) {
       return new MultiVector(this, "normSE", add => add(se, [
-        ctx.scalarFunc("sign", mv.value(se))
+        ctx.scalarOp("sign", mv.value(se))
       ])).markAsUnit();
     }
 
@@ -454,10 +450,10 @@ export class Algebra<T> {
       throw new Error(`trying to normalize null vector ${mv}`);
     }
     return this.scale(
-      ctx.scalarFunc("inversesqrt",
+      ctx.scalarOp("inversesqrt",
         // Use the absolute value for compatibility with the
         // [DFM07] reference implementation.  Does it actually make sense?
-        true ? ctx.scalarFunc("abs", normSq) : normSq
+        true ? ctx.scalarOp("abs", normSq) : normSq
       ),
       mv
     ).markAsUnit();
@@ -598,10 +594,10 @@ export class Algebra<T> {
     } else {
       // TODO detect and handle negative or zero norm2 at runtime
       const {ctx} = this;
-      const alpha = ctx.scalarFunc("sqrt", norm2);
-      const cos = ctx.scalarFunc("cos", alpha);
-      const sin = ctx.scalarFunc("sin", alpha);
-      const sinByAlpha = ctx.binop("/", sin, alpha);
+      const alpha = ctx.scalarOp("sqrt", norm2);
+      const cos = ctx.scalarOp("cos", alpha);
+      const sin = ctx.scalarOp("sin", alpha);
+      const sinByAlpha = ctx.scalarOp("/", sin, alpha);
       return new MultiVector(this, "exp", add => {
         add(0, [cos]);
         for (const [bitmap, value] of A) {
@@ -629,8 +625,8 @@ export class Algebra<T> {
     const R2Norm = this.norm(R2);
     if (R2Norm == 0) throw new Error("division by zero in log computation");
     // TODO optimize away atan2 call if R0 == 0.
-    const atan = ctx.scalarFunc("atan2", R2Norm, R0);
-    const scalarFactor = ctx.binop("/", atan, R2Norm);
+    const atan = ctx.scalarOp("atan2", R2Norm, R0);
+    const scalarFactor = ctx.scalarOp("/", atan, R2Norm);
     return this.scale(scalarFactor, R2);
   }
 
@@ -643,7 +639,7 @@ export class Algebra<T> {
   
   /** **EXPECTS 1-VECTORS** */
   getAngle(a: MultiVector<T>, b: MultiVector<T>): Factor<T> {
-    return this.ctx.scalarFunc("atan2",
+    return this.ctx.scalarOp("atan2",
       this.norm(this.wedgeProduct(a, b)),
       this.scalarProduct(a, b),
     );
@@ -662,13 +658,13 @@ export class Algebra<T> {
   slerp(a: MultiVector<T>, b: MultiVector<T>) {
     const {ctx} = this;
     const Omega = this.getAngle(a, b);
-    const scale = ctx.binop("/", 1, ctx.scalarFunc("sin", Omega));
+    const scale = ctx.scalarOp("/", 1, ctx.scalarOp("sin", Omega));
     return (t: Factor<T>) => {
       const scaleA = this.times(scale,
-        ctx.scalarFunc("sin", this.times(ctx.binop("-", 1, t), Omega))
+        ctx.scalarOp("sin", this.times(ctx.scalarOp("-", 1, t), Omega))
       );
       const scaleB = this.times(scale,
-        ctx.scalarFunc("sin", this.times(t                   , Omega))
+        ctx.scalarOp("sin", this.times(t                   , Omega))
       );
       return (
         this.plus(this.scale(scaleA, a), this.scale(scaleB, b)).markAsUnit()
@@ -686,7 +682,7 @@ export class Algebra<T> {
       factors.some(f => f === 0) ? 0 :
       factors.length === 0 ? 1 :
       // TODO multiply numeric factors at generation time?
-      factors.reduce((acc, f) => this.ctx.binop("*", acc, f))
+      factors.reduce((acc, f) => this.ctx.scalarOp("*", acc, f))
     );
   }
 
