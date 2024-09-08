@@ -6,7 +6,7 @@ import { Algebra, Context, bitCount, MultiVector, productFlips, Factor } from ".
 import { makeLetterNames, makeNumberedNames } from "./componentNaming";
 import { WebGLContext } from "./generateWebGL";
 import { EvalContext } from "./evalExpr";
-import { LocalRef, WASMContext } from "./generateWASM";
+import { WASMContext } from "./generateWASM";
 
 const euclidean = (coords: number | string | string[]) =>
   (
@@ -958,23 +958,21 @@ ${alg.exp(blade)}`);
 
   const mod = new binaryen.Module();
   mod.setFeatures(binaryen.Features.Multivalue);
-  const ctx = new WASMContext(mod);
+
+  const ctx = new WASMContext(mod,
+    "h.1 h.xy h.xz h.yz e.x e.w" // d.z
+    .split(" ")
+  );
   const coords = "xyzw";
   const alg = new Algebra([1,333,1,-1], ctx, makeLetterNames(coords));
 
-  // Params must be generated before variables for proper var numbering.
-  // (Notice that alg.mv(...) already creates vars!)
-  const paramsByHint = Object.fromEntries(
-    "h.1 h.xy h.xz h.yz e.x e.w" // d.z
-    .split(" ").map(name => [name, ctx.param(name)])
-  );
-
+  const param = ctx.paramsByHint;
   const h = alg.mv("h", {
-    1: paramsByHint["h.1"], xy: paramsByHint["h.xy"], xz: paramsByHint["h.xz"], yz: paramsByHint["h.yz"]
+    1: param["h.1"], xy: param["h.xy"], xz: param["h.xz"], yz: param["h.yz"]
   });
   const inputs = [
-    // alg.mv("d", {x: 2.22, z: paramsByHint["d.z"], w: 4.44}),
-    alg.mv("e", {x: paramsByHint["e.x"], w: paramsByHint["e.w"]}),
+    // alg.mv("d", {x: 2.22, z: param["d.z"], w: 4.44}),
+    alg.mv("e", {x: param["e.x"], w: param["e.w"]}),
   ];
 
   const sandwich_h = alg.sandwich(h);
@@ -987,11 +985,13 @@ ${alg.exp(blade)}`);
     ))
   );
 
+  const f64Array = (length: number): binaryen.Type[] => new Array(length).fill(binaryen.f64);
+
   const fn = mod.addFunction(
     "myTest",
-    binaryen.createType(ctx.paramHints.map(() => binaryen.f64)),
-    binaryen.createType(new Array(results.flatMap(res => [...res]).length).fill(binaryen.f64)),
-    ctx.localVars,
+    binaryen.createType(f64Array(ctx.paramCount)),
+    binaryen.createType(f64Array(results.flatMap(res => [...res]).length)),
+    f64Array(ctx.varCount - ctx.paramCount),
     mod.block(null, ctx.body),
   );
   mod.addFunctionExport("myTest", "myTestExt");
@@ -1026,7 +1026,7 @@ ${alg.exp(blade)}`);
     }\n  // ${
       paramTypes.length
     }${
-      paramTypes.length === ctx.paramHints.length ? "" :
+      paramTypes.length === ctx.paramCount ? "" :
       " [### param number mismatch ###]"
     }\n) : [${
       results.flatMap((res, i) => [...res].map(([bm]) => `\n  float /* out[${i}].${alg.bitmapToString[bm]} */`).join(","))

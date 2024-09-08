@@ -1,33 +1,8 @@
 import binaryen from "binaryen";
 import { Term, Factor, Context, AbstractVar } from "./Algebra";
 
-interface VarRef {
-  readonly varNum: number;
-}
-
-export class ParamRef implements VarRef {
-  constructor(
-    readonly ctx: WASMContext,
-    readonly paramNum: number,
-  ) {
-    if (ctx.varNumUsed) {
-      throw new Error("Cannot create ParamRef after using varNum");
-    }
-  }
-
-  get varNum() { return this.paramNum; }
-}
-
-export class LocalRef implements VarRef {
-  constructor(
-    readonly ctx: WASMContext,
-    readonly localVarNum: number,
-  ) {}
-
-  get varNum(): number {
-    this.ctx.varNumUsed = true;
-    return this.ctx.paramHints.length + this.localVarNum;
-  }
+export class VarRef implements VarRef {
+  constructor(readonly varNum: number) {}
 }
 
 class VarImpl extends AbstractVar<VarRef> {
@@ -88,30 +63,27 @@ class VarImpl extends AbstractVar<VarRef> {
 }
 
 export class WASMContext implements Context<VarRef> {
-  localVars: binaryen.Type[] = [];
+  varCount = 0;
   body: binaryen.ExpressionRef[] = [];
-  varNumUsed = false;
+  paramsByHint: Record<string, VarRef> = {};
 
   constructor(
     readonly mod: binaryen.Module,
-  ) {}
-
-  paramHints: string[] = [];
-  param(hint: string): ParamRef {
-    const {paramHints} = this;
-    const i = paramHints.length;
-    paramHints.push(hint);
-    return new ParamRef(this, i);
+    readonly paramHints: string[],
+  ) {
+    for (const hint of paramHints) {
+      this.paramsByHint[hint] = this.newLocal();
+    }
   }
+
+  get paramCount() { return this.paramHints.length; }
 
   makeVar() {
     return new VarImpl(this);
   }
 
   newLocal() {
-    const localVarNum = this.localVars.length;
-    this.localVars.push(binaryen.f64);
-    return new LocalRef(this, localVarNum);
+    return new VarRef(this.varCount++);
   }
 
   /**
