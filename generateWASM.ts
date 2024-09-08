@@ -120,6 +120,7 @@ export class WASMContext implements Context<VarRef> {
     return new LocalRef(this, localVarNum);
   }
 
+  /** formatFactor is a bound function, so it can be used as `[...].map(formatFactor)` */
   formatFactor = (f: Factor<VarRef>) => {
     switch (typeof f) {
       case "number": return this.mod.f64.const(f);
