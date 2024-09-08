@@ -1,0 +1,51 @@
+diff --git a/node_modules/binaryen/index.d.ts b/node_modules/binaryen/index.d.ts
+index 3ecfb06..36fb458 100644
+--- a/node_modules/binaryen/index.d.ts
++++ b/node_modules/binaryen/index.d.ts
+@@ -1,6 +1,6 @@
+ declare module binaryen {
+ 
+-  type Type = number;
++  const enum Type {}
+ 
+   const none: Type;
+   const i32: Type;
+@@ -1123,13 +1123,13 @@ declare module binaryen {
+     TraverseCalls
+   }
+ 
+-  type ElementSegmentRef = number;
+-  type ExpressionRef = number;
+-  type FunctionRef = number;
+-  type GlobalRef = number;
+-  type ExportRef = number;
+-  type TableRef = number;
+-  type TagRef = number;
++  const enum ElementSegmentRef {}
++  const enum ExpressionRef {}
++  const enum FunctionRef {}
++  const enum GlobalRef {}
++  const enum ExportRef {}
++  const enum TableRef {}
++  const enum TagRef {}
+ 
+   class Module {
+     constructor();
+@@ -1758,7 +1758,7 @@ declare module binaryen {
+       fence(): ExpressionRef;
+     };
+     tuple: {
+-      make(elements: ExportRef[]): ExpressionRef;
++      make(elements: ExpressionRef[]): ExpressionRef;
+       extract(tuple: ExpressionRef, index: number): ExpressionRef;
+     };
+     Function: {
+@@ -2302,7 +2302,7 @@ declare module binaryen {
+   function setAllowInliningFunctionsWithLoops(on: boolean): void;
+   function exit(status: number): void;
+ 
+-  type RelooperBlockRef = number;
++  const enum RelooperBlockRef {}
+ 
+   class Relooper {
+     constructor(module: Module);
