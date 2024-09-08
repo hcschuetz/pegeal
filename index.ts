@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import zlib from "node:zlib";
-import binaryen from "binaryen";
+import B from "binaryen";
 
 import { Algebra, Context, bitCount, MultiVector, productFlips, Factor } from "./Algebra";
 import { makeLetterNames, makeNumberedNames } from "./componentNaming";
@@ -956,8 +956,8 @@ ${alg.exp(blade)}`);
 // WASM generation
 `);
 
-  const mod = new binaryen.Module();
-  mod.setFeatures(binaryen.Features.Multivalue);
+  const mod = new B.Module();
+  mod.setFeatures(B.Features.Multivalue);
 
   const ctx = new WASMContext(mod,
     "h.1 h.xy h.xz h.yz e.x e.w" // d.z
@@ -985,12 +985,12 @@ ${alg.exp(blade)}`);
     ))
   );
 
-  const f64Array = (length: number): binaryen.Type[] => new Array(length).fill(binaryen.f64);
+  const f64Array = (length: number): B.Type[] => new Array(length).fill(B.f64);
 
   const fn = mod.addFunction(
     "myTest",
-    binaryen.createType(f64Array(ctx.paramCount)),
-    binaryen.createType(f64Array(results.flatMap(res => [...res]).length)),
+    B.createType(f64Array(ctx.paramCount)),
+    B.createType(f64Array(results.flatMap(res => [...res]).length)),
     f64Array(ctx.varCount - ctx.paramCount),
     mod.block(null, ctx.body),
   );
@@ -1019,8 +1019,8 @@ ${alg.exp(blade)}`);
   writeAndStat("./out.wasm", binary);
 
   {
-    const {name, params, body} = binaryen.getFunctionInfo(fn);
-    const paramTypes = binaryen.expandType(params)
+    const {name, params, body} = B.getFunctionInfo(fn);
+    const paramTypes = B.expandType(params)
     const header = `function ${name}(${
       ctx.paramHints.map((hint, i) => `\n  float v${i} /* ${hint} */`).join(",")
     }\n  // ${
@@ -1044,25 +1044,25 @@ ${alg.exp(blade)}`);
     p(`// ${where}: ${what.length} (brotli ${zlib.brotliCompressSync(what).length})`);
   }
 
-  function prettyStmt(stmt: binaryen.ExpressionRef, emit: (line: string) => unknown): void {
-    const stmtInfo = binaryen.getExpressionInfo(stmt);
+  function prettyStmt(stmt: B.ExpressionRef, emit: (line: string) => unknown): void {
+    const stmtInfo = B.getExpressionInfo(stmt);
     switch (stmtInfo.id) {
-      case binaryen.NopId: {
+      case B.NopId: {
         break;
       }
-      case binaryen.LocalSetId: {
-        const {isTee, index, value} = stmtInfo as binaryen.LocalSetInfo;
+      case B.LocalSetId: {
+        const {isTee, index, value} = stmtInfo as B.LocalSetInfo;
         if (isTee) emit("### tee not supported");
         // This assumes single-assignment form:
         indent(`float v${index} = ${prettyExpr(value)};`, emit)
         break;
       }
-      case binaryen.ReturnId:
-        const {value} = stmtInfo as binaryen.ReturnInfo;
+      case B.ReturnId:
+        const {value} = stmtInfo as B.ReturnInfo;
         indent(`return ${prettyExpr(value)};`, emit);
         break;
-      case binaryen.BlockId: {
-        const {children} = stmtInfo as binaryen.BlockInfo;
+      case B.BlockId: {
+        const {children} = stmtInfo as B.BlockInfo;
         emit("{");
         for (const child of children) {
           prettyStmt(child, line => emit("  " + line));
@@ -1070,7 +1070,7 @@ ${alg.exp(blade)}`);
         emit("}");
         break;
       }
-      case binaryen.UnreachableId: {
+      case B.UnreachableId: {
         emit("// unreachable");
         break;
       }
@@ -1085,36 +1085,36 @@ ${alg.exp(blade)}`);
     text.split("\n").forEach(emit);
   }
 
-  function prettyExpr(expr: binaryen.ExpressionRef): string {
-    const exprInfo = binaryen.getExpressionInfo(expr);
+  function prettyExpr(expr: B.ExpressionRef): string {
+    const exprInfo = B.getExpressionInfo(expr);
     switch(exprInfo.id) {
-      case binaryen.ConstId: {
-        const {value} = exprInfo as binaryen.ConstInfo;
+      case B.ConstId: {
+        const {value} = exprInfo as B.ConstInfo;
         return `${value}`;
       }
-      case binaryen.LocalGetId: {
-        const {index} = exprInfo as binaryen.LocalGetInfo;
+      case B.LocalGetId: {
+        const {index} = exprInfo as B.LocalGetInfo;
         return `v${index}`;
       }
-      case binaryen.UnaryId: {
-        const {op, value} = exprInfo as binaryen.UnaryInfo;
+      case B.UnaryId: {
+        const {op, value} = exprInfo as B.UnaryInfo;
         switch (op) {
-          case binaryen.NegFloat64: return `(-${prettyExpr(value)})`;
+          case B.NegFloat64: return `(-${prettyExpr(value)})`;
           default: return "### unary " + op;
         }
       }
-      case binaryen.BinaryId: {
-        const {op, left, right} = exprInfo as binaryen.BinaryInfo;
+      case B.BinaryId: {
+        const {op, left, right} = exprInfo as B.BinaryInfo;
         const opString =
-          op === binaryen.AddFloat64 ? "+" :
-          op === binaryen.SubFloat64 ? "-" :
-          op === binaryen.MulFloat64 ? "*" :
-          op === binaryen.DivFloat64 ? "/" :
+          op === B.AddFloat64 ? "+" :
+          op === B.SubFloat64 ? "-" :
+          op === B.MulFloat64 ? "*" :
+          op === B.DivFloat64 ? "/" :
           "### binop " + op;
         return `(${prettyExpr(left)} ${opString} ${prettyExpr(right)})`;
       }
-      case binaryen.TupleMakeId: {
-        const {operands} = exprInfo as binaryen.TupleMakeInfo;
+      case B.TupleMakeId: {
+        const {operands} = exprInfo as B.TupleMakeInfo;
         // TODO properly indent line breaks within elem output
         return `[\n   ${operands.map(elem => prettyExpr(elem)).join(",\n   ")}\n]`;
       }

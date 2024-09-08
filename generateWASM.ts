@@ -1,4 +1,4 @@
-import binaryen from "binaryen";
+import B from "binaryen";
 import { Term, Factor, Context, AbstractVar } from "./Algebra";
 
 export class VarRef implements VarRef {
@@ -39,7 +39,7 @@ class VarImpl extends AbstractVar<VarRef> {
       body.push(mod.local.set(this.#varRef.varNum, signedExpr));
     } else {
       body.push(mod.local.set(this.#varRef!.varNum,
-        mod.f64.add(mod.local.get(this.#varRef!.varNum, binaryen.f64), signedExpr)
+        mod.f64.add(mod.local.get(this.#varRef!.varNum, B.f64), signedExpr)
       ));
     }
     this.#created = true;
@@ -50,7 +50,7 @@ class VarImpl extends AbstractVar<VarRef> {
     if (this.#created && this.#numericPart !== 0) {
       body.push(mod.local.set(this.#varRef!.varNum,
         mod.f64.add(
-          mod.local.get(this.#varRef!.varNum, binaryen.f64),
+          mod.local.get(this.#varRef!.varNum, B.f64),
           mod.f64.const(this.#numericPart)
         )
       ));
@@ -64,11 +64,11 @@ class VarImpl extends AbstractVar<VarRef> {
 
 export class WASMContext implements Context<VarRef> {
   varCount = 0;
-  body: binaryen.ExpressionRef[] = [];
+  body: B.ExpressionRef[] = [];
   paramsByHint: Record<string, VarRef> = {};
 
   constructor(
-    readonly mod: binaryen.Module,
+    readonly mod: B.Module,
     readonly paramHints: string[],
   ) {
     for (const hint of paramHints) {
@@ -93,7 +93,7 @@ export class WASMContext implements Context<VarRef> {
   convertFactor = (f: Factor<VarRef>) => {
     switch (typeof f) {
       case "number": return this.mod.f64.const(f);
-      case "object": return this.mod.local.get(f.varNum, binaryen.f64);
+      case "object": return this.mod.local.get(f.varNum, B.f64);
     }
   }
   
@@ -104,7 +104,7 @@ export class WASMContext implements Context<VarRef> {
       mod.local.set(localVar.varNum,
         Object.hasOwn(binopName, name)
         ? mod.f64[binopName[name]](convertFactor(args[0]),convertFactor(args[1]))
-        : mod.call(name, args.map(convertFactor), binaryen.f64)
+        : mod.call(name, args.map(convertFactor), B.f64)
       )
     );
     return localVar;
