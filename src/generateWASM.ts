@@ -1,11 +1,11 @@
 import B from "binaryen";
-import { Term, Scalar, Context, AbstractVar } from "./Algebra";
+import { Term, Scalar, Context, Var } from "./Algebra";
 
 export class VarRef implements VarRef {
   constructor(readonly varNum: number) {}
 }
 
-class VarImpl extends AbstractVar<VarRef> {
+class VarImpl extends Var<VarRef> {
   #created = false;
   #varRef?: VarRef;
   #numericPart = 0;
@@ -45,7 +45,7 @@ class VarImpl extends AbstractVar<VarRef> {
     this.#created = true;
   }
 
-  onFreeze(): void {
+  freeze(): void {
     const {mod, body} = this.ctx;
     if (this.#created && this.#numericPart !== 0) {
       body.push(mod.local.set(this.#varRef!.varNum,

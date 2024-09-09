@@ -1,4 +1,4 @@
-import { Term, Scalar, Context, AbstractVar } from "./Algebra";
+import { Term, Scalar, Context, Var } from "./Algebra";
 
 function formatFactor(f: Scalar<string>): string {
   switch (typeof f) {
@@ -10,7 +10,7 @@ function formatFactor(f: Scalar<string>): string {
   }
 }
 
-class VarImpl extends AbstractVar<string> {
+class VarImpl extends Var<string> {
   #created = false;
   #numericPart = 0;
 
@@ -44,7 +44,7 @@ class VarImpl extends AbstractVar<string> {
     this.#created = true;
   }
 
-  onFreeze(): void {
+  freeze(): void {
     if (this.#created && this.#numericPart !== 0) {
       this.ctx.emit(`      ${this.name} += ${formatFactor(this.#numericPart)};`);
     }

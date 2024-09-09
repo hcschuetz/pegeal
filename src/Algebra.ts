@@ -3,17 +3,8 @@ import scalarOp from "./scalarOp";
 export type Scalar<T> = number | T;
 export type Term<T> = Scalar<T>[];
 
-export interface Var<T> {
-  add(term: Term<T>, negate?: any): void;
-  value(): Scalar<T>;
-}
-
-export abstract class AbstractVar<T> implements Var<T> {
+export abstract class Var<T> {
   #frozen = false;
-
-  abstract addImpl(term: Term<T>, negate?: any): void;
-  onFreeze() {}
-  abstract valueImpl(): Scalar<T>;
 
   add(term: Term<T>, negate?: any): void {
     if (this.#frozen) throw new Error("trying to update frozen variable");
@@ -22,11 +13,15 @@ export abstract class AbstractVar<T> implements Var<T> {
 
   value(): Scalar<T> {
     if (!this.#frozen) {
-      this.onFreeze();
+      this.freeze();
       this.#frozen = true;
     }
     return this.valueImpl();
   }
+
+  protected abstract addImpl(term: Term<T>, negate?: any): void;
+  protected freeze() {}
+  protected abstract valueImpl(): Scalar<T>;
 }
 
 export interface Context<T> {

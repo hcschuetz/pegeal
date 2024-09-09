@@ -1,7 +1,7 @@
-import { Context, Var, Term, AbstractVar } from "./Algebra";
+import { Context, Var, Term, Var } from "./Algebra";
 import scalarOp from "./scalarOp";
 
-class VarImpl extends AbstractVar<never> {
+class VarImpl extends Var<never> {
   #value = 0;
 
   addImpl(term: Term<never>, negate = false): void {
