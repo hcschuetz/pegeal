@@ -177,29 +177,6 @@ const incl: Record<string, ProdInclude> = {
   dot   : (bmA, bmB) => !(bmA & ~bmB) || !(~bmA & bmB),
 }
 
-// The bitmap operations above correspond to the following conditions on
-// basis-vector sets and grades:
-// ------------------+-----------------+----------------------------------------
-// product kind      | condition on    | grade-based test using
-//                   | the sets of     | gA   := bitcount(bmA)
-//                   | input basis     | gB   := bitcount(bmB)
-//                   | vectors         | gOut := bitcount(bmA ^ bmB)
-// ------------------+-----------------+----------------------------------------
-// geometric         | true            | true
-// wedge             | A ⋂ B = {}      | gOut === gA + gB
-// left contraction  | A ⊂ B           | gOut === gB - gA
-// right contraction | A ⊃ B           | gOut === gA - gB
-// scalar            | A = B           | gOut === 0
-// dot               | A ⊂ B or A ⊃ B  | gOut === |gA - gB|
-// ------------------+-----------------+----------------------------------------
-// To emphasize their analogy, the "scalar" and "dot" cases could be defined as:
-// scalar            | A ⊂ B and A ⊃ B | gOut === gB - gA && gOut === gA - gB
-// dot               | A ⊂ B or  A ⊃ B | gOut === gB - gA || gOut === gA - gB
-// ------------------+-----------------+----------------------------------------
-// Notice that the set-based conditions (and thus also the bitmap conditions)
-// can be formulated using just the inputs whereas the grade-based conditions
-// also need the result property gOut.
-
 /**
  * The number of adjacent transpositions needed for the product of
  * two basis blades (represented as bitmaps).
