@@ -4,24 +4,41 @@ export type Scalar<T> = number | T;
 export type Term<T> = Scalar<T>[];
 
 export abstract class Var<T> {
+  #created = false;
   #frozen = false;
+  #numericPart = 0;
 
   add(term: Term<T>, negate?: any): void {
     if (this.#frozen) throw new Error("trying to update frozen variable");
-    this.addImpl(term, negate);
+
+    if (term.some(f => f === 0)) return;
+
+    // We could easily eliminate 1 factors:
+    //   term = term.filter(f => f !== 1);
+    // but keeping them might make the generated code more readable,
+    // and it should be easy for that code's compiler to optimize 1s away.
+
+    if (term.every(f => typeof f === "number")) {
+      this.#numericPart += term.reduce((x, y) => x * y, negate ? -1 : 1);
+      return;
+    }
+
+    this.addTerm(term, negate, !this.#created);
+    this.#created = true;
   }
 
   value(): Scalar<T> {
     if (!this.#frozen) {
-      this.freeze();
+      if (this.#created && this.#numericPart !== 0) {
+        this.addTerm([this.#numericPart], false, false);
+      }
       this.#frozen = true;
     }
-    return this.valueImpl();
+    return this.#created ? this.getValue() : this.#numericPart;
   }
 
-  protected abstract addImpl(term: Term<T>, negate?: any): void;
-  protected freeze() {}
-  protected abstract valueImpl(): Scalar<T>;
+  protected abstract addTerm(term: Term<T>, negate: any, create: boolean): void;
+  protected abstract getValue(): T;
 }
 
 export interface Context<T> {

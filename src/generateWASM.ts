@@ -6,35 +6,21 @@ export class VarRef implements VarRef {
 }
 
 class VarImpl extends Var<VarRef> {
-  #created = false;
-  #varRef?: VarRef;
-  #numericPart = 0;
-
   constructor(
     readonly ctx: WASMContext,
   ) {
     super();
   }
 
-  addImpl(term: Term<VarRef>, negate = false) {
+  #varRef?: VarRef;
+
+  addTerm(term: Term<VarRef>, negate: any, create: boolean) {
     const {mod, body, convertFactor} = this.ctx;
-    if (term.some(f => f === 0)) return;
-
-    // We could easily eliminate 1 factors:
-    //   term = term.filter(f => f !== 1);
-    // but keeping them might make the generated code more readable,
-    // and it should be easy for that code's compiler to optimize 1s away.
-
-    if (term.every(f => typeof f === "number")) {
-      this.#numericPart += term.reduce((x, y) => x * y, negate ? -1 : 1);
-      return;
-    }
-
     const expr =
       term.length === 0 ? mod.f64.const(1) :
       term.map(convertFactor).reduce((acc, factor) => mod.f64.mul(acc, factor));
     const signedExpr = negate ? mod.f64.neg(expr) : expr;
-    if (!this.#created) {
+    if (create) {
       this.#varRef = this.ctx.newLocal();
       body.push(mod.local.set(this.#varRef.varNum, signedExpr));
     } else {
@@ -42,24 +28,9 @@ class VarImpl extends Var<VarRef> {
         mod.f64.add(mod.local.get(this.#varRef!.varNum, B.f64), signedExpr)
       ));
     }
-    this.#created = true;
   }
 
-  freeze(): void {
-    const {mod, body} = this.ctx;
-    if (this.#created && this.#numericPart !== 0) {
-      body.push(mod.local.set(this.#varRef!.varNum,
-        mod.f64.add(
-          mod.local.get(this.#varRef!.varNum, B.f64),
-          mod.f64.const(this.#numericPart)
-        )
-      ));
-    }
-  }
-
-  valueImpl() {
-    return this.#created ? this.#varRef! : this.#numericPart;
-  }
+  getValue() { return this.#varRef! };
 }
 
 export class WASMContext implements Context<VarRef> {

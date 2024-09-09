@@ -1,15 +1,20 @@
-import { Context, Var, Term, Var } from "./Algebra";
-import scalarOp from "./scalarOp";
+import { Context, Term, Var } from "./Algebra";
+
+/*
+This module used to work on purely numeric input and to evaluate it
+immediately.
+
+Meanwhile the Algebra pre-calculates purely numeric expressions.
+So the respective methods in this module will no more be called.
+*/
 
 class VarImpl extends Var<never> {
-  #value = 0;
-
-  addImpl(term: Term<never>, negate = false): void {
-    this.#value += term.reduce((x, y) => x * y, negate ? -1 : 1);
+  addTerm(term: Term<never>, negate: any, create: boolean): void {
+    throw new Error("This method should never be called");
   }
 
-  valueImpl(): number {
-    return this.#value;
+  getValue(): never {
+    throw new Error("This method should never be called");
   }
 }
 
@@ -20,9 +25,7 @@ export class EvalContext implements Context<never> {
   }
 
   scalarOp(name: string, ...args: number[]): number {
-    // If all args are numbers, the Algebra will directly evaluate the expression.
-    // So this function is not called.  Still we provide the full context API.
-    return scalarOp(name, ...args);
+    throw new Error("This method should never be called");
   }
 
   space(): void {}

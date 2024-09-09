@@ -11,9 +11,6 @@ function formatFactor(f: Scalar<string>): string {
 }
 
 class VarImpl extends Var<string> {
-  #created = false;
-  #numericPart = 0;
-
   constructor(
     readonly ctx: WebGLContext,
     readonly name: string
@@ -21,38 +18,15 @@ class VarImpl extends Var<string> {
     super();
   }
 
-  addImpl(term: Term<string>, negate = false) {
-    if (term.some(f => f === 0)) return;
-
-    // We could easily eliminate 1 factors:
-    //   term = term.filter(f => f !== 1);
-    // but keeping them might make the generated code more readable,
-    // and it should be easy for that code's compiler to optimize 1s away.
-
-    if (term.every(f => typeof f === "number")) {
-      this.#numericPart += term.reduce((x, y) => x * y, negate ? -1 : 1);
-      return;
-    }
-
+  addTerm(term: Term<string>, negate: any, create: boolean) {
     const expr = term.length === 0 ? "1.0" : term.map(formatFactor).join(" * ");
     const signedExpr = negate ? `-(${expr})` : `  ${expr}`;
     this.ctx.emit(
-      !this.#created
-      ? `float ${this.name}  = ${signedExpr};`
-      : `      ${this.name} += ${signedExpr};`
+      `${create ? "float" : "     "} ${this.name}  = ${signedExpr};`
     );
-    this.#created = true;
   }
 
-  freeze(): void {
-    if (this.#created && this.#numericPart !== 0) {
-      this.ctx.emit(`      ${this.name} += ${formatFactor(this.#numericPart)};`);
-    }
-  }
-
-  valueImpl() {
-    return this.#created ? this.name : this.#numericPart;
-  }
+  getValue() { return this.name; }
 }
 
 export class WebGLContext implements Context<string> {
