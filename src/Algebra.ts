@@ -436,8 +436,6 @@ export class Algebra<T> {
     if (mv.knownUnit) return mv;
     // TODO provide nicer check for number of components
     if ([...mv].length === 1) {
-      // TODO check the optimization of the single-component case for
-      // correctness again
       return new Multivector(this, "inverse", add => {
         for (const [bm, val] of mv) {
           const mf = this.metricFactors(bm);
@@ -535,8 +533,6 @@ export class Algebra<T> {
         }
       }
     }).markAsUnit(!skipped && a.knownUnit && b.knownUnit);
-    // TODO Check if the geometric product of units is really always a unit.
-
     // We do not  restrict "unitness propagation" to geometric products.
     // It suffices if the product happens to behave like a geometric product
     // for the given input vectors (i.e., no skipped component pairs).
