@@ -1,5 +1,11 @@
 import scalarOp from "./scalarOp";
 
+/**
+ * Semantically a boolean, but for convenience any value.
+ * Only its truthiness should be used.
+ */
+export type truth = unknown;
+
 export type Scalar<T> = number | T;
 export type Term<T> = Scalar<T>[];
 
@@ -8,7 +14,7 @@ export abstract class Var<T> {
   #frozen = false;
   #numericPart = 0;
 
-  add(term: Term<T>, negate?: any): void {
+  add(term: Term<T>, negate?: truth): void {
     if (this.#frozen) throw new Error("trying to update frozen variable");
 
     if (term.some(f => f === 0)) return;
@@ -34,7 +40,7 @@ export abstract class Var<T> {
     return this.#created ? this.getValue() : this.#numericPart;
   }
 
-  protected abstract addTerm(term: Term<T>, negate: any, create: boolean): void;
+  protected abstract addTerm(term: Term<T>, negate: truth, create: boolean): void;
   protected abstract getValue(): T;
 }
 
@@ -51,9 +57,7 @@ export class Multivector<T> implements Iterable<[number, Scalar<T>]> {
     readonly alg: Algebra<T>,
     readonly name: string,
     initialize: (
-      // `negate` is semantically a boolean, but for convenience we
-      // accept any value and use its truthiness.
-      add: (bm: number, term: Term<T>, negate?: any) => unknown,
+      add: (bm: number, term: Term<T>, negate?: truth) => unknown,
     ) => unknown,
   ) {
     alg.ctx.comment("mv " + name);

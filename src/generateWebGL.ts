@@ -1,4 +1,4 @@
-import { Term, Scalar, Context, Var } from "./Algebra";
+import { Term, Scalar, Context, Var, truth } from "./Algebra";
 
 function formatFactor(f: Scalar<string>): string {
   switch (typeof f) {
@@ -18,7 +18,7 @@ class VarImpl extends Var<string> {
     super();
   }
 
-  addTerm(term: Term<string>, negate: any, create: boolean) {
+  addTerm(term: Term<string>, negate: truth, create: boolean) {
     const expr = term.length === 0 ? "1.0" : term.map(formatFactor).join(" * ");
     const signedExpr = negate ? `-(${expr})` : `  ${expr}`;
     this.ctx.emit(

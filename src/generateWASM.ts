@@ -1,5 +1,5 @@
 import B from "binaryen";
-import { Term, Scalar, Context, Var } from "./Algebra";
+import { Term, Scalar, Context, Var, truth } from "./Algebra";
 
 export class VarRef implements VarRef {
   constructor(readonly varNum: number) {}
@@ -14,7 +14,7 @@ class VarImpl extends Var<VarRef> {
 
   #varRef?: VarRef;
 
-  addTerm(term: Term<VarRef>, negate: any, create: boolean) {
+  addTerm(term: Term<VarRef>, negate: truth, create: boolean) {
     const {mod, body, convertFactor} = this.ctx;
     const expr =
       term.length === 0 ? mod.f64.const(1) :
