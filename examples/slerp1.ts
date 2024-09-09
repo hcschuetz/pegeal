@@ -1,6 +1,6 @@
 import { Algebra, BackEnd } from "../src/Algebra";
 import { makeLetterNames } from "../src/componentNaming";
-import { EvalBackEnd } from "../src/evalExpr";
+import { DummyBackEnd } from "../src/evalExpr";
 import { WebGLBackEnd } from "../src/generateWebGL";
 import { euclidean, p, q_ } from "./utils";
 
@@ -22,4 +22,4 @@ const result = slerpTest(be);
 p(be.text);
 p("// " + result);
 
-q_(coords)("\nresult", slerpTest(new EvalBackEnd()));
+q_(coords)("\nresult", slerpTest(new DummyBackEnd()));

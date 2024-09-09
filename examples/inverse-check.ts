@@ -1,11 +1,11 @@
 import { Algebra, Multivector } from "../src/Algebra";
 import { makeLetterNames } from "../src/componentNaming";
-import { EvalBackEnd } from "../src/evalExpr";
+import { DummyBackEnd } from "../src/evalExpr";
 import { p } from "./utils";
 
 console.log(`// Inverse Check\n`);
 
-const be = new EvalBackEnd();
+const be = new DummyBackEnd();
 const coords = "xyzw";
 const alg = new Algebra([1,3,1,-1], be, makeLetterNames(coords));
 

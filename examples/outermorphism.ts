@@ -2,7 +2,7 @@ import { euclidean, p, q_ } from "./utils";
 import { Algebra, BackEnd } from "../src/Algebra";
 import { makeLetterNames } from "../src/componentNaming";
 import { WebGLBackEnd } from "../src/generateWebGL";
-import { EvalBackEnd } from "../src/evalExpr";
+import { DummyBackEnd } from "../src/evalExpr";
 
 p(`// Outermorphism - WebGL and eval\n`);
 
@@ -58,4 +58,4 @@ console.log(`// result: ${result}`);
 
 console.log("\n-------------\n")
 
-q2("result", testOM(new EvalBackEnd()));
+q2("result", testOM(new DummyBackEnd()));

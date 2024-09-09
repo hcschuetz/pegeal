@@ -1,10 +1,10 @@
 import { Algebra } from "../src/Algebra";
 import { makeLetterNames } from "../src/componentNaming";
-import { EvalBackEnd } from "../src/evalExpr";
+import { DummyBackEnd } from "../src/evalExpr";
 import { p, q_ } from "./utils";
 
 {
-  const be = new EvalBackEnd();
+  const be = new DummyBackEnd();
   const alg = new Algebra([1,2,3], be, makeLetterNames("xyz"));
   const q = q_("xyz");
 

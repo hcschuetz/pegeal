@@ -1,12 +1,12 @@
 import { Algebra } from "../src/Algebra";
 import { makeLetterNames } from "../src/componentNaming";
-import { EvalBackEnd } from "../src/evalExpr";
+import { DummyBackEnd } from "../src/evalExpr";
 import { deg, euclidean, p, q_ } from "./utils";
 
 p(`// Rotor Log -  Eval\n`);
 
 const coords = "xyz";
-const be = new EvalBackEnd();
+const be = new DummyBackEnd();
 const alg = new Algebra(euclidean(coords), be, makeLetterNames(coords));
 
 const q = q_(coords);

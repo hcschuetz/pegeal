@@ -1,12 +1,12 @@
 import { Algebra } from "../src/Algebra";
 import { makeNumberedNames } from "../src/componentNaming";
-import { EvalBackEnd } from "../src/evalExpr";
+import { DummyBackEnd } from "../src/evalExpr";
 import { euclidean, p } from "./utils";
 
 p(`// A back-end using component names like "e1_8_11"\n`);
 
 const metric = euclidean(13);
-const be = new EvalBackEnd();
+const be = new DummyBackEnd();
 const alg = new Algebra(
   metric,
   be,
