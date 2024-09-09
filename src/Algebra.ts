@@ -277,10 +277,14 @@ export class Algebra<T> {
     return this.inverse(this.pseudoScalar());
   }
   basisVectors(): Multivector<T>[] {
-    return this.metric.map((_, i) =>
-      new Multivector(this, "basis" + i, add => add(1 << i, []))
-      .markAsUnit(this.metric[i] === 1)
-    )
+    return this.metric.map((_, i) => {
+      const bitmap = 1 << i;
+      return new Multivector(
+        this,
+        "basis_" + this.bitmapToString[bitmap],
+        add => add(bitmap, []),
+      ).markAsUnit(this.metric[i] === 1)
+    });
   }
 
   outermorphism(mv: Multivector<T>, matrix: (Scalar<T> | undefined)[][]): Multivector<T> {
