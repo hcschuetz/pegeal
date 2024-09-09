@@ -18,7 +18,7 @@ class VarImpl extends Var<never> {
   }
 }
 
-export class EvalContext implements Context<never> {
+export class EvalContext extends Context<never> {
 
   makeVar(nameHint: string): Var<never> {
     return new VarImpl();
@@ -27,6 +27,4 @@ export class EvalContext implements Context<never> {
   scalarOp(name: string, ...args: number[]): number {
     throw new Error("This method should never be called");
   }
-
-  space(): void {}
 }

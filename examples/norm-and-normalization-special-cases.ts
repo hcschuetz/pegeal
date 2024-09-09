@@ -18,7 +18,7 @@ const alg = new Algebra([1,1,5], ctx, makeLetterNames(coords));
   {x: 1, y: -2, z: 3},
   {x: 1, y: "two", z: 3},
 ] as Record<string, Scalar<string>>[]).forEach((data, i) => {
-  ctx.space();
+  ctx.emit("");
   ctx.emit("// -----------");
   const mv = alg.mv(`mv${i}`, data);
   ctx.emit(`// ${mv}`)

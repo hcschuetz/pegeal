@@ -29,7 +29,7 @@ class VarImpl extends Var<string> {
   getValue() { return this.name; }
 }
 
-export class WebGLContext implements Context<string> {
+export class WebGLContext extends Context<string> {
   private count = 0;
   public text = "";
 
@@ -53,8 +53,8 @@ export class WebGLContext implements Context<string> {
     return varName;
   }
 
-  space() {
-    this.emit("");
+  comment(text: string) {
+    this.emit("// " + text);
   }
 }
 

@@ -33,7 +33,7 @@ class VarImpl extends Var<VarRef> {
   getValue() { return this.#varRef! };
 }
 
-export class WASMContext implements Context<VarRef> {
+export class WASMContext extends Context<VarRef> {
   varCount = 0;
   body: B.ExpressionRef[] = [];
   paramsByHint: Record<string, VarRef> = {};
@@ -42,6 +42,7 @@ export class WASMContext implements Context<VarRef> {
     readonly mod: B.Module,
     readonly paramHints: string[],
   ) {
+    super();
     for (const hint of paramHints) {
       this.paramsByHint[hint] = this.newLocal();
     }
@@ -80,8 +81,6 @@ export class WASMContext implements Context<VarRef> {
     );
     return localVar;
   }
-
-  space(): void {}
 }
 
 const binopName: Record<string, "add" | "sub" | "mul" | "div"> = {

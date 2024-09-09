@@ -38,10 +38,10 @@ export abstract class Var<T> {
   protected abstract getValue(): T;
 }
 
-export interface Context<T> {
-  makeVar(nameHint: string): Var<T>;
-  scalarOp(name: string, ...args: Scalar<T>[]): Scalar<T>;
-  space(): void;
+export abstract class Context<T> {
+  abstract makeVar(nameHint: string): Var<T>;
+  abstract scalarOp(name: string, ...args: Scalar<T>[]): Scalar<T>;
+  comment(text: string): void {}
 }
 
 export class Multivector<T> implements Iterable<[number, Scalar<T>]> {
@@ -56,7 +56,7 @@ export class Multivector<T> implements Iterable<[number, Scalar<T>]> {
       add: (bm: number, term: Term<T>, negate?: any) => unknown,
     ) => unknown,
   ) {
-    alg.ctx.space();
+    alg.ctx.comment("mv " + name);
     initialize((bm, term, negate?) => {
       let variable = this.#components[bm];
       if (variable === undefined) {
@@ -368,7 +368,7 @@ export class Algebra<T> {
     // TODO If the entire multivector and the relevant metric factors
     // are given as numbers, precalculate the result.
 
-    this.ctx.space();
+    this.ctx.comment("normSquared");
     const variable = this.ctx.makeVar("normSquared");
     for (const [bitmap, value] of mv) {
       const mf = this.metricFactors(bitmap);
@@ -573,7 +573,7 @@ export class Algebra<T> {
   scalarProduct(a: Multivector<T>, b: Multivector<T>): Scalar<T> {
     this.checkMine(a);
     this.checkMine(b);
-    this.ctx.space();
+    this.ctx.comment("scalar product");
     const variable = this.ctx.makeVar("scalarProd");
     for (const [bitmap, valA] of a) {
       const valB = b.value(bitmap);
