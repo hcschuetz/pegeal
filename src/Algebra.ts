@@ -359,7 +359,7 @@ export class Algebra<T> {
 
   dual(mv: Multivector<T>): Multivector<T> {
     return this.contractLeft(mv, this.pseudoScalarInv());
-    // TODO Implement directly.
+    // TODO Implement directly?
   }
 
   /**
