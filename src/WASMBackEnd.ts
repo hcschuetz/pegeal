@@ -68,14 +68,14 @@ export default class WASMBackEnd extends BackEnd<VarRef> {
       case "object": return this.mod.local.get(f.varNum, B.f64);
     }
   }
-  
+
   scalarOp(name: string, ...args: Scalar<VarRef>[]) {
     const {mod, convertFactor} = this;
     const localVar = this.newLocal();
     this.body.push(
       mod.local.set(localVar.varNum,
         Object.hasOwn(binopName, name)
-        ? mod.f64[binopName[name]](convertFactor(args[0]),convertFactor(args[1]))
+        ? mod.f64[binopName[name]](convertFactor(args[0]), convertFactor(args[1]))
         : mod.call(name, args.map(convertFactor), B.f64)
       )
     );
