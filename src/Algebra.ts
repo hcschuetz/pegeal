@@ -685,10 +685,10 @@ export class Algebra<T> {
 
   // TODO similar optimizations for other scalar operators/functions
   times(...factors: Scalar<T>[]): Scalar<T> {
-    // This is not absolutely correct.  If one operator is 0 and the other
-    // one is NaN or infinity, the unoptimized computation would not return 0.
     factors = factors.filter(f => f !== 1);
     return (
+      // This is not absolutely correct.  If one operator is 0 and the other
+      // one is NaN or infinity, the unoptimized computation would not return 0.
       factors.some(f => f === 0) ? 0 :
       factors.length === 0 ? 1 :
       // TODO multiply numeric factors at generation time?
