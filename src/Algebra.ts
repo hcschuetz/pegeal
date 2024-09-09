@@ -433,6 +433,7 @@ export class Algebra<T> {
 
   /** **This is only correct for versors!** */
   inverse(mv: Multivector<T>): Multivector<T> {
+    this.checkMine(mv);
     if (mv.knownUnit) return mv;
     // TODO provide nicer check for number of components
     if ([...mv].length === 1) {
@@ -581,12 +582,10 @@ export class Algebra<T> {
     const variable = this.ctx.makeVar("scalarProd");
     for (const [bitmap, valA] of a) {
       const valB = b.value(bitmap);
-      if (valB !== 0) {
-        const mf = this.metricFactors(bitmap);
-        if (mf !== null) {
-          variable.add([...mf, valA, valB], bitCount(bitmap) & 2);
-        }
-      }
+      if (valB === 0) continue;
+      const mf = this.metricFactors(bitmap);
+      if (mf === null) continue;
+      variable.add([...mf, valA, valB], bitCount(bitmap) & 2);
     }
     return variable.value();
   }
@@ -779,9 +778,8 @@ export class Algebra<T> {
         for (const {bm, lrVal, term, count} of Object.values(lirVals)) {
           if (count === 0) continue;
           const lrValue = lrVal();
-          if (!dummy) {
-            add(bm, [lrValue, ...term, Math.abs(count)].filter(f => f !== 1), Math.sign(count) < 0);
-          }
+          if (dummy) continue;
+          add(bm, [lrValue, ...term, Math.abs(count)], Math.sign(count) < 0);
         }
       }).markAsUnit(operator.knownUnit && operand.knownUnit && !dummy);
     };
