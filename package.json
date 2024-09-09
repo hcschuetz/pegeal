@@ -11,11 +11,11 @@
   "type-comment": "apparently needed to properly load binaryen:",
   "type": "module",
   "dependencies": {
-    "binaryen": "^119.0.0",
-    "nodemon": "^3.1.4",
-    "tsx": "^4.16.5"
+    "binaryen": "^119.0.0"
   },
   "devDependencies": {
-    "@types/node": "^22.5.4"
+    "@types/node": "^22.5.4",
+    "nodemon": "^3.1.4",
+    "tsx": "^4.16.5"
   }
 }
