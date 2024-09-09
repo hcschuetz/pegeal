@@ -13,10 +13,7 @@ export abstract class Var<T> {
 
     if (term.some(f => f === 0)) return;
 
-    // We could easily eliminate 1 factors:
-    //   term = term.filter(f => f !== 1);
-    // but keeping them might make the generated code more readable,
-    // and it should be easy for that code's compiler to optimize 1s away.
+    term = term.filter(f => f !== 1);
 
     if (term.every(f => typeof f === "number")) {
       this.#numericPart += term.reduce((x, y) => x * y, negate ? -1 : 1);
