@@ -1,13 +1,13 @@
 import { Algebra } from "../src/Algebra";
 import { makeLetterNames } from "../src/componentNaming";
-import { EvalContext } from "../src/evalExpr";
+import { EvalBackEnd } from "../src/evalExpr";
 import { euclidean, p } from "./utils";
 
 p(`// Blade Squaring\n`);
 
 const coords = "uvwxyz";
-const ctx = new EvalContext();
-const alg = new Algebra(euclidean(coords), ctx, makeLetterNames(coords));
+const be = new EvalBackEnd();
+const alg = new Algebra(euclidean(coords), be, makeLetterNames(coords));
 
 const blade =
   !true ? alg.wedgeProduct(

@@ -1,13 +1,13 @@
 import { Algebra, Multivector } from "../src/Algebra";
 import { makeLetterNames } from "../src/componentNaming";
-import { EvalContext } from "../src/evalExpr";
+import { EvalBackEnd } from "../src/evalExpr";
 import { p } from "./utils";
 
 console.log(`// Inverse Check\n`);
 
-const ctx = new EvalContext();
+const be = new EvalBackEnd();
 const coords = "xyzw";
-const alg = new Algebra([1,3,1,-1], ctx, makeLetterNames(coords));
+const alg = new Algebra([1,3,1,-1], be, makeLetterNames(coords));
 
 for (const v of [
   alg.mv("scalar", {1: 7}),

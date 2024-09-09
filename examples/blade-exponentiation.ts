@@ -1,13 +1,13 @@
 import { Algebra } from "../src/Algebra";
 import { makeLetterNames } from "../src/componentNaming";
-import { WebGLContext } from "../src/generateWebGL";
+import { WebGLBackEnd } from "../src/generateWebGL";
 import { euclidean, p } from "./utils";
 
 p(`// Blade Exponentiation - WebGL\n`);
 
 const coords = "xyz";
-const ctx = new WebGLContext();
-const alg = new Algebra(euclidean(coords), ctx, makeLetterNames(coords));
+const be = new WebGLBackEnd();
+const alg = new Algebra(euclidean(coords), be, makeLetterNames(coords));
 
 const blade = alg.wedgeProduct(
     alg.mv("v", {x: 3, y: 5, z: 9}),
@@ -15,5 +15,5 @@ const blade = alg.wedgeProduct(
   );
 
 const result = alg.exp(blade);
-p(ctx.text);
+p(be.text);
 p(`// result: ${result}`)

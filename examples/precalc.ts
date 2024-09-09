@@ -1,11 +1,11 @@
-import { WebGLContext } from "../src/generateWebGL";
+import { WebGLBackEnd } from "../src/generateWebGL";
 import { p } from "./utils";
 
 p(`// precalculate - WebGL\n`);
 
-  const ctx = new WebGLContext();
+  const be = new WebGLBackEnd();
 
-  const three = ctx.scalarOp("abs", ctx.scalarOp("-", 7, 10));
-  ctx.emit(`// should be 3 (evaluated): ${three}`);
+  const three = be.scalarOp("abs", be.scalarOp("-", 7, 10));
+  be.emit(`// should be 3 (evaluated): ${three}`);
 
-  p(ctx.text);
+  p(be.text);

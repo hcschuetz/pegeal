@@ -44,7 +44,7 @@ export abstract class Var<T> {
   protected abstract getValue(): T;
 }
 
-export abstract class Context<T> {
+export abstract class BackEnd<T> {
   abstract makeVar(nameHint: string): Var<T>;
   abstract scalarOp(name: string, ...args: Scalar<T>[]): Scalar<T>;
   comment(text: string): void {}
@@ -60,12 +60,12 @@ export class Multivector<T> implements Iterable<[number, Scalar<T>]> {
       add: (bm: number, term: Term<T>, negate?: truth) => unknown,
     ) => unknown,
   ) {
-    alg.ctx.comment("mv " + name);
+    alg.be.comment("mv " + name);
     initialize((bm, term, negate?) => {
       let variable = this.#components[bm];
       if (variable === undefined) {
         variable = this.#components[bm] =
-          this.alg.ctx.makeVar(this.name + "_" + this.alg.bitmapToString[bm]);
+          this.alg.be.makeVar(this.name + "_" + this.alg.bitmapToString[bm]);
       }
       variable.add(term, negate);
     });
@@ -88,7 +88,7 @@ export class Multivector<T> implements Iterable<[number, Scalar<T>]> {
   }
   public set knownUnit(mark) {
     // // Debug code looking for non-unit multivectors being marked as unit:
-    // if (mark && this.alg.ctx instanceof EvalContext) {
+    // if (mark && this.alg.be instanceof EvalBackEnd) {
     //   const THIS = this as any as MultiVector<never>;
     //   let n2 = 0;
     //   for (const [bm, variable] of THIS.#components.entries()) {
@@ -205,7 +205,7 @@ export class Algebra<T> {
 
   constructor(
     readonly metric: Scalar<T>[],
-    readonly ctx: Context<T>,
+    readonly be: BackEnd<T>,
     readonly bitmapToString: string[],
   ) {
     const nDimensions = this.nDimensions = metric.length;
@@ -361,8 +361,8 @@ export class Algebra<T> {
     // TODO If the entire multivector and the relevant metric factors
     // are given as numbers, precalculate the result.
 
-    this.ctx.comment("normSquared");
-    const variable = this.ctx.makeVar("normSquared");
+    this.be.comment("normSquared");
+    const variable = this.be.makeVar("normSquared");
     for (const [bitmap, value] of mv) {
       const mf = this.metricFactors(bitmap);
       if (mf !== null) {
@@ -563,8 +563,8 @@ export class Algebra<T> {
   scalarProduct(a: Multivector<T>, b: Multivector<T>): Scalar<T> {
     this.checkMine(a);
     this.checkMine(b);
-    this.ctx.comment("scalar product");
-    const variable = this.ctx.makeVar("scalarProd");
+    this.be.comment("scalar product");
+    const variable = this.be.makeVar("scalarProd");
     for (const [bitmap, valA] of a) {
       const valB = b.value(bitmap);
       if (valB === 0) continue;
@@ -689,7 +689,7 @@ export class Algebra<T> {
     return (
       args.every(arg => typeof arg === "number")
       ? scalarOp(name, ...args)
-      : this.ctx.scalarOp(name, ...args)
+      : this.be.scalarOp(name, ...args)
     );
   }
 

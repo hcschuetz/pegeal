@@ -1,19 +1,19 @@
 import { Algebra } from "../src/Algebra";
 import { makeLetterNames } from "../src/componentNaming";
-import { EvalContext } from "../src/evalExpr";
+import { EvalBackEnd } from "../src/evalExpr";
 import { p, q_ } from "./utils";
 
 p(`// Determinants - eval\n`);
   
-  const ctx = new EvalContext();
+  const be = new EvalBackEnd();
   
   const coords = "xyz";
   const q = q_(coords);
-  const alg = new Algebra([2,3,5], ctx, makeLetterNames(coords));
+  const alg = new Algebra([2,3,5], be, makeLetterNames(coords));
   
   const coords2 = "pqr";
   const q2 = q_(coords2);
-  const alg2 = new Algebra([4, 5, 6], ctx, makeLetterNames(coords2));
+  const alg2 = new Algebra([4, 5, 6], be, makeLetterNames(coords2));
   
   const m =  [
     /*         x   y    z */

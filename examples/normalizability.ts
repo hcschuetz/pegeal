@@ -1,6 +1,6 @@
 import { Algebra, bitCount, Multivector, productFlips } from "../src/Algebra";
 import { makeLetterNames } from "../src/componentNaming";
-import { EvalContext } from "../src/evalExpr";
+import { EvalBackEnd } from "../src/evalExpr";
 import { euclidean, p } from "./utils";
 
 p(`// An example where my simple normalizability test fails:
@@ -37,8 +37,8 @@ function isNormalizable(m: Multivector<never>): boolean {
 }
 
 const coords = "xyzw";
-const ctx = new EvalContext();
-const alg = new Algebra(euclidean(coords), ctx, makeLetterNames(coords));
+const be = new EvalBackEnd();
+const alg = new Algebra(euclidean(coords), be, makeLetterNames(coords));
 
 const a = alg.mv("a", {x: 2, y: 3})
 const b = alg.mv("b", {z: 5, w: 7});

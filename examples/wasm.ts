@@ -3,7 +3,7 @@ import zlib from "node:zlib";
 
 import B from "binaryen";
 
-import { WASMContext } from "../src/generateWASM";
+import { WASMBackEnd } from "../src/generateWASM";
 import { Algebra } from "../src/Algebra";
 import { makeLetterNames } from "../src/componentNaming";
 import { p } from "./utils";
@@ -15,13 +15,13 @@ B.setFastMath(true);
 const mod = new B.Module();
 mod.setFeatures(B.Features.Multivalue);
 
-const ctx = new WASMContext(mod,
+const be = new WASMBackEnd(mod,
   "m_z g_x g_y g_z h_x h_y h_z e_x e_w" // d_z
   .split(" ")
 );
-const param = ctx.paramsByHint;
+const param = be.paramsByHint;
 const coords = "xyzw";
-const alg = new Algebra([1,333,param.m_z,-1], ctx, makeLetterNames(coords));
+const alg = new Algebra([1,333,param.m_z,-1], be, makeLetterNames(coords));
 
 const g = alg.mv("g", {x: param.g_x, y: param.g_y, z: param.g_z});
 const h = alg.mv("h", {x: param.h_x, y: param.h_y, z: param.h_z});
@@ -32,12 +32,12 @@ const inputs = [
 ];
 
 const sandwich_gh = alg.sandwich(gh);
-const invNorm = ctx.scalarOp("/", 1, sandwich_gh(alg.one()).value(0));
+const invNorm = be.scalarOp("/", 1, sandwich_gh(alg.one()).value(0));
 const results = inputs.map(inp => alg.scale(invNorm, sandwich_gh(inp)));
 // TODO make use of the bitmaps in result
-ctx.body.push(
+be.body.push(
   mod.return(mod.tuple.make(
-    results.flatMap(res => [...res].map(([,val]) => ctx.convertFactor(val)))
+    results.flatMap(res => [...res].map(([,val]) => be.convertFactor(val)))
   ))
 );
 
@@ -45,10 +45,10 @@ const f64Array = (length: number): B.Type[] => new Array(length).fill(B.f64);
 
 const fn = mod.addFunction(
   "myTest",
-  B.createType(f64Array(ctx.paramCount)),
+  B.createType(f64Array(be.paramCount)),
   B.createType(f64Array(results.flatMap(res => [...res]).length)),
-  f64Array(ctx.varCount - ctx.paramCount),
-  mod.block(null, ctx.body),
+  f64Array(be.varCount - be.paramCount),
+  mod.block(null, be.body),
 );
 mod.addFunctionExport("myTest", "myTestExt");
 p(`// valid: ${Boolean(mod.validate())}`);
@@ -82,11 +82,11 @@ writeAndStat("out.wasm", binary);
   const {name, params, body} = B.getFunctionInfo(fn);
   const paramTypes = B.expandType(params)
   const header = `function ${name}(${
-    ctx.paramHints.map((hint, i) => `\n  float v${i} /* ${hint} */`).join(",")
+    be.paramHints.map((hint, i) => `\n  float v${i} /* ${hint} */`).join(",")
   }\n  // ${
     paramTypes.length
   }${
-    paramTypes.length === ctx.paramCount ? "" :
+    paramTypes.length === be.paramCount ? "" :
     " [### param number mismatch ###]"
   }\n) : [${
     results.flatMap((res, i) => [...res].map(([bm]) => `\n  float /* out[${i}].${alg.bitmapToString[bm]} */`).join(","))

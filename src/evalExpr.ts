@@ -1,4 +1,4 @@
-import { Context, Term, truth, Var } from "./Algebra";
+import { BackEnd, Term, truth, Var } from "./Algebra";
 
 /*
 This module used to work on purely numeric input and to evaluate it
@@ -18,7 +18,7 @@ class VarImpl extends Var<never> {
   }
 }
 
-export class EvalContext extends Context<never> {
+export class EvalBackEnd extends BackEnd<never> {
 
   makeVar(nameHint: string): Var<never> {
     return new VarImpl();

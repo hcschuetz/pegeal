@@ -1,13 +1,13 @@
 import { Algebra } from "../src/Algebra";
 import { makeNumberedNames } from "../src/componentNaming";
-import { WebGLContext } from "../src/generateWebGL";
+import { WebGLBackEnd } from "../src/generateWebGL";
 import { euclidean, p } from "./utils";
 
 p(`// Homogeneous coords\n`);
 
 const metric = euclidean(4);
-const ctx = new WebGLContext();
-const alg = new Algebra(metric, ctx, makeNumberedNames(metric.length));
+const be = new WebGLBackEnd();
+const alg = new Algebra(metric, be, makeNumberedNames(metric.length));
 const [e0, e1, e2, e3] = alg.basisVectors();
 const e0Inv = alg.inverse(e0);
 
@@ -22,4 +22,4 @@ const p_loc = alg.geometricProduct(
   alg.inverse(p_weight),
 );
 
-p(ctx.text)
+p(be.text)

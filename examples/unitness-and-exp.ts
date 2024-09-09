@@ -1,6 +1,6 @@
 import { Algebra } from "../src/Algebra";
 import { makeLetterNames } from "../src/componentNaming";
-import { EvalContext } from "../src/evalExpr";
+import { EvalBackEnd } from "../src/evalExpr";
 import { deg, hideUnit, p, q_ } from "./utils";
 
 p(`
@@ -8,9 +8,9 @@ p(`
 // unitness and exp - eval
 `);
 
-const ctx = new EvalContext();
+const be = new EvalBackEnd();
 const coords = "xyzw";
-const alg = new Algebra([1,1,1,5], ctx, makeLetterNames(coords));
+const alg = new Algebra([1,1,1,5], be, makeLetterNames(coords));
 const q = q_(coords);
 
 const B = alg.mv("B", {xy: .3, xz: .1, yz: .2});

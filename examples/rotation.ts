@@ -1,14 +1,14 @@
 import { Algebra } from "../src/Algebra";
 import { makeLetterNames } from "../src/componentNaming";
-import { EvalContext } from "../src/evalExpr";
+import { EvalBackEnd } from "../src/evalExpr";
 import { deg, euclidean, p, TAU } from "./utils";
 
 p(`// Rotation example
 // (see also "Rotor Log" examples)\n`);
 
 const coords = "xyz";
-const ctx = new EvalContext();
-const alg = new Algebra(euclidean(coords), ctx, makeLetterNames(coords));
+const be = new EvalBackEnd();
+const alg = new Algebra(euclidean(coords), be, makeLetterNames(coords));
 const [ex, ey, ez] = alg.basisVectors();
 
 const P = alg.mv("P", {x: 1, y: 1, z: 3});

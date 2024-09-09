@@ -1,4 +1,4 @@
-import { Term, Scalar, Context, Var, truth } from "./Algebra";
+import { Term, Scalar, BackEnd, Var, truth } from "./Algebra";
 
 function formatFactor(f: Scalar<string>): string {
   switch (typeof f) {
@@ -12,7 +12,7 @@ function formatFactor(f: Scalar<string>): string {
 
 class VarImpl extends Var<string> {
   constructor(
-    readonly ctx: WebGLContext,
+    readonly be: WebGLBackEnd,
     readonly name: string
   ) {
     super();
@@ -21,7 +21,7 @@ class VarImpl extends Var<string> {
   addTerm(term: Term<string>, negate: truth, create: boolean) {
     const expr = term.length === 0 ? "1.0" : term.map(formatFactor).join(" * ");
     const signedExpr = negate ? `-(${expr})` : `  ${expr}`;
-    this.ctx.emit(
+    this.be.emit(
       `${create ? "float" : "     "} ${this.name}  = ${signedExpr};`
     );
   }
@@ -29,7 +29,7 @@ class VarImpl extends Var<string> {
   getValue() { return this.name; }
 }
 
-export class WebGLContext extends Context<string> {
+export class WebGLBackEnd extends BackEnd<string> {
   private count = 0;
   public text = "";
 

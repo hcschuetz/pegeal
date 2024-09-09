@@ -1,8 +1,8 @@
 import { euclidean, p, q_ } from "./utils";
-import { Algebra, Context } from "../src/Algebra";
+import { Algebra, BackEnd } from "../src/Algebra";
 import { makeLetterNames } from "../src/componentNaming";
-import { WebGLContext } from "../src/generateWebGL";
-import { EvalContext } from "../src/evalExpr";
+import { WebGLBackEnd } from "../src/generateWebGL";
+import { EvalBackEnd } from "../src/evalExpr";
 
 p(`// Outermorphism - WebGL and eval\n`);
 
@@ -12,9 +12,9 @@ const q = q_(coords);
 const coords2 = "pqr";
 const q2 = q_(coords2);
 
-function testOM<T>(ctx: Context<T>) {
-  const alg = new Algebra(euclidean(coords), ctx, makeLetterNames(coords));
-  const alg2 = new Algebra(euclidean(coords2), ctx, makeLetterNames(coords2));
+function testOM<T>(be: BackEnd<T>) {
+  const alg = new Algebra(euclidean(coords), be, makeLetterNames(coords));
+  const alg2 = new Algebra(euclidean(coords2), be, makeLetterNames(coords2));
 
   const m1 =  [
     /*         x   y    z     w */
@@ -51,11 +51,11 @@ function testOM<T>(ctx: Context<T>) {
   return alg2.outermorphism(A, m3);
 }
 
-const webCtx = new WebGLContext();
-const result = testOM(webCtx);
-console.log(webCtx.text);
+const webBE = new WebGLBackEnd();
+const result = testOM(webBE);
+console.log(webBE.text);
 console.log(`// result: ${result}`);
 
 console.log("\n-------------\n")
 
-q2("result", testOM(new EvalContext()));
+q2("result", testOM(new EvalBackEnd()));

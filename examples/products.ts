@@ -1,11 +1,11 @@
 import { Algebra } from "../src/Algebra";
 import { makeLetterNames } from "../src/componentNaming";
-import { EvalContext } from "../src/evalExpr";
+import { EvalBackEnd } from "../src/evalExpr";
 import { p, q_ } from "./utils";
 
 {
-  const ctx = new EvalContext();
-  const alg = new Algebra([1,2,3], ctx, makeLetterNames("xyz"));
+  const be = new EvalBackEnd();
+  const alg = new Algebra([1,2,3], be, makeLetterNames("xyz"));
   const q = q_("xyz");
 
   const v = alg.mv("v", {x: 4, y: 11});

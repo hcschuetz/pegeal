@@ -1,15 +1,15 @@
 import { Algebra } from "../src/Algebra";
 import { makeNumberedNames } from "../src/componentNaming";
-import { EvalContext } from "../src/evalExpr";
+import { EvalBackEnd } from "../src/evalExpr";
 import { euclidean, p } from "./utils";
 
-p(`// A context using component names like "e1_8_11"\n`);
+p(`// A back-end using component names like "e1_8_11"\n`);
 
 const metric = euclidean(13);
-const ctx = new EvalContext();
+const be = new EvalBackEnd();
 const alg = new Algebra(
   metric,
-  ctx,
+  be,
   makeNumberedNames(metric.length, {scalar: "scalar", start: 1})
 );
 

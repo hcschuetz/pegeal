@@ -1,5 +1,5 @@
 import B from "binaryen";
-import { Term, Scalar, Context, Var, truth } from "./Algebra";
+import { Term, Scalar, BackEnd, Var, truth } from "./Algebra";
 
 export class VarRef implements VarRef {
   constructor(readonly varNum: number) {}
@@ -7,7 +7,7 @@ export class VarRef implements VarRef {
 
 class VarImpl extends Var<VarRef> {
   constructor(
-    readonly ctx: WASMContext,
+    readonly be: WASMBackEnd,
   ) {
     super();
   }
@@ -15,13 +15,13 @@ class VarImpl extends Var<VarRef> {
   #varRef?: VarRef;
 
   addTerm(term: Term<VarRef>, negate: truth, create: boolean) {
-    const {mod, body, convertFactor} = this.ctx;
+    const {mod, body, convertFactor} = this.be;
     const expr =
       term.length === 0 ? mod.f64.const(1) :
       term.map(convertFactor).reduce((acc, factor) => mod.f64.mul(acc, factor));
     const signedExpr = negate ? mod.f64.neg(expr) : expr;
     if (create) {
-      this.#varRef = this.ctx.newLocal();
+      this.#varRef = this.be.newLocal();
       body.push(mod.local.set(this.#varRef.varNum, signedExpr));
     } else {
       body.push(mod.local.set(this.#varRef!.varNum,
@@ -33,7 +33,7 @@ class VarImpl extends Var<VarRef> {
   getValue() { return this.#varRef! };
 }
 
-export class WASMContext extends Context<VarRef> {
+export class WASMBackEnd extends BackEnd<VarRef> {
   varCount = 0;
   body: B.ExpressionRef[] = [];
   paramsByHint: Record<string, VarRef> = {};
