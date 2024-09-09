@@ -1,6 +1,6 @@
 import { Algebra } from "../src/Algebra";
 import { makeLetterNames } from "../src/componentNaming";
-import { DummyBackEnd } from "../src/evalExpr";
+import DummyBackEnd from "../src/DummyBackEnd";
 import { deg, euclidean, p, TAU } from "./utils";
 
 p(`// Rotation example

@@ -33,7 +33,7 @@ class VarImpl extends Var<VarRef> {
   getValue() { return this.#varRef! };
 }
 
-export class WASMBackEnd extends BackEnd<VarRef> {
+export default class WASMBackEnd extends BackEnd<VarRef> {
   varCount = 0;
   body: B.ExpressionRef[] = [];
   paramsByHint: Record<string, VarRef> = {};

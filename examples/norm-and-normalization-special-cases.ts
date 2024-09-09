@@ -1,6 +1,6 @@
 import { Algebra, Scalar } from "../src/Algebra";
 import { makeLetterNames } from "../src/componentNaming";
-import { WebGLBackEnd } from "../src/generateWebGL";
+import WebGLBackEnd from "../src/WebGLBackEnd";
 import { hideUnit, p } from "./utils";
 
 p(`// norm and normalization, special cases - WebGL\n`);

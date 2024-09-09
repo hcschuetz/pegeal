@@ -1,6 +1,6 @@
 import { Algebra } from "../src/Algebra";
 import { makeNumberedNames } from "../src/componentNaming";
-import { WebGLBackEnd } from "../src/generateWebGL";
+import WebGLBackEnd from "../src/WebGLBackEnd";
 import { euclidean, p } from "./utils";
 
 p(`// Homogeneous coords\n`);

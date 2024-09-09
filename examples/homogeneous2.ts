@@ -1,6 +1,6 @@
 import { Algebra } from "../src/Algebra";
 import { makeLetterNames } from "../src/componentNaming";
-import { WebGLBackEnd } from "../src/generateWebGL";
+import WebGLBackEnd from "../src/WebGLBackEnd";
 
 console.log(`// Homogeneous - WebGL
 // [DFM09] p. 275, equation (11.1)

@@ -1,8 +1,8 @@
 import { euclidean, p, q_ } from "./utils";
 import { Algebra, BackEnd } from "../src/Algebra";
 import { makeLetterNames } from "../src/componentNaming";
-import { WebGLBackEnd } from "../src/generateWebGL";
-import { DummyBackEnd } from "../src/evalExpr";
+import WebGLBackEnd from "../src/WebGLBackEnd";
+import DummyBackEnd from "../src/DummyBackEnd";
 
 p(`// Outermorphism - WebGL and eval\n`);
 

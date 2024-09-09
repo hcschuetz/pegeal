@@ -1,6 +1,6 @@
 import { Algebra } from "../src/Algebra";
 import { makeLetterNames } from "../src/componentNaming";
-import { WebGLBackEnd } from "../src/generateWebGL";
+import WebGLBackEnd from "../src/WebGLBackEnd";
 import { p } from "./utils";
 
 const be = new WebGLBackEnd();

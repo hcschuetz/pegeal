@@ -1,7 +1,7 @@
 import { Algebra, BackEnd } from "../src/Algebra";
 import { makeLetterNames } from "../src/componentNaming";
-import { DummyBackEnd } from "../src/evalExpr";
-import { WebGLBackEnd } from "../src/generateWebGL";
+import DummyBackEnd from "../src/DummyBackEnd";
+import WebGLBackEnd from "../src/WebGLBackEnd";
 import { euclidean, p, q_ } from "./utils";
 
 p(`// Slerp - WebGL + eval\n`);

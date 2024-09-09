@@ -1,6 +1,6 @@
 import { Algebra, Multivector } from "../src/Algebra";
 import { makeLetterNames } from "../src/componentNaming";
-import { DummyBackEnd } from "../src/evalExpr";
+import DummyBackEnd from "../src/DummyBackEnd";
 import { p } from "./utils";
 
 console.log(`// Inverse Check\n`);

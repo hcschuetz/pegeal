@@ -1,4 +1,4 @@
-import { WebGLBackEnd } from "../src/generateWebGL";
+import WebGLBackEnd from "../src/WebGLBackEnd";
 import { p } from "./utils";
 
 p(`// precalculate - WebGL\n`);

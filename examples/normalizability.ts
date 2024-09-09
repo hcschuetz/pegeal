@@ -1,6 +1,6 @@
 import { Algebra, bitCount, Multivector, productFlips } from "../src/Algebra";
 import { makeLetterNames } from "../src/componentNaming";
-import { DummyBackEnd } from "../src/evalExpr";
+import DummyBackEnd from "../src/DummyBackEnd";
 import { euclidean, p } from "./utils";
 
 p(`// An example where my simple normalizability test fails:

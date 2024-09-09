@@ -3,7 +3,7 @@ import zlib from "node:zlib";
 
 import B from "binaryen";
 
-import { WASMBackEnd } from "../src/generateWASM";
+import WASMBackEnd from "../src/WASMBackEnd";
 import { Algebra } from "../src/Algebra";
 import { makeLetterNames } from "../src/componentNaming";
 import { p } from "./utils";

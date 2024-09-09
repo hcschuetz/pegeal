@@ -1,6 +1,6 @@
 import { Algebra } from "../src/Algebra";
 import { makeLetterNames } from "../src/componentNaming";
-import { DummyBackEnd } from "../src/evalExpr";
+import DummyBackEnd from "../src/DummyBackEnd";
 import { p, q_ } from "./utils";
 
 p(`// Determinants - eval\n`);

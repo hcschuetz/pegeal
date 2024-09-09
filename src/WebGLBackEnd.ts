@@ -29,7 +29,7 @@ class VarImpl extends Var<string> {
   getValue() { return this.name; }
 }
 
-export class WebGLBackEnd extends BackEnd<string> {
+export default class WebGLBackEnd extends BackEnd<string> {
   private count = 0;
   public text = "";
 

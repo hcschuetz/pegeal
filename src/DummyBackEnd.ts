@@ -18,7 +18,7 @@ class VarImpl extends Var<never> {
   }
 }
 
-export class DummyBackEnd extends BackEnd<never> {
+export default class DummyBackEnd extends BackEnd<never> {
 
   makeVar(nameHint: string): Var<never> {
     return new VarImpl();

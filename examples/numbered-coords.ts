@@ -1,6 +1,6 @@
 import { Algebra } from "../src/Algebra";
 import { makeNumberedNames } from "../src/componentNaming";
-import { DummyBackEnd } from "../src/evalExpr";
+import DummyBackEnd from "../src/DummyBackEnd";
 import { euclidean, p } from "./utils";
 
 p(`// A back-end using component names like "e013"\n`);
