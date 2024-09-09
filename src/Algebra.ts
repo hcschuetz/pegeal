@@ -213,6 +213,14 @@ export function productFlips(bitmapA: number, bitmapB: number): number {
   return flips;
 }
 
+export function gradeInvolutionFlips(bitmap: number): number {
+  return bitCount(bitmap) & 1;
+}
+
+export function reverseFlips(bitmap: number): number {
+  return (bitCount(bitmap) >> 1) & 1;
+}
+
 export class Algebra<T> {
   readonly nDimensions: number;
   readonly fullBitmap: number;
@@ -344,7 +352,7 @@ export class Algebra<T> {
   gradeInvolution(mv: Multivector<T>): Multivector<T> {
     return new Multivector(this, "gradeInvolution", add => {
       for (const [bitmap, value] of this.checkMine(mv)) {
-        add(bitmap, [value], bitCount(bitmap) & 1);
+        add(bitmap, [value], gradeInvolutionFlips(bitmap));
       }
     }).markAsUnit(mv.knownUnit);
   }
@@ -352,7 +360,7 @@ export class Algebra<T> {
   reverse(mv: Multivector<T>): Multivector<T> {
     return new Multivector(this, "reverse", add => {
       for (const [bitmap, value] of this.checkMine(mv)) {
-        add(bitmap, [value], bitCount(bitmap) & 2);
+        add(bitmap, [value], reverseFlips(bitmap));
       }
     }).markAsUnit(mv.knownUnit);
   }
@@ -443,7 +451,7 @@ export class Algebra<T> {
           if (mf === null) {
             throw new Error(`trying to invert null vector ${mv}`);
           }
-          add(bm, [this.scalarOp("/", 1, this.times(val, ...mf))], bitCount(bm) & 2);
+          add(bm, [this.scalarOp("/", 1, this.times(val, ...mf))], reverseFlips(bm));
         }
       });
     }
@@ -585,7 +593,8 @@ export class Algebra<T> {
       if (valB === 0) continue;
       const mf = this.metricFactors(bitmap);
       if (mf === null) continue;
-      variable.add([...mf, valA, valB], bitCount(bitmap) & 2);
+      // Notice that reverseFlips(bitmap) === productFlips(bitmap, bitmap) & 1:
+      variable.add([...mf, valA, valB], reverseFlips(bitmap));
     }
     return variable.value();
   }
@@ -764,7 +773,7 @@ export class Algebra<T> {
               const flips =
                 productFlips(lBitmap, iBitmap)
               + productFlips(liBitmap, rBitmap)
-              + ((bitCount(rBitmap) >> 1) & 1);
+              + reverseFlips(rBitmap);
               const flipFactor = flips & 1 ? -1 : 1;
 
               const lirKey = lrKey + "," + iBitmap;
