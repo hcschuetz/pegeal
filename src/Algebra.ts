@@ -561,7 +561,6 @@ export class Algebra<T> {
     const variable = this.be.makeVar("scalarProd");
     for (const [bitmap, valA] of a) {
       const valB = b.value(bitmap);
-      if (valB === 0) continue;
       const mf = this.metricFactors(bitmap);
       // Notice that reverseFlips(bitmap) === productFlips(bitmap, bitmap) & 1:
       variable.add(this.times(mf, valA, valB), reverseFlips(bitmap));
