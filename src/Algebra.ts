@@ -156,7 +156,7 @@ export function bitCount(bitmap: number) {
 }
 
 /**
- * Test whether the product of two base blades should be included in a
+ * Test whether the product of two basis blades should be included in a
  * multivector product.
  * 
  * Instances of this function type should have a name that is suitable as an
@@ -370,11 +370,11 @@ export class Algebra<T> {
 
   /**
    * "Single euclidean" means that
-   * - the multivector has precisely one base blade that might be non-zero
-   * - and the metric factors for this base blade are all one.
+   * - the multivector has precisely one basis blade that might be non-zero
+   * - and the metric factors for this basis blade are all one.
    *   (Notice that it is not required that the entire metric is euclidean.)
    * 
-   * The method returns the bitmap for that single base blade or `null`
+   * The method returns the bitmap for that single basis blade or `null`
    * if the conditions above are not met.
    * 
    * Use this for to simplify/optimize 
