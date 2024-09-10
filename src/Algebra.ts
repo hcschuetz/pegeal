@@ -224,7 +224,7 @@ export class Algebra<T> {
     });
   }
 
-  /** Return a term for the metric or null if the term is always 0. */
+  /** Return the metric factor for squaring a basis blade. */
   metricFactors(bm: number): Scalar<T> {
     return this.times(...bitList(bm).map(i => this.metric[i]));
   }
