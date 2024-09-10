@@ -90,9 +90,8 @@ export class Multivector<T> implements Iterable<[number, Scalar<T>]> {
     //   for (const [bm, variable] of THIS.#components.entries()) {
     //     if (variable === undefined) continue;
     //     const mf = THIS.alg.metricFactors(bm);
-    //     if (mf === null) continue;
     //     const val = variable.value();
-    //     n2 += [...mf, val, val].reduce((x, y) => x*y);
+    //     n2 += mf * val * val;
     //   }
     //   console.log("# UNIT: " + n2);
     //   // n2 ~ -1 is also allowed:
@@ -214,17 +213,8 @@ export class Algebra<T> {
   }
 
   /** Return a term for the metric or null if the term is always 0. */
-  metricFactors(bm: number): Term<T> | null {
-    const result = [];
-    for (const i of bitList(bm)) {
-      const f = this.metric[i];
-      switch (f) {
-        case 0: return null;
-        case 1: break;
-        default: result.push(f);
-      }
-    }
-    return result;
+  metricFactors(bm: number): Scalar<T> {
+    return this.times(...bitList(bm).map(i => this.metric[i]));
   }
 
   checkMine(mv: Multivector<T>): Multivector<T> {
@@ -361,9 +351,7 @@ export class Algebra<T> {
     const variable = this.be.makeVar("normSquared");
     for (const [bitmap, value] of mv) {
       const mf = this.metricFactors(bitmap);
-      if (mf !== null) {
-        variable.add(this.times(...mf, value, value));
-      }
+      variable.add(this.times(mf, value, value));
     }
     return variable.value();
   }
@@ -421,10 +409,10 @@ export class Algebra<T> {
       return new Multivector(this, "inverse", add => {
         for (const [bm, val] of mv) {
           const mf = this.metricFactors(bm);
-          if (mf === null) {
+          if (mf === 0) {
             throw new Error(`trying to invert null vector ${mv}`);
           }
-          add(bm, [this.scalarOp("/", 1, this.times(val, ...mf))], reverseFlips(bm));
+          add(bm, [this.scalarOp("/", 1, this.times(val, mf))], reverseFlips(bm));
         }
       });
     }
@@ -506,9 +494,7 @@ export class Algebra<T> {
         for (const [bmB, valB] of b) {
           if (include(bmA, bmB)) {
             const mf = this.metricFactors(bmA & bmB);
-            if (mf !== null) {
-              add(bmA ^ bmB, [...mf, valA, valB], productFlips(bmA, bmB) & 1);
-            }
+            add(bmA ^ bmB, [mf, valA, valB], productFlips(bmA, bmB) & 1);
           } else {
             skipped = true;
           }
@@ -565,9 +551,8 @@ export class Algebra<T> {
       const valB = b.value(bitmap);
       if (valB === 0) continue;
       const mf = this.metricFactors(bitmap);
-      if (mf === null) continue;
       // Notice that reverseFlips(bitmap) === productFlips(bitmap, bitmap) & 1:
-      variable.add(this.times(...mf, valA, valB), reverseFlips(bitmap));
+      variable.add(this.times(mf, valA, valB), reverseFlips(bitmap));
     }
     return variable.value();
   }
@@ -724,11 +709,11 @@ export class Algebra<T> {
         if (lBitmap > rBitmap) continue;
 
         const lrMetric = this.metricFactors(lBitmap & rBitmap);
-        if (lrMetric === null) continue;
+        if (lrMetric === 0) continue;
 
         const lrKey = `${lBitmap},${rBitmap}`;
         if (!Object.hasOwn(lrVals, lrKey)) {
-          lrVals[lrKey] = lazy(() => this.times(lVal, rVal, ...lrMetric))
+          lrVals[lrKey] = lazy(() => this.times(lVal, rVal, lrMetric))
         }
       }
     }
@@ -740,13 +725,13 @@ export class Algebra<T> {
         for (const [lBitmap] of operator) {
           for (const [rBitmap] of operator) {  
             const lrMetric = this.metricFactors(lBitmap & rBitmap);
-            if (lrMetric === null) continue;
+            if (lrMetric === 0) continue;
 
             const lrKey = [lBitmap, rBitmap].sort().join(",");
             const lrVal = lrVals[lrKey];
             for (const [iBitmap, iVal] of operand) {
               const lr_iMetric = this.metricFactors((lBitmap ^ rBitmap) & iBitmap);
-              if (lr_iMetric === null) continue;
+              if (lr_iMetric === 0) continue;
               const liBitmap = lBitmap ^ iBitmap;
               const lirBitmap = liBitmap ^ rBitmap;
 
@@ -759,7 +744,7 @@ export class Algebra<T> {
               const lirKey = lrKey + "," + iBitmap;
               const lirVal =
                 lirVals[lirKey] ??
-                (lirVals[lirKey] = {bm: lirBitmap, lrVal, term: [iVal, ...lr_iMetric], count: 0});
+                (lirVals[lirKey] = {bm: lirBitmap, lrVal, term: [iVal, lr_iMetric], count: 0});
               lirVal.count += flipFactor;
             }
           }
