@@ -162,11 +162,11 @@ export function bitCount(bitmap: number) {
  * Instances of this function type should have a name that is suitable as an
  * identifier.
  */
-type ProdInclude = (bmA: number, bmB: number) => boolean;
+type ProdInclusionTest = (bmA: number, bmB: number) => boolean;
 
 // For each product kind a test whether the product of two basis blades
 // (represented as bitmaps) should be included in the product.
-const incl: Record<string, ProdInclude> = {
+const incl: Record<string, ProdInclusionTest> = {
   geom  : (        ) => true,
   wedge : (bmA, bmB) => !(bmA & bmB),
   contrL: (bmA, bmB) => !(bmA & ~bmB),
@@ -492,7 +492,7 @@ export class Algebra<T> {
   }
 
   /** The core functionality for all kinds of products */
-  product2(include: ProdInclude, a: Multivector<T>, b: Multivector<T>): Multivector<T> {
+  product2(include: ProdInclusionTest, a: Multivector<T>, b: Multivector<T>): Multivector<T> {
     this.checkMine(a);
     this.checkMine(b);
     let skipped = false;
@@ -514,7 +514,7 @@ export class Algebra<T> {
   }
 
   /** Like `product2`, but for an arbitrary number of multivectors */
-  product(include: ProdInclude, mvs: Multivector<T>[]): Multivector<T> {
+  product(include: ProdInclusionTest, mvs: Multivector<T>[]): Multivector<T> {
     return mvs.length === 0
       ? new Multivector(this, include + "1", add => add(0, [])).markAsUnit()
       : mvs.reduce((acc, mv) => this.product2(include, acc, mv));
