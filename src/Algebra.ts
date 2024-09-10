@@ -58,12 +58,18 @@ export class Multivector<T> implements Iterable<[number, Scalar<T>]> {
   ) {
     alg.be.comment("mv " + name);
     initialize((bm, term, negate?) => {
+      const value = this.alg.times(...term);
+
+      // This check is not really needed.  Without it a Var<T> might be created
+      // unnecessarily, but still without a backing target-language variable.
+      if (value === 0) return;
+
       let variable = this.#components[bm];
       if (variable === undefined) {
         variable = this.#components[bm] =
           this.alg.be.makeVar(this.name + "_" + this.alg.bitmapToString[bm]);
       }
-      variable.add(this.alg.times(...term), negate);
+      variable.add(value, negate);
     });
   }
 
@@ -71,9 +77,10 @@ export class Multivector<T> implements Iterable<[number, Scalar<T>]> {
 
   *[Symbol.iterator](): Generator<[number, Scalar<T>], void, unknown> {
     for (const [bitmap, variable] of this.#components.entries()) {
-      if (variable !== undefined) {
-        yield [bitmap, variable.value()];
-      }
+      if (variable === undefined) continue;
+      const value = variable.value();
+      if (value === 0) continue;
+      yield [bitmap, value];
     }
   }
 
