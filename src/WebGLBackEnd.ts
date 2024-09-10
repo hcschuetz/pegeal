@@ -22,7 +22,9 @@ class VarImpl extends Var<string> {
     const expr = term.length === 0 ? "1.0" : term.map(formatFactor).join(" * ");
     const signedExpr = negate ? `-(${expr})` : `  ${expr}`;
     this.be.emit(
-      `${create ? "float" : "     "} ${this.name}  = ${signedExpr};`
+      create
+      ? `float ${this.name}  = ${signedExpr};`
+      : `      ${this.name} += ${signedExpr};`,
     );
   }
 
