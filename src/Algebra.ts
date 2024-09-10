@@ -87,10 +87,9 @@ export class Multivector<T> implements Iterable<[number, Scalar<T>]> {
     // checkUnit:
     // if (mark) {
     //   let n2 = 0;
-    //   for (const [bm, variable] of this.#components.entries()) {
-    //     if (variable === undefined) continue;
+    //   for (const [bm, val] of this) {
     //     const mf = this.alg.metricFactors(bm);
-    //     const val = variable.value();
+    //     // Cannot check symbolic values here:
     //     if (typeof mf !== "number" || typeof val !== "number") break checkUnit;
     //     n2 += mf * val * val;
     //   }
