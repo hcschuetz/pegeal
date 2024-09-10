@@ -84,13 +84,14 @@ export class Multivector<T> implements Iterable<[number, Scalar<T>]> {
   }
   public set knownUnit(mark) {
     // // Debug code looking for non-unit multivectors being marked as unit:
-    // if (mark && this.alg.be instanceof EvalBackEnd) {
-    //   const THIS = this as any as MultiVector<never>;
+    // checkUnit:
+    // if (mark) {
     //   let n2 = 0;
-    //   for (const [bm, variable] of THIS.#components.entries()) {
+    //   for (const [bm, variable] of this.#components.entries()) {
     //     if (variable === undefined) continue;
-    //     const mf = THIS.alg.metricFactors(bm);
+    //     const mf = this.alg.metricFactors(bm);
     //     const val = variable.value();
+    //     if (typeof mf !== "number" || typeof val !== "number") break checkUnit;
     //     n2 += mf * val * val;
     //   }
     //   console.log("# UNIT: " + n2);
@@ -647,7 +648,8 @@ export class Algebra<T> {
         this.scalarOp("sin", this.times(t                   , Omega))
       );
       return (
-        this.plus(this.scale(scaleA, a), this.scale(scaleB, b)).markAsUnit()
+        this.plus(this.scale(scaleA, a), this.scale(scaleB, b))
+        .markAsUnit(a.knownUnit && b.knownUnit)
         // Unitness is not detected by the lower-level operations.
       );
     }
