@@ -1,4 +1,4 @@
-import { BackEnd, Term, truth, Var } from "./Algebra";
+import { BackEnd, Scalar, truth, Var } from "./Algebra";
 
 /*
 This module used to work on purely numeric input and to evaluate it
@@ -9,7 +9,7 @@ So the respective methods in this module will no more be called.
 */
 
 class VarImpl extends Var<never> {
-  addTerm(term: Term<never>, negate: truth, create: boolean): void {
+  addValue(val: Scalar<never>, negate: truth, create: boolean): void {
     throw new Error("This method should never be called");
   }
 

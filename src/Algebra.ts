@@ -14,33 +14,29 @@ export abstract class Var<T> {
   #frozen = false;
   #numericPart = 0;
 
-  add(term: Term<T>, negate?: truth): void {
+  add(value: Scalar<T>, negate?: truth): void {
     if (this.#frozen) throw new Error("trying to update frozen variable");
 
-    if (term.some(f => f === 0)) return;
-
-    term = term.filter(f => f !== 1);
-
-    if (term.every(f => typeof f === "number")) {
-      this.#numericPart += term.reduce((x, y) => x * y, negate ? -1 : 1);
-      return;
+    if (typeof value === "number") {
+      if (value === 0) return;
+      this.#numericPart += negate ? -value : value;
+    } else {
+      this.addValue(value, negate, !this.#created);
+      this.#created = true;
     }
-
-    this.addTerm(term, negate, !this.#created);
-    this.#created = true;
   }
 
   value(): Scalar<T> {
     if (!this.#frozen) {
       if (this.#created && this.#numericPart !== 0) {
-        this.addTerm([this.#numericPart], false, false);
+        this.addValue(this.#numericPart, false, false);
       }
       this.#frozen = true;
     }
     return this.#created ? this.getValue() : this.#numericPart;
   }
 
-  protected abstract addTerm(term: Term<T>, negate: truth, create: boolean): void;
+  protected abstract addValue(value: Scalar<T>, negate: truth, create: boolean): void;
   protected abstract getValue(): T;
 }
 
@@ -67,7 +63,7 @@ export class Multivector<T> implements Iterable<[number, Scalar<T>]> {
         variable = this.#components[bm] =
           this.alg.be.makeVar(this.name + "_" + this.alg.bitmapToString[bm]);
       }
-      variable.add(term, negate);
+      variable.add(this.alg.times(...term), negate);
     });
   }
 
@@ -366,7 +362,7 @@ export class Algebra<T> {
     for (const [bitmap, value] of mv) {
       const mf = this.metricFactors(bitmap);
       if (mf !== null) {
-        variable.add([...mf, value, value]);
+        variable.add(this.times(...mf, value, value));
       }
     }
     return variable.value();
@@ -571,7 +567,7 @@ export class Algebra<T> {
       const mf = this.metricFactors(bitmap);
       if (mf === null) continue;
       // Notice that reverseFlips(bitmap) === productFlips(bitmap, bitmap) & 1:
-      variable.add([...mf, valA, valB], reverseFlips(bitmap));
+      variable.add(this.times(...mf, valA, valB), reverseFlips(bitmap));
     }
     return variable.value();
   }

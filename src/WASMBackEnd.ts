@@ -14,11 +14,9 @@ class VarImpl extends Var<LocalRef> {
 
   #localRef?: LocalRef;
 
-  addTerm(term: Term<LocalRef>, negate: truth, create: boolean) {
+  addValue(val: Scalar<LocalRef>, negate: truth, create: boolean) {
     const {mod, body, convertFactor} = this.be;
-    const expr =
-      term.length === 0 ? mod.f64.const(1) :
-      term.map(convertFactor).reduce((acc, factor) => mod.f64.mul(acc, factor));
+    const expr = convertFactor(val);
     const signedExpr = negate ? mod.f64.neg(expr) : expr;
     if (create) {
       this.#localRef = this.be.newLocal();

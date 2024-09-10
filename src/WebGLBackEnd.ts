@@ -18,8 +18,8 @@ class VarImpl extends Var<string> {
     super();
   }
 
-  addTerm(term: Term<string>, negate: truth, create: boolean) {
-    const expr = term.length === 0 ? "1.0" : term.map(formatFactor).join(" * ");
+  addValue(val: Scalar<string>, negate: truth, create: boolean) {
+    const expr = formatFactor(val);
     const signedExpr = negate ? `-(${expr})` : `  ${expr}`;
     this.be.emit(
       create
