@@ -216,7 +216,12 @@ export class Algebra<T> {
     if (bitmapToString.length !== 1 << nDimensions) {
       throw new Error("sizes of metric and component names do not fit");
     }
-    bitmapToString.forEach((name, bm) => this.stringToBitmap[name] = bm);
+    bitmapToString.forEach((name, bm) => {
+      if (this.stringToBitmap[name] !== undefined) {
+        throw new Error("duplicate base-blade name");
+      }
+      this.stringToBitmap[name] = bm;
+    });
   }
 
   /** Return a term for the metric or null if the term is always 0. */
