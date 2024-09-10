@@ -674,15 +674,22 @@ export class Algebra<T> {
 
   // TODO similar optimizations for other scalar operators/functions
   times(...factors: Scalar<T>[]): Scalar<T> {
-    factors = factors.filter(f => f !== 1);
-    return (
-      // This is not absolutely correct.  If one operator is 0 and the other
-      // one is NaN or infinity, the unoptimized computation would not return 0.
-      factors.some(f => f === 0) ? 0 :
-      factors.length === 0 ? 1 :
-      // TODO multiply numeric factors at generation time?
-      factors.reduce((acc, f) => this.scalarOp("*", acc, f))
-    );
+    let num = 1;
+    const sym: T[] = [];
+    for (const factor of factors) {
+      if (typeof factor === "number") {
+        // This is not absolutely correct.  If one operator is 0 and another one
+        // is NaN or infinity, the unoptimized computation would not return 0.
+        // (But we are in "fast-math mode". ;-)
+        if (factor === 0) return 0;
+        num *= factor;
+      } else {
+        sym.push(factor);
+      }
+    }
+    const simplified: Scalar<T>[] =
+      num !== 1 || sym.length === 0 ? [num, ...sym] : sym;
+    return simplified.reduce((acc, f) => this.scalarOp("*", acc, f));
   }
 
   scalarOp(name: string, ...args: Scalar<T>[]) {
