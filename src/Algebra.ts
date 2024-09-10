@@ -645,7 +645,7 @@ export class Algebra<T> {
         this.scalarOp("sin", this.times(this.scalarOp("-", 1, t), Omega))
       );
       const scaleB = this.times(scale,
-        this.scalarOp("sin", this.times(t                   , Omega))
+        this.scalarOp("sin", this.times(t                       , Omega))
       );
       return (
         this.plus(this.scale(scaleA, a), this.scale(scaleB, b))
