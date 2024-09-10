@@ -217,7 +217,7 @@ export class Algebra<T> {
     bitmapToString.forEach((name, bm) => this.stringToBitmap[name] = bm);
   }
 
-  /** Return a term for the metric or 0 if the term is always 0. */
+  /** Return a term for the metric or null if the term is always 0. */
   metricFactors(bm: number): Term<T> | null {
     const result = [];
     for (const i of bitList(bm)) {
