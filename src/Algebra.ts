@@ -739,7 +739,7 @@ export class Algebra<T> {
             const lrMetric = this.metricFactors(lBitmap & rBitmap);
             if (lrMetric === 0) continue;
 
-            const lrKey = [lBitmap, rBitmap].sort().join(",");
+            const lrKey = [lBitmap, rBitmap].sort((x,y) => x-y).join(",");
             const lrVal = lrVals[lrKey];
             for (const [iBitmap, iVal] of operand) {
               const lr_iMetric = this.metricFactors((lBitmap ^ rBitmap) & iBitmap);
