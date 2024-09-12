@@ -1,3 +1,4 @@
+import alphabetic from "./alphabetic";
 import scalarOp from "./scalarOp";
 
 /**
@@ -48,15 +49,17 @@ export abstract class BackEnd<T> {
 
 export class Multivector<T> implements Iterable<[number, Scalar<T>]> {
   #components: Var<T>[] = [];
+  readonly name: string;
 
   constructor(
     readonly alg: Algebra<T>,
-    readonly name: string,
+    nameHint: string,
     initialize: (
       add: (bm: number, term: Term<T>, negate?: truth) => unknown,
     ) => unknown,
   ) {
-    alg.be.comment("mv " + name);
+    this.name = `${nameHint}_${alphabetic(alg.mvCount++)}`;
+    alg.be.comment(`${this.name}`);
     initialize((bm, term, negate?) => {
       const value = this.alg.times(...term);
 
@@ -204,6 +207,7 @@ export class Algebra<T> {
   readonly nDimensions: number;
   readonly fullBitmap: number;
   readonly stringToBitmap: Record<string, number> = {};
+  mvCount = 0;
 
   constructor(
     readonly metric: Scalar<T>[],
