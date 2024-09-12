@@ -1,5 +1,6 @@
 {
-  "name": "geometric-algebra-generator",
+  "name": "pegeal",
+  "description": "Partial Evaluator for Geometric Algebra",
   "version": "0.0.1",
   "main": "index.js",
   "scripts": {
@@ -7,7 +8,7 @@
   },
   "author": "Heribert Schütz",
   "license": "MIT",
-  "description": "Generate WebGL shaders from geometric-algebra expressions",
+
   "type-comment": "apparently needed to properly load binaryen:",
   "type": "module",
   "dependencies": {
