@@ -81,7 +81,7 @@ writeAndStat("out.wasm", binary);
 {
   const {name, params, body} = B.getFunctionInfo(fn);
   const paramTypes = B.expandType(params)
-  const header = `function ${name}(${
+  const header = `// Code in some fantasy language:\nfunction ${name}(${
     be.paramHints.map((hint, i) => `\n  float v${i} /* ${hint} */`).join(",")
   }\n  // ${
     paramTypes.length
