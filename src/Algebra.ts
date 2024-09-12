@@ -738,7 +738,13 @@ export class Algebra<T> {
       this.checkMine(operand);
       const {dummy = false} = options;
       return new Multivector<T>(this, "sandwich", add => {
-        const lirVals: Record<string, {bm: number, lrVal: () => Scalar<T>, term: Term<T>, count: number}> = {}
+        const lirVals: Record<string, {
+          lrBitmap: number,
+          iBitmap: number,
+          lrVal: () => Scalar<T>,
+          lr_iMetric: Scalar<T>,
+          count: number,
+        }> = {}
         for (const [lBitmap] of operator) {
           for (const [rBitmap] of operator) {  
             const lrMetric = this.metricFactors(lBitmap & rBitmap);
@@ -746,11 +752,11 @@ export class Algebra<T> {
 
             const lrKey = [lBitmap, rBitmap].sort((x,y) => x-y).join(",");
             const lrVal = lrVals[lrKey];
-            for (const [iBitmap, iVal] of operand) {
+            for (const [iBitmap] of operand) {
               const lr_iMetric = this.metricFactors((lBitmap ^ rBitmap) & iBitmap);
               if (lr_iMetric === 0) continue;
               const liBitmap = lBitmap ^ iBitmap;
-              const lirBitmap = liBitmap ^ rBitmap;
+              const lrBitmap = lBitmap ^ rBitmap;
 
               const flips =
                 productFlips(lBitmap, iBitmap)
@@ -759,21 +765,34 @@ export class Algebra<T> {
               const flipFactor = flips & 1 ? -1 : 1;
 
               const lirKey = lrKey + "," + iBitmap;
-              const lirVal =
-                lirVals[lirKey] ??
-                (lirVals[lirKey] = {bm: lirBitmap, lrVal, term: [iVal, lr_iMetric], count: 0});
+              const lirVal = lirVals[lirKey] ?? (lirVals[lirKey] =
+                {lrBitmap, iBitmap, lrVal, lr_iMetric, count: 0}
+              );
               lirVal.count += flipFactor;
             }
           }
         }
-        for (const {bm, lrVal, term, count} of Object.values(lirVals)) {
+
+        const lirValsGrouped: Record<string, {
+          lrBitmap: number, iBitmap: number, sum: Scalar<T>,
+        }> = {};
+        for (const {lrBitmap, iBitmap, lrVal, lr_iMetric, count} of Object.values(lirVals)) {
           if (count === 0) continue;
-          const lrValue = lrVal();
+          const groupKey = [lrBitmap, iBitmap].sort((x,y) => x-y).join(",");
+          const group = lirValsGrouped[groupKey] ?? (lirValsGrouped[groupKey] =
+            {lrBitmap, iBitmap, sum: 0}
+          );
+          const lrVal_ = lrVal();
           if (dummy) continue;
-          // TODO Factor out common parts of the following product (lazily).
-          // TODO Add up the products w/o iVal with the same iBitmap and
-          // lirBitmap and multiply them with the iVal at the end.
-          add(bm, [lrValue, ...term, Math.abs(count)], Math.sign(count) < 0);
+          // TODO Share these terms and sums across operands:
+          const term = this.times(lrVal_, lr_iMetric, count);
+          const {sum} = group;
+          group.sum = sum ? this.scalarOp("+", term, sum) : term;
+        }
+
+        if (dummy) return;
+        for (const {lrBitmap, iBitmap, sum} of Object.values(lirValsGrouped)) {
+          add(lrBitmap ^ iBitmap, [sum, operand.value(iBitmap)], false);
         }
       }).markAsUnit(operator.knownUnit && operand.knownUnit && !dummy);
     };
