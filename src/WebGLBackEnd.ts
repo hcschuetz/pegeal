@@ -47,10 +47,10 @@ export default class WebGLBackEnd extends BackEnd<string> {
     let varName: string
     if (Object.hasOwn(binopLongName, name)) {
       varName = `${binopLongName[name]}_${this.count++}`;
-      this.emit(`\nfloat ${varName} = ${formatFactor(args[0])} ${name} ${formatFactor(args[1])};`);
+      this.emit(`float ${varName} = ${formatFactor(args[0])} ${name} ${formatFactor(args[1])};`);
     } else {
       varName = `${name}_${this.count++}`;
-      this.emit(`\nfloat ${varName} = ${name}(${args.map(formatFactor).join(", ")});`);
+      this.emit(`float ${varName} = ${name}(${args.map(formatFactor).join(", ")});`);
     }
     return varName;
   }
