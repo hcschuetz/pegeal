@@ -11,7 +11,7 @@ export const TAU = 2 * Math.PI;
 export const deg = (x: number, p?: number) => `${(x * (360 / TAU)).toFixed(p)}°`;
 
 export const p = console.log;
-export const q_ = (coords: string) => (label: string, x: Multivector<never> | number | string | undefined) => {
+export const q_ = (coords: string) => <T>(label: string, x: Multivector<T> | number | string | undefined) => {
   switch (typeof x) {
     case "undefined":
     case "string":
@@ -25,7 +25,11 @@ export const q_ = (coords: string) => (label: string, x: Multivector<never> | nu
       for (const [bm, val] of x) {
         p(`  ${
           coords.split("").map((c, i) => (1 << i) & bm ? c : "_").join("")
-        }: ${val.toFixed(8).replace(/^(?!-)/, "+").replace(/\.?0*$/, "")}`);
+        }: ${
+          typeof val === "number"
+          ? val.toFixed(8).replace(/^(?!-)/, "+").replace(/\.?0*$/, "")
+          : val
+        }`);
       }
     }
 }
