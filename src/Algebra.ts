@@ -685,7 +685,8 @@ export class Algebra<T> {
       }
     }
     const simplified: Scalar<T>[] =
-      num !== 1 || sym.length === 0 ? [num, ...sym] : sym;
+      // TODO If num === -1, use unary minus?
+      num !== 1 || sym.length === 0 ? [...sym, num] : sym;
     return simplified.reduce((acc, f) => this.scalarOp("*", acc, f));
   }
 
