@@ -769,6 +769,9 @@ export class Algebra<T> {
           if (count === 0) continue;
           const lrValue = lrVal();
           if (dummy) continue;
+          // TODO Factor out common parts of the following product (lazily).
+          // TODO Add up the products w/o iVal with the same iBitmap and
+          // lirBitmap and multiply them with the iVal at the end.
           add(bm, [lrValue, ...term, Math.abs(count)], Math.sign(count) < 0);
         }
       }).markAsUnit(operator.knownUnit && operand.knownUnit && !dummy);
