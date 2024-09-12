@@ -1,5 +1,7 @@
 
 for (const file of [
+  "introduction",
+
   "basics",
   "products",
 
