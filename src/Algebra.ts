@@ -690,6 +690,21 @@ export class Algebra<T> {
     return simplified.reduce((acc, f) => this.scalarOp("*", acc, f));
   }
 
+  scalarSum(...terms: Scalar<T>[]): Scalar<T> {
+    let num = 0;
+    const sym: T[] = [];
+    for (const term of terms) {
+      if (typeof term === "number") {
+        num += term;
+      } else {
+        sym.push(term);
+      }
+    }
+    const simplified: Scalar<T>[] =
+      num !== 0 || sym.length === 0 ? [...sym, num] : sym;
+    return simplified.reduce((acc, t) => this.scalarOp("+", acc, t));
+  }
+
   scalarOp(name: string, ...args: Scalar<T>[]) {
     return (
       args.every(arg => typeof arg === "number")
@@ -718,82 +733,97 @@ export class Algebra<T> {
    */
   sandwich(operator: Multivector<T>): (operand: Multivector<T>, options?: {dummy?: boolean}) => Multivector<T> {
     this.checkMine(operator);
+
+    function makeLRKey(lBitmap: number, rBitmap: number): string {
+      return [lBitmap, rBitmap].sort((x,y) => x-y).join(",");
+    }
+
     // We use name prefixes l, i, and r for the left, inner, and right part
     // of a sandwich product.
     const lrVals: Record<string, () => Scalar<T>> = {};
     for (const [lBitmap, lVal] of operator) {
       for (const [rBitmap, rVal] of operator) {
-        if (lBitmap > rBitmap) continue;
-
         const lrMetric = this.metricFactors(lBitmap & rBitmap);
         if (lrMetric === 0) continue;
 
-        const lrKey = `${lBitmap},${rBitmap}`;
+        const lrKey = makeLRKey(lBitmap, rBitmap);
         if (!Object.hasOwn(lrVals, lrKey)) {
-          lrVals[lrKey] = lazy(() => this.times(lVal, rVal, lrMetric))
+          lrVals[lrKey] = lazy(() => this.times(lVal, rVal, lrMetric));
         }
       }
     }
+
+    // cache[lirBitmap][iBitmap][lrKey] has shape {count, term, ...}
+    const cache: Array<Array<Record<string, {
+      count: number,
+      term: () => Scalar<T>,
+      complete: boolean,
+    }>>> = [];
+
     return (operand, options = {}) => {
       this.checkMine(operand);
       const {dummy = false} = options;
-      return new Multivector<T>(this, "sandwich", add => {
-        const lirVals: Record<string, {
-          lrBitmap: number,
-          iBitmap: number,
-          lrVal: () => Scalar<T>,
-          lr_iMetric: Scalar<T>,
-          count: number,
-        }> = {}
-        for (const [lBitmap] of operator) {
-          for (const [rBitmap] of operator) {  
-            const lrMetric = this.metricFactors(lBitmap & rBitmap);
-            if (lrMetric === 0) continue;
 
-            const lrKey = [lBitmap, rBitmap].sort((x,y) => x-y).join(",");
+      return new Multivector<T>(this, "sandwich", add => {
+        // TODO? Pass an operand-shape already as a second argument
+        // to the outer function.  Then move the cache-filling phase
+        // up to the outer function and use the cache read-only in the inner
+        // function.
+        // - The shape may be a list of basis blades (bitmaps and/or strings)
+        //   or a multivector whose component values are ignored.
+        // - No more need for the "complete" hack.
+        // - The actual operands should be tested (at code-generation time)
+        //   whether they fit the given shape.
+        //   - Additional components are a problem as they would be ignored.
+        //   - Missing components can be treated like run-time 0.
+        //     This just leads to some superfluous operations involving 0.
+        for (const [lBitmap] of operator) {
+          for (const [rBitmap] of operator) {
+            const lrBitmap = lBitmap ^ rBitmap;
+            const lrKey = makeLRKey(lBitmap, rBitmap);
             const lrVal = lrVals[lrKey];
             for (const [iBitmap] of operand) {
-              const lr_iMetric = this.metricFactors((lBitmap ^ rBitmap) & iBitmap);
-              if (lr_iMetric === 0) continue;
               const liBitmap = lBitmap ^ iBitmap;
-              const lrBitmap = lBitmap ^ rBitmap;
+              const lirBitmap = liBitmap ^ rBitmap;
+
+              const cache1 = cache[lirBitmap] ?? (cache[lirBitmap] = []);
+              const cache2 = cache1[iBitmap] ?? (cache1[iBitmap] = {});
+              const cache3 = cache2[lrKey] ?? (cache2[lrKey] = {
+                complete: false,
+                count: 0,
+                term: lazy(() => this.times(
+                  lrVal(), this.metricFactors(lrBitmap & iBitmap),
+                )),
+              });
+              if (cache3.complete) continue;
 
               const flips =
                 productFlips(lBitmap, iBitmap)
               + productFlips(liBitmap, rBitmap)
               + reverseFlips(rBitmap);
-              const flipFactor = flips & 1 ? -1 : 1;
-
-              const lirKey = lrKey + "," + iBitmap;
-              const lirVal = lirVals[lirKey] ?? (lirVals[lirKey] =
-                {lrBitmap, iBitmap, lrVal, lr_iMetric, count: 0}
-              );
-              lirVal.count += flipFactor;
+              cache3.count += flips & 1 ? -1 : 1;
             }
           }
         }
 
-        const lirValsGrouped: Record<string, {
-          lrBitmap: number, iBitmap: number, sum: Scalar<T>,
-        }> = {};
-        for (const {lrBitmap, iBitmap, lrVal, lr_iMetric, count} of Object.values(lirVals)) {
-          if (count === 0) continue;
-          const groupKey = [lrBitmap, iBitmap].sort((x,y) => x-y).join(",");
-          const group = lirValsGrouped[groupKey] ?? (lirValsGrouped[groupKey] =
-            {lrBitmap, iBitmap, sum: 0}
-          );
-          const lrVal_ = lrVal();
-          if (dummy) continue;
-          // TODO Share these terms and sums across operands:
-          const term = this.times(lrVal_, lr_iMetric, count);
-          const {sum} = group;
-          group.sum = sum ? this.scalarOp("+", term, sum) : term;
-        }
-
-        if (dummy) return;
-        for (const {lrBitmap, iBitmap, sum} of Object.values(lirValsGrouped)) {
-          add(lrBitmap ^ iBitmap, [sum, operand.value(iBitmap)], false);
-        }
+        cache.forEach((cache1, lirBitmap) => {
+          cache1.forEach((cache2, iBitmap) => {
+            const iVal = operand.value(iBitmap);
+            const sum: Scalar<T>[] = [];
+            Object.values(cache2).forEach(cache3 => {
+              const {count, term} = cache3;
+              cache3.complete = true;
+              if (count === 0) return;
+              cache3.count = 1;
+              cache3.term = lazy(() => this.times(count, term()));
+              const t = cache3.term();
+              if (dummy) return;
+              sum.push(t);
+            });
+            // TODO Cache the summation and share it across operands
+            add(lirBitmap, [this.scalarSum(...sum), iVal]);
+          });
+        });
       }).markAsUnit(operator.knownUnit && operand.knownUnit && !dummy);
     };
   }
