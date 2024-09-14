@@ -685,6 +685,7 @@ export class Algebra<T> {
     return simplified.reduce((acc, f) => this.scalarOp("*", acc, f));
   }
 
+  // The name "plus" is already taken for the sum of multivectors.
   scalarSum(...terms: Scalar<T>[]): Scalar<T> {
     let num = 0;
     const sym: T[] = [];
