@@ -80,7 +80,7 @@ export class Multivector<T> implements Iterable<[number, Scalar<T>]> {
 
   value(bm: number): Scalar<T> { return this.#components[bm]?.value() ?? 0; }
 
-  *[Symbol.iterator](): Generator<[number, Scalar<T>], void, unknown> {
+  *[Symbol.iterator](): Iterator<[number, Scalar<T>]> {
     for (const [bitmap, variable] of this.#components.entries()) {
       if (variable === undefined) continue;
       const value = variable.value();
