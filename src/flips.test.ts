@@ -1,5 +1,5 @@
 import { assert, test } from 'vitest';
-import { productFlips, reverseFlips } from "../src/Algebra";
+import { bitCount, productFlips, reverseFlips } from "../src/Algebra";
 
 const isSorted = (list: string[]): boolean =>
   list.every((elem, i) => i === 0 || list[i-1] <= elem);
@@ -30,6 +30,14 @@ function bitmapToStrings(bm: number): string[] {
 }
 
 const randomBitmap = () => Math.floor(2**26 * Math.random());
+
+test("bitCount", () => {
+  // Run a bunch of random test cases
+  for (let i = 0; i < 1000; i++) {
+    const bits = randomBitmap(), strings = bitmapToStrings(bits);
+    assert(bitCount(bits) === strings.length,`mismatch for: ${strings}`);
+  }
+});
 
 test("reverseFlips", () => {
   // Run a bunch of random test cases
