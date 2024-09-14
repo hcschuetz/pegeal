@@ -6,7 +6,7 @@
   "scripts": {
     "test": "vitest",
     "introduction": "nodemon --trace-uncaught --enable-source-maps --import=tsx examples/introduction.ts",
-    "dev"         : "nodemon --trace-uncaught --enable-source-maps --import=tsx examples/index.ts"
+    "examples"    : "nodemon --trace-uncaught --enable-source-maps --import=tsx examples/index.ts"
   },
   "author": "Heribert Schütz",
   "license": "MIT",
