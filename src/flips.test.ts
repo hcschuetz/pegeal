@@ -60,7 +60,10 @@ test("productFlips", () => {
     const actualFlips = productFlips(lBits, rBits);
 
     assert(
-      (actualFlips & 1) === (referenceFlips & 1),
+      // We actually only care about the parities:
+      // (actualFlips & 1) === (referenceFlips & 1),
+      // But it's nice to have full equality:
+      actualFlips === referenceFlips,
       `mismatch for: ${lStrings} / ${rStrings}`
     );
   }
