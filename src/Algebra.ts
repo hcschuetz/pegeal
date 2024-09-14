@@ -460,16 +460,6 @@ export class Algebra<T> {
     ).markAsUnit();
   }
 
-  extractGrade(grade: number, mv: Multivector<T>): Multivector<T> {
-    return new Multivector(this, "extract" + grade, add => {
-      for (const [bitmap, value] of this.checkMine(mv)) {
-        if (bitCount(bitmap) === grade) {
-          add(bitmap, [value]);
-        }
-      }
-    });
-  }
-
   extract(
     test: (bm: number, value: Scalar<T>) => boolean,
     mv: Multivector<T>,
@@ -481,6 +471,10 @@ export class Algebra<T> {
         }
       }
     });
+  }
+
+  extractGrade(grade: number, mv: Multivector<T>): Multivector<T> {
+    return this.extract(bm => bitCount(bm) === grade, mv);
   }
 
   plus(...mvs: Multivector<T>[]): Multivector<T> {
