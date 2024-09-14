@@ -7,6 +7,8 @@ import scalarOp from "./scalarOp";
  */
 export type truth = unknown;
 
+function fail(msg: string): never { throw new Error(msg); };
+
 export type Scalar<T> = number | T;
 export type Term<T> = Scalar<T>[];
 
@@ -16,7 +18,7 @@ export abstract class Var<T> {
   #numericPart = 0;
 
   add(value: Scalar<T>, negate?: truth): void {
-    if (this.#frozen) throw new Error("trying to update frozen variable");
+    if (this.#frozen) fail("trying to update frozen variable");
 
     if (typeof value === "number") {
       if (value === 0) return;
@@ -106,7 +108,7 @@ export class Multivector<T> implements Iterable<[number, Scalar<T>]> {
     //   console.log("# UNIT: " + n2);
     //   // n2 ~ -1 is also allowed:
     //   if (Math.abs(Math.abs(n2) - 1) > 1e-10) {
-    //     throw new Error("Marking a non-unit multivector as unit");
+    //     fail("Marking a non-unit multivector as unit");
     //   }
     // }
 
@@ -218,12 +220,10 @@ export class Algebra<T> {
     this.fullBitmap = (1 << nDimensions) - 1;
 
     if (bitmapToString.length !== 1 << nDimensions) {
-      throw new Error("sizes of metric and component names do not fit");
+      fail("sizes of metric and component names do not fit");
     }
     bitmapToString.forEach((name, bm) => {
-      if (this.stringToBitmap[name] !== undefined) {
-        throw new Error("duplicate base-blade name");
-      }
+      if (this.stringToBitmap[name]) fail(`duplicate base-blade name "${name}"`);
       this.stringToBitmap[name] = bm;
     });
   }
@@ -234,17 +234,15 @@ export class Algebra<T> {
   }
 
   checkMine(mv: Multivector<T>): Multivector<T> {
-    if (mv.alg !== this) throw new Error("trying to use foreign multivector");
+    if (mv.alg !== this) fail("trying to use foreign multivector");
     return mv;
   }
 
   mv(nameHint: string, obj: Record<string, Scalar<T>>) {
     return new Multivector(this, nameHint, add => {
       for (const [key, val] of Object.entries(obj)) {
-        const bm = this.stringToBitmap[key];
-        if (bm === undefined) {
-          throw new Error(`unexpected key in mv data: ${key}`);
-        }
+        const bm = this.stringToBitmap[key] ??
+          fail(`unexpected key in mv data: ${key}`);
         add(bm, [val]);
       }
     });
@@ -424,18 +422,14 @@ export class Algebra<T> {
     if ([...mv].length === 1) {
       return new Multivector(this, "inverse", add => {
         for (const [bm, val] of mv) {
-          const mf = this.metricFactors(bm);
-          if (mf === 0) {
-            throw new Error(`trying to invert null vector ${mv}`);
-          }
+          const mf = this.metricFactors(bm) ||
+            fail(`trying to invert null vector ${mv}`);
           add(bm, [this.scalarOp("/", 1, this.times(val, mf))], reverseFlips(bm));
         }
       });
     }
-    const norm2 = this.normSquared(mv);
-    if (norm2 === 0) {
-      throw new Error(`trying to invert null vector ${mv}`);
-    }
+    const norm2 = this.normSquared(mv) ||
+      fail(`trying to invert null vector ${mv}`);
     return this.scale(this.scalarOp("/", 1, norm2), this.reverse(mv));
   }
 
@@ -450,10 +444,8 @@ export class Algebra<T> {
       ])).markAsUnit();
     }
 
-    const normSq = this.normSquared(mv);
-    if (normSq === 0) {
-      throw new Error(`trying to normalize null vector ${mv}`);
-    }
+    const normSq = this.normSquared(mv) ||
+      fail(`trying to normalize null vector ${mv}`);
     return this.scale(
       this.scalarOp("inversesqrt",
         // Use the absolute value for compatibility with the
@@ -618,8 +610,7 @@ export class Algebra<T> {
     /** The imaginary part of the quaternion */
     const R2 = this.extractGrade(2, R);
     /** The sine of the half angle */
-    const R2Norm = this.norm(R2);
-    if (R2Norm == 0) throw new Error("division by zero in log computation");
+    const R2Norm = this.norm(R2) || fail("division by zero in log computation");
     // TODO optimize away atan2 call if R0 == 0.
     const atan = this.scalarOp("atan2", R2Norm, R0);
     const scalarFactor = this.scalarOp("/", atan, R2Norm);
@@ -714,117 +705,112 @@ export class Algebra<T> {
   }
 
   /**
-   * Like `this.geometricProduct(operator, operand, this.reverse(operator))`
-   * but cancelling terms that can be detected at code-generation time
+   * `sandwich(operator, operandComponents)(operand)` is like
+   * `this.geometricProduct(operator, operand, this.reverse(operator))`
+   * but cancels terms that can be detected at code-generation time
    * to be negations of each other.
    * 
-   * **THE OPERATOR IS EXPECTED TO BE A VERSOR**, typically a unit versor
-   * for a mirror/rotation operation without stretching/shrinking.
+   * The `operator` is typically a unit versor for a mirror/rotation operation
+   * without stretching/shrinking.
    * 
-   * The function is curried, so that the same operator can be "applied" to
-   * multiple operands, sharing some intermediate values that only depend
-   * on the operator.
+   * The function is curried so that the same `operator` can be "applied" to
+   * multiple `operand`s, pre-computing and sharing some intermediate values
+   * that do not depend on the `operand`'s basis-blade magnitudes.
    * 
-   * If the dummy flag is set, no output to the result multivector is generated,
-   * but the intermediate values needed for the given operand will be computed.
-   * (This is useful if you apply the second step of the curried function
-   * in a loop, but you want to force the computation of the intermediate
-   * values before entering the loop.)
+   * `operandComponents` tells which basis-blades might be populated in the
+   * `operands`.  It can be given as a ("dummy") `Multivector` or as an iterable
+   * of bitmaps and/or basis-blade names.
    */
-  sandwich(operator: Multivector<T>): (operand: Multivector<T>, options?: {dummy?: boolean}) => Multivector<T> {
+  sandwich(
+    operator: Multivector<T>,
+    operandComponents: Multivector<any> | Iterable<number | string>,
+  ): (operand: Multivector<T>) => Multivector<T> {
     this.checkMine(operator);
 
-    function makeLRKey(lBitmap: number, rBitmap: number): string {
-      return [lBitmap, rBitmap].sort((x,y) => x-y).join(",");
-    }
+    const componentBitmaps =
+      operandComponents instanceof Multivector
+      ? [...operandComponents].map(([bitmap]) => bitmap)
+      : [...operandComponents].map(x =>
+        typeof x === "number"
+        ? (x >= 1 << this.nDimensions && fail(`bitmap exceeds limit: ${x}`), x)
+        : this.stringToBitmap[x] ?? fail(`unknown basis blade: "${x}"`)
+      );
 
-    // We use name prefixes l, i, and r for the left, inner, and right part
-    // of a sandwich product.
+    // Prefixes l/i/r refer to the left/inner/right parts of a sandwich.
+
     const lrVals: Record<string, () => Scalar<T>> = {};
+
+    // cache[iBitmap][lirBitmap].children[lrKey] has shape {count, term}.
+    // The (linear) mapping from the operand to the result multivector is
+    // represented by a matrix with entries `cache[iBitmap][lirBitmap].entry`.
+    const cache: Array<Array<{
+      children: Record<string, {
+        count: number,
+        term: () => Scalar<T>,
+      }>,
+      entry: Scalar<T>;
+    }>> = [];
+
     for (const [lBitmap, lVal] of operator) {
       for (const [rBitmap, rVal] of operator) {
         const lrMetric = this.metricFactors(lBitmap & rBitmap);
         if (lrMetric === 0) continue;
 
-        const lrKey = makeLRKey(lBitmap, rBitmap);
-        if (!Object.hasOwn(lrVals, lrKey)) {
-          lrVals[lrKey] = lazy(() => this.times(lVal, rVal, lrMetric));
+        const lrKey = [lBitmap, rBitmap].sort((x, y) => x - y).join(",");
+        const lrVal = lrVals[lrKey] ??=
+          lazy(() => this.times(lVal, lrMetric, rVal));
+
+        const lrBitmap = lBitmap ^ rBitmap;
+        for (const iBitmap of componentBitmaps) {
+          const lr_iMetric = this.metricFactors(lrBitmap & iBitmap);
+          if (lr_iMetric === 0) continue;
+
+          const liBitmap = lBitmap ^ iBitmap;
+          const lirBitmap = liBitmap ^ rBitmap;
+
+          const cache1 = cache[iBitmap] ??= [];
+          const cache2 = cache1[lirBitmap] ??= {children: {}, entry: 0};
+          const cache3 = cache2.children[lrKey] ??= {
+            count: 0,
+            term: lazy(() => this.times(lrVal(), lr_iMetric)),
+          };
+
+          const flips =
+            productFlips(lBitmap, iBitmap)
+          + productFlips(liBitmap, rBitmap)
+          + reverseFlips(rBitmap);
+          cache3.count += flips & 1 ? -1 : 1;
         }
       }
     }
 
-    // cache[lirBitmap][iBitmap][lrKey] has shape {count, term, ...}
-    const cache: Array<Array<Record<string, {
-      count: number,
-      term: () => Scalar<T>,
-      complete: boolean,
-    }>>> = [];
+    // Pre-compute matrix entries:
+    cache.forEach(cache1 => {
+      cache1.forEach(cache2 => {
+        cache2.entry = this.scalarSum(
+          ...[...Object.values(cache2.children)].map(({count, term}) => 
+            // TODO Construct an example where the laziness of term avoids
+            // generating some superfluous code.  (Or remove the laziness.)
+            count && this.times(count, term())
+          )
+        );
+      });
+    });
 
-    return (operand, options = {}) => {
+    return (operand) => {
       this.checkMine(operand);
-      const {dummy = false} = options;
-
       return new Multivector<T>(this, "sandwich", add => {
-        // TODO? Pass an operand-shape already as a second argument
-        // to the outer function.  Then move the cache-filling phase
-        // up to the outer function and use the cache read-only in the inner
-        // function.
-        // - The shape may be a list of basis blades (bitmaps and/or strings)
-        //   or a multivector whose component values are ignored.
-        // - No more need for the "complete" hack.
-        // - The actual operands should be tested (at code-generation time)
-        //   whether they fit the given shape.
-        //   - Additional components are a problem as they would be ignored.
-        //   - Missing components can be treated like run-time 0.
-        //     This just leads to some superfluous operations involving 0.
-        for (const [lBitmap] of operator) {
-          for (const [rBitmap] of operator) {
-            const lrBitmap = lBitmap ^ rBitmap;
-            const lrKey = makeLRKey(lBitmap, rBitmap);
-            const lrVal = lrVals[lrKey];
-            for (const [iBitmap] of operand) {
-              const liBitmap = lBitmap ^ iBitmap;
-              const lirBitmap = liBitmap ^ rBitmap;
-
-              const cache1 = cache[lirBitmap] ?? (cache[lirBitmap] = []);
-              const cache2 = cache1[iBitmap] ?? (cache1[iBitmap] = {});
-              const cache3 = cache2[lrKey] ?? (cache2[lrKey] = {
-                complete: false,
-                count: 0,
-                term: lazy(() => this.times(
-                  lrVal(), this.metricFactors(lrBitmap & iBitmap),
-                )),
-              });
-              if (cache3.complete) continue;
-
-              const flips =
-                productFlips(lBitmap, iBitmap)
-              + productFlips(liBitmap, rBitmap)
-              + reverseFlips(rBitmap);
-              cache3.count += flips & 1 ? -1 : 1;
-            }
-          }
-        }
-
-        cache.forEach((cache1, lirBitmap) => {
-          cache1.forEach((cache2, iBitmap) => {
-            const iVal = operand.value(iBitmap);
-            const sum: Scalar<T>[] = [];
-            Object.values(cache2).forEach(cache3 => {
-              const {count, term} = cache3;
-              cache3.complete = true;
-              if (count === 0) return;
-              cache3.count = 1;
-              cache3.term = lazy(() => this.times(count, term()));
-              const t = cache3.term();
-              if (dummy) return;
-              sum.push(t);
-            });
-            // TODO Cache the summation and share it across operands
-            add(lirBitmap, [this.scalarSum(...sum), iVal]);
+        // The remaining code is essentially a matrix/vector multiplication:
+        for (const [iBitmap, iVal] of operand) {
+          const cache1 = cache[iBitmap] ?? fail(
+            `sandwich-operand component "${this.bitmapToString[iBitmap]
+            }" missing in component list`
+          );
+          cache1.forEach((cache2, lirBitmap) => {
+            add(lirBitmap, [cache2.entry, iVal]);
           });
-        });
-      }).markAsUnit(operator.knownUnit && operand.knownUnit && !dummy);
+        }
+      }).markAsUnit(operator.knownUnit && operand.knownUnit);
     };
   }
 

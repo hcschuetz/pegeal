@@ -21,7 +21,7 @@ for (const create of [
   const rotor = alg.normalize(ba);
   be.emit(`// rotor: ${rotor}`);
   be.emit(`// rotor~: ${alg.reverse(rotor)}`);
-  const sw_rotor = alg.sandwich(rotor);
+  const sw_rotor = alg.sandwich(rotor, ["x", "y"]);
   for (const c of [alg.mv("a", {x: "ax", y: "ay"}), alg.mv("a", {x: 1, y: 1})]) {
     be.emit(`// c: ${c}`);
     be.emit(`// sandwich: ${sw_rotor(c)}`);
@@ -34,7 +34,7 @@ for (const create of [
   for(const [name, value] of Object.entries({a, b, ba, rotor})) {
     be.emit(`\n// ${name}: ${value}`);
     be.emit(`// |${name}|**2: ${alg.normSquared(value)}`);
-    be.emit(`// |${name}|**2: ${alg.sandwich(value)(alg.one())}`);  
+    be.emit(`// |${name}|**2: ${alg.sandwich(value, ["1"])(alg.one())}`);  
   }
   be.emit("---------------------");
 }
@@ -50,8 +50,7 @@ for (const create of [
   b = alg.normalize(b);
   be.emit(`// a: ${a})`);
   be.emit(`// b: ${b})`);
-  const sw_a = alg.sandwich(a);
-  be.emit(`// sandwich/dummy: ${sw_a(alg.mv("dummy", {z: "1.0"}), {dummy: true})}`);
+  const sw_a = alg.sandwich(a, ["z"]);
   be.emit(`// sandwich: ${sw_a(b)})`);
   be.emit(`// sandwich/neg: ${sw_a(alg.negate(b))})`);
   be.emit(`// sandwich1: ${alg.sandwich1(a, b)})`);

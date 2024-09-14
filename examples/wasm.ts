@@ -31,7 +31,7 @@ const inputs = [
   alg.mv("e", {x: param.e_x, w: param.e_w}),
 ];
 
-const sandwich_gh = alg.sandwich(gh);
+const sandwich_gh = alg.sandwich(gh, ["1", "x", "y", "z", "w"]);
 const invNorm = be.scalarOp("/", 1, sandwich_gh(alg.one()).value(0));
 const results = inputs.map(inp => alg.scale(invNorm, sandwich_gh(inp)));
 // TODO make use of the bitmaps in result

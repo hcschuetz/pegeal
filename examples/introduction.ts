@@ -103,7 +103,10 @@ try {
 
   // An example using more advanced algebra features:
   function rotationExample(
-    label: string, a: Multivector<string>, b: Multivector<string>
+    label: string,
+    pattern: Parameters<typeof alg.sandwich>[1],
+    a: Multivector<string>,
+    b: Multivector<string>,
   ) {
     be.comment("");
     be.comment("=".repeat(77));
@@ -126,8 +129,10 @@ try {
     const oneTenthRotor = alg.exp(oneTenthBlade);
     output("oneTenthRotor", oneTenthRotor);
 
-    // `sandwich(p)(q)` is an optimized version of `p q ~p`:
-    const rotate = alg.sandwich(oneTenthRotor)
+    // `sandwich(p, pattern)(q)` is an optimized version of `p q ~p`:
+    // (The `pattern` parameter tells the `sandwich` method which
+    // basis blades to expect in `q`.)
+    const rotate = alg.sandwich(oneTenthRotor, pattern)
     const aRotated = rotate(a);
     output("rotate(a)", aRotated);
 
@@ -146,6 +151,7 @@ try {
   // since that has a symbolic metric.)
   rotationExample(
     "numeric",
+    ["x", "y", "z"],
     alg.mv("aNum", {x: 1, y: -2}),
     alg.normalize(alg.mv("bNum", {x: .5, y: .7, z: 1})),
   );
@@ -154,13 +160,13 @@ try {
   // that is relatively easy to understand:
   rotationExample(
     "symbolic",
+    ["x", "y", "z"], // Notice that "z" is not being used.
     alg.mv("aNum", {x: "a_x", y: "a_y"}),
     alg.mv("bNum", {x: "b_x", y: "b_y"}),
   );
 
   // Using our vectors from above produces more complex output:
-  // rotationExample("partially symbolic", a, b);
-
+  // rotationExample("partially symbolic", ["x", "y", "z", "w"], a, b);
 } finally {
   console.log(be.text);
 }
