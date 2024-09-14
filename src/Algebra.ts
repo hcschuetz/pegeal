@@ -89,6 +89,10 @@ export class Multivector<T> implements Iterable<[number, Scalar<T>]> {
     }
   }
 
+  *basisBlades(): Iterable<number> {
+    for (const [bitmap] of this) yield bitmap;
+  }
+
   /** Do we know (at code-generation time) that this multivector has norm 1? */
   #knownUnit = false;
   public get knownUnit() {
@@ -715,26 +719,22 @@ export class Algebra<T> {
    * 
    * The function is curried so that the same `operator` can be "applied" to
    * multiple `operand`s, pre-computing and sharing some intermediate values
-   * that do not depend on the `operand`'s basis-blade magnitudes.
+   * that do not depend on the `operand`'s component magnitudes.
    * 
-   * `operandComponents` tells which basis-blades might be populated in the
-   * `operands`.  It can be given as a ("dummy") `Multivector` or as an iterable
-   * of bitmaps and/or basis-blade names.
+   * `operandComponents` tells which components might be populated in the
+   * `operand`s.  It is an iterable of bitmaps and/or basis-blade names.
    */
   sandwich(
     operator: Multivector<T>,
-    operandComponents: Multivector<any> | Iterable<number | string>,
+    operandComponents: Iterable<number | string>,
   ): (operand: Multivector<T>) => Multivector<T> {
     this.checkMine(operator);
 
-    const componentBitmaps =
-      operandComponents instanceof Multivector
-      ? [...operandComponents].map(([bitmap]) => bitmap)
-      : [...operandComponents].map(x =>
-        typeof x === "number"
-        ? (x >= 1 << this.nDimensions && fail(`bitmap exceeds limit: ${x}`), x)
-        : this.stringToBitmap[x] ?? fail(`unknown basis blade: "${x}"`)
-      );
+    const componentBitmaps = [...operandComponents].map(x =>
+      typeof x === "number"
+      ? (x >= 1 << this.nDimensions && fail(`bitmap exceeds limit: ${x}`), x)
+      : this.stringToBitmap[x] ?? fail(`unknown basis blade: "${x}"`)
+    );
 
     // Prefixes l/i/r refer to the left/inner/right parts of a sandwich.
 
