@@ -4,21 +4,21 @@
   "version": "0.0.1",
   "main": "index.js",
   "scripts": {
+    "test": "vitest",
     "introduction": "nodemon --trace-uncaught --enable-source-maps --import=tsx examples/introduction.ts",
     "dev"         : "nodemon --trace-uncaught --enable-source-maps --import=tsx examples/index.ts"
   },
   "author": "Heribert Schütz",
   "license": "MIT",
-
   "type-comment": "apparently needed to properly load binaryen:",
   "type": "module",
-
   "dependencies": {
     "binaryen": "^119.0.0"
   },
   "devDependencies": {
     "@types/node": "^22.5.4",
     "nodemon": "^3.1.4",
-    "tsx": "^4.16.5"
+    "tsx": "^4.16.5",
+    "vitest": "^2.1.1"
   }
 }
