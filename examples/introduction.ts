@@ -113,11 +113,14 @@ try {
     be.comment(`rotation example (${label}):`);
     be.comment("");
 
+    a = alg.normalize(a);
+    b = alg.normalize(b);
+
     output("a", a);
     output("b", b);
     output("∡(a, b)", alg.getAngle(a, b));
 
-    const doubleRotor = alg.geometricProduct(a, b);
+    const doubleRotor = alg.geometricProduct(b, a);
     output("doubleRotor", doubleRotor);
 
     const doubleBlade = alg.log(doubleRotor);
@@ -135,14 +138,18 @@ try {
     const rotate = alg.sandwich(oneTenthRotor, pattern)
     const aRotated = rotate(a);
     output("rotate(a)", aRotated);
+    // For comparison:
+    const slerp = alg.slerp(a, b);
+    output("slerp-based", slerp(0.1));
 
     // With purely numeric input, the angle between a and aRotated should be
     // one tenth of the angle between a and b computed above:
     output("∡(a, rotate(a))", alg.getAngle(a, aRotated));
 
-    // We can re-use `rotate`:
+    // We can re-use `rotate` and `slerp`:
     const bRotated = rotate(b);
     output("rotate(b)", bRotated);
+    output("slerp-based", slerp(1.1));
     output("∡(b, rotate(b))", alg.getAngle(b, bRotated));
   }
 
@@ -153,7 +160,7 @@ try {
     "numeric",
     ["x", "y", "z"],
     alg.mv("aNum", {x: 1, y: -2}),
-    alg.normalize(alg.mv("bNum", {x: .5, y: .7, z: 1})),
+    alg.mv("bNum", {x: .5, y: .7, z: 1}),
   );
 
   // Running the example with simple symbolic input generates code
