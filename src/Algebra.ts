@@ -602,8 +602,8 @@ export class Algebra<T> {
   // TODO Does this really only work in 3-D?  Doesn't it suffice that the rotor
   // is "exp(some 2-blade)", even in higher dimensions or 2-D?
   // 
-  // Notice that R can also be seen as a unit quaternion,
-  // except that the xz component is the negative j component.
+  // Notice that in 3D R can also be seen as a unit quaternion,
+  // except that the xz component is the *negative* j component.
   log(R: Multivector<T>): Multivector<T> {
     /** The cosine of the half angle, that is, the real part of the quaternion */
     const R0 = R.value(0);

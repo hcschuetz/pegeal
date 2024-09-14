@@ -147,8 +147,8 @@ try {
   }
 
   // Run the rotation example with all numbers given:
-  // (Notice that we are not using the w coordinate here
-  // since that has a symbolic metric.)
+  // (We are not using the w coordinate here since that has a symbolic metric.)
+  // This evaluates the expression fully and does not generate any code.
   rotationExample(
     "numeric",
     ["x", "y", "z"],
