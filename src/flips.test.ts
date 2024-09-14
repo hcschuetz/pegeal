@@ -21,7 +21,7 @@ function flips_referenceImplementation(listIn: string[]): number {
   return flips;
 }
 
-function bitmapToStringList(bm: number): string[] {
+function bitmapToStrings(bm: number): string[] {
   const out = [];
   for (let i = 0; i < 32; i++) {
     if (bm & (1 << i)) out.push(String.fromCharCode("a".charCodeAt(0) + i));
@@ -34,9 +34,7 @@ const randomBitmap = () => Math.floor(2**26 * Math.random());
 test("reverseFlips", () => {
   // Run a bunch of random test cases
   for (let i = 0; i < 1000; i++) {
-    const bits = randomBitmap();
-
-    const strings = bitmapToStringList(bits);
+    const bits = randomBitmap(), strings = bitmapToStrings(bits);
 
     const referenceFlips =
       flips_referenceImplementation([...strings].reverse());
@@ -53,11 +51,8 @@ test("reverseFlips", () => {
 test("productFlips", () => {
   // Run a bunch of random test cases
   for (let i = 0; i < 1000; i++) {
-    const lBits = randomBitmap();
-    const rBits = randomBitmap();
-
-    const lStrings = bitmapToStringList(lBits);
-    const rStrings = bitmapToStringList(rBits);
+    const lBits = randomBitmap(), lStrings = bitmapToStrings(lBits);
+    const rBits = randomBitmap(), rStrings = bitmapToStrings(rBits);
 
     const referenceFlips =
       flips_referenceImplementation([...lStrings, ...rStrings]);
@@ -74,13 +69,9 @@ test("productFlips", () => {
 test("sandwich flipping", () => {
   // Run a bunch of random test cases
   for (let i = 0; i < 1000; i++) {
-    const lBits = randomBitmap();
-    const iBits = randomBitmap();
-    const rBits = randomBitmap();
-
-    const lStrings = bitmapToStringList(lBits);
-    const iStrings = bitmapToStringList(iBits);
-    const rStrings = bitmapToStringList(rBits);
+    const lBits = randomBitmap(), lStrings = bitmapToStrings(lBits);
+    const iBits = randomBitmap(), iStrings = bitmapToStrings(iBits);
+    const rBits = randomBitmap(), rStrings = bitmapToStrings(rBits);
 
     const referenceFlips =
       flips_referenceImplementation([
