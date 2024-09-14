@@ -813,11 +813,6 @@ export class Algebra<T> {
       }).markAsUnit(operator.knownUnit && operand.knownUnit);
     };
   }
-
-  /** Straight-forward implementation, for comparison with `.sandwich(...)` */
-  sandwich1(operator: Multivector<T>, operand: Multivector<T>): Multivector<T> {
-    return this.geometricProduct(operator, operand, this.reverse(operator));
-  }
 }
 
 function lazy<T>(exec: () => T): () => T {

@@ -1,4 +1,4 @@
-import { Algebra } from "../src/Algebra";
+import { Algebra, Multivector } from "../src/Algebra";
 import { makeLetterNames } from "../src/componentNaming";
 import WebGLBackEnd from "../src/WebGLBackEnd";
 import { euclidean, p } from "./utils";
@@ -8,6 +8,9 @@ p(`// sandwich - WebGL\n`);
 const be = new WebGLBackEnd();
 const coords = "xyz";
 const alg = new Algebra(euclidean(coords), be, makeLetterNames(coords));
+
+const sandwichReference = (p: Multivector<string>, q: Multivector<string>) =>
+  alg.geometricProduct(alg.geometricProduct(p, q), alg.reverse(p));
 
 for (const create of [
   () => [alg.mv("a", {x: "ax", y: "ay"}), alg.mv("b", {x: "bx", y: "by", z: "bz"})],
@@ -25,7 +28,7 @@ for (const create of [
   for (const c of [alg.mv("a", {x: "ax", y: "ay"}), alg.mv("a", {x: 1, y: 1})]) {
     be.emit(`// c: ${c}`);
     be.emit(`// sandwich: ${sw_rotor(c)}`);
-    be.emit(`// sandwich1: ${alg.sandwich1(rotor, c)}`);
+    be.emit(`// sandwich1: ${sandwichReference(rotor, c)}`);
   }
   // console.log(be.text); process.exit();
   const a0 = alg.normalize(a);
@@ -53,7 +56,7 @@ for (const create of [
   const sw_a = alg.sandwich(a, ["z"]);
   be.emit(`// sandwich: ${sw_a(b)})`);
   be.emit(`// sandwich/neg: ${sw_a(alg.negate(b))})`);
-  be.emit(`// sandwich1: ${alg.sandwich1(a, b)})`);
+  be.emit(`// sandwich1: ${sandwichReference(a, b)})`);
   be.emit("---------------------");
 }
 
