@@ -1,13 +1,17 @@
 import { Algebra, Scalar } from "../src/Algebra";
 import { makeLetterNames } from "../src/componentNaming";
 import WebGLBackEnd from "../src/WebGLBackEnd";
-import { p } from "./utils";
+import { p, q_ } from "./utils";
 
-p(`// norm and normalization, special cases - WebGL\n`);
+p(`norm and normalization, special cases - WebGL\n`);
 
-const be = new WebGLBackEnd();
 const coords = "xyz";
+const be = new WebGLBackEnd();
 const alg = new Algebra([1,1,5], be, makeLetterNames(coords));
+
+// output helpers
+const c = (text: string) => be.emit("// " + text);
+const q = q_(coords, c);
 
 ([
   {xy: 1},
@@ -18,16 +22,16 @@ const alg = new Algebra([1,1,5], be, makeLetterNames(coords));
   {x: 1, y: -2, z: 3},
   {x: 1, y: "two", z: 3},
 ] as Record<string, Scalar<string>>[]).forEach((data, i) => {
-  be.emit("");
-  be.emit("// -----------");
+  c("");
+  c("-----------");
   const mv = alg.mv(`mv${i}`, data);
-  be.emit(`// ${mv}`)
-  be.emit(`// norm: ` + alg.norm(mv));
+  q("mv", mv)
+  q(`norm`, alg.norm(mv));
   const normalized = alg.normalize(mv);
-  be.emit(`// normalized: ` + normalized);
-  be.emit(`// norm(normalized): ` + alg.norm(normalized));
+  q(`normalized`, normalized);
+  q(`norm(normalized)`, alg.norm(normalized));
   normalized.markAsUnit(false);
-  be.emit(`// norm(normalized) [computed]: ` + alg.norm(normalized));
+  q(`norm(normalized) [computed]`, alg.norm(normalized));
 });
 
 p(be.text);

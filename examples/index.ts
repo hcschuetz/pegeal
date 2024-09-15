@@ -6,15 +6,13 @@ for (const file of [
   "outermorphism",
   "determinants",
   "sandwich",
+  "homogeneous",
 
   "numbered-coords",
   "wasm",
   "multi-backend",
 
   // TODO: Check the following examples for relevance and redundancy.
-
-  "homogeneous",
-  "homogeneous2",
 
   "normalization",
   "norm-and-normalization-special-cases",

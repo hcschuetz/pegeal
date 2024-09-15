@@ -1,26 +1,43 @@
 import { Algebra } from "../src/Algebra";
-import { makeNumberedNames } from "../src/componentNaming";
+import { makeLetterNames } from "../src/componentNaming";
 import WebGLBackEnd from "../src/WebGLBackEnd";
-import { p } from "./utils";
-import { euclidean } from "../src/euclidean";
+import { p, q_ } from "./utils";
 
-p(`// Homogeneous coords\n`);
+p(`Homogeneous coords - WebGL
+[DFM09] p. 275, equation (11.1)
+`);
 
-const metric = euclidean(4);
-const be = new WebGLBackEnd();
-const alg = new Algebra(metric, be, makeNumberedNames(metric.length));
-const [e0, e1, e2, e3] = alg.basisVectors();
-const e0Inv = alg.inverse(e0);
+for (const metric_w of [1, -1, "metric_w"]) {
+  p("-------------------------------------------")
 
-const point = alg.mv("point", {e0: "3", e1: "6", e2: "9", e3: "+++"});
+  const coords = "xyzw";
+  const be = new WebGLBackEnd();
+  const alg = new Algebra([1,1,1,metric_w], be, makeLetterNames(coords));
 
-// With our optimizations (and the expected optimizations by the WebGL
-// compiler) the extractions of weight and location should be as efficient
-// as in hand-written code:
-const p_weight = alg.contractLeft(e0Inv, point);
-const p_loc = alg.geometricProduct(
-  alg.contractLeft(e0Inv, alg.wedgeProduct(e0, point)),
-  alg.inverse(p_weight),
-);
+  // output helpers
+  const c = (text: string) => be.emit("// " + text);
+  const q = q_(coords, c);
 
-p(be.text)
+  q("metric_w", metric_w);
+  c("")
+  const [ex, ey, ez, ew] = alg.basisVectors();
+  const ewInv = alg.inverse(ew);
+  q("ewInv", ewInv);
+
+  const point = alg.mv("point", {x: "px", y: "py", z: "pz", w: "pw"});
+
+  // With our optimizations (and the expected optimizations by the WebGL
+  // compiler) the extractions of weight and location should be as efficient
+  // as in hand-written code:
+  const weight = alg.contractLeft(ewInv, point);
+  q("weight", weight);
+
+  q("location",
+    alg.geometricProduct(
+      alg.contractLeft(ewInv, alg.wedgeProduct(ew, point)),
+      alg.inverse(weight),
+    )
+  );
+
+  p(be.text);
+}
