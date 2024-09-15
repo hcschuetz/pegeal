@@ -32,13 +32,13 @@ in a web browser.
 
 ## TL;DR
 
-```
+```sh
 git clone https://github.com/hcschuetz/pegeal.git
 cd pegeal
 npm install
 ```
 Have a look at [`examples/introduction.ts`](examples/introduction.ts).
-```bash
+```sh
 node --import=tsx examples/introduction.ts # or use deno or bun
 ```
 Have a look at the output.
