@@ -1,23 +1,22 @@
 
 for (const file of [
   "introduction",
+
   "basics",
+  "outermorphism",
+  "determinants",
+
+  "numbered-coords",
   "wasm",
   "multi-backend",
-  "numbered-coords",
 
-  // While all these examples work, some are redundant or outdated.
-  // TODO Clean up examples.
+  // TODO: Check the following examples for relevance and redundancy.
 
   "homogeneous",
   "homogeneous2",
 
   "normalization",
   "norm-and-normalization-special-cases",
-
-  "outermorphism",
-
-  "determinants",
 
   "sandwich",
 ]) {
