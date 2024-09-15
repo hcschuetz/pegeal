@@ -5,6 +5,7 @@ for (const file of [
   "basics",
   "outermorphism",
   "determinants",
+  "sandwich",
 
   "numbered-coords",
   "wasm",
@@ -17,8 +18,6 @@ for (const file of [
 
   "normalization",
   "norm-and-normalization-special-cases",
-
-  "sandwich",
 ]) {
   console.log(`
 ================================================================================`);
