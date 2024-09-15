@@ -4,7 +4,8 @@ import { makeLetterNames } from "../src/componentNaming";
 import DummyBackEnd from "../src/DummyBackEnd";
 import WASMBackEnd, { LocalRef } from "../src/WASMBackEnd";
 import WebGLBackEnd from "../src/WebGLBackEnd";
-import { euclidean, p, q_ } from "./utils";
+import { p, q_ } from "./utils";
+import { euclidean } from "../src/euclidean";
 
 p(`// Multi-back-end example\n`);
 

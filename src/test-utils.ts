@@ -1,5 +1,5 @@
 import { expect, suite, test } from "vitest";
-import { euclidean } from "../examples/utils";
+import { euclidean } from "./euclidean";
 import { Algebra, Multivector } from "./Algebra";
 import { makeLetterNames } from "./componentNaming";
 import DummyBackEnd from "./DummyBackEnd";

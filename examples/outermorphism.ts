@@ -1,4 +1,5 @@
-import { euclidean, p, q_ } from "./utils";
+import { p, q_ } from "./utils";
+import { euclidean } from "../src/euclidean";
 import { Algebra, BackEnd } from "../src/Algebra";
 import { makeLetterNames } from "../src/componentNaming";
 import WebGLBackEnd from "../src/WebGLBackEnd";

@@ -1,7 +1,8 @@
 import { Algebra, Multivector } from "../src/Algebra";
 import { makeLetterNames } from "../src/componentNaming";
 import WebGLBackEnd from "../src/WebGLBackEnd";
-import { euclidean, p } from "./utils";
+import { p } from "./utils";
+import { euclidean } from "../src/euclidean";
 
 p(`// sandwich - WebGL\n`);
 
