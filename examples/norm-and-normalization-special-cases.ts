@@ -1,7 +1,7 @@
 import { Algebra, Scalar } from "../src/Algebra";
 import { makeLetterNames } from "../src/componentNaming";
 import WebGLBackEnd from "../src/WebGLBackEnd";
-import { hideUnit, p } from "./utils";
+import { p } from "./utils";
 
 p(`// norm and normalization, special cases - WebGL\n`);
 
@@ -26,7 +26,8 @@ const alg = new Algebra([1,1,5], be, makeLetterNames(coords));
   const normalized = alg.normalize(mv);
   be.emit(`// normalized: ` + normalized);
   be.emit(`// norm(normalized): ` + alg.norm(normalized));
-  be.emit(`// norm(normalized) [computed]: ` + alg.norm(hideUnit(alg, normalized)));
+  normalized.markAsUnit(false);
+  be.emit(`// norm(normalized) [computed]: ` + alg.norm(normalized));
 });
 
 p(be.text);

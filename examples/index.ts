@@ -2,6 +2,8 @@
 for (const file of [
   "introduction",
   "basics",
+  "wasm",
+  "multi-backend",
 
   // While all these examples work, some are redundant or outdated.
   // TODO Clean up examples.
@@ -12,10 +14,6 @@ for (const file of [
   "homogeneous",
   "homogeneous2",
 
-  "unitness-and-exp",
-
-  "multi-backend",
-
   "normalization",
   "norm-and-normalization-special-cases",
 
@@ -24,8 +22,6 @@ for (const file of [
   "determinants",
 
   "sandwich",
-
-  "wasm",
 ]) {
   console.log(`
 ================================================================================`);

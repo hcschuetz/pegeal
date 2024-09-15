@@ -1,4 +1,4 @@
-import { Algebra, Multivector } from "../src/Algebra";
+import { Multivector } from "../src/Algebra";
 
 export const euclidean = (coords: number | string | string[]) =>
   (
@@ -33,7 +33,3 @@ export const q_ = (coords: string) => <T>(label: string, x: Multivector<T> | num
       }
     }
 }
-
-/** Copy multivector without the unit mark. */
-export const hideUnit = <T>(alg: Algebra<T>, mv: Multivector<T>) =>
-  alg.plus(alg.zero(), mv);

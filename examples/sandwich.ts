@@ -30,7 +30,6 @@ for (const create of [
     be.emit(`// sandwich: ${sw_rotor(c)}`);
     be.emit(`// sandwich1: ${sandwichReference(rotor, c)}`);
   }
-  // console.log(be.text); process.exit();
   const a0 = alg.normalize(a);
   const b0 = alg.normalize(b);
 
