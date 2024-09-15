@@ -1,4 +1,4 @@
-import { assert, test } from 'vitest';
+import { expect, test } from 'vitest';
 import { bitCount, productFlips, reverseFlips } from "../src/Algebra";
 
 const isSorted = (list: string[]): boolean =>
@@ -35,7 +35,7 @@ test("bitCount", () => {
   // Run a bunch of random test cases
   for (let i = 0; i < 1000; i++) {
     const bits = randomBitmap(), strings = bitmapToStrings(bits);
-    assert(bitCount(bits) === strings.length,`mismatch for: ${strings}`);
+    expect(bitCount(bits), `${strings}`).toBe(strings.length);
   }
 });
 
@@ -49,10 +49,8 @@ test("reverseFlips", () => {
 
     const actualFlips = reverseFlips(bits);
 
-    assert(
-      (actualFlips & 1) === (referenceFlips & 1),
-      `mismatch for: ${strings}`
-    );
+    expect(actualFlips & 1, `${strings}`)
+    .toBe(referenceFlips & 1);
   }
 });
 
@@ -67,13 +65,10 @@ test("productFlips", () => {
 
     const actualFlips = productFlips(lBits, rBits);
 
-    assert(
-      // We actually only care about the parities:
-      // (actualFlips & 1) === (referenceFlips & 1),
-      // But it's nice to have full equality:
-      actualFlips === referenceFlips,
-      `mismatch for: ${lStrings} / ${rStrings}`
-    );
+    // We actually only care about the parities,
+    // but it's nice to have full equality:
+    expect(actualFlips, `${lStrings} / ${rStrings}`)
+    .toBe(referenceFlips);
   }
 });
 
@@ -96,9 +91,7 @@ test("sandwich flipping", () => {
     + productFlips(lBits ^ iBits, rBits)
     + reverseFlips(rBits);
 
-    assert(
-      (actualFlips & 1) === (referenceFlips & 1),
-      `mismatch for: ${lStrings} / ${iStrings} / ${rStrings}`
-    );
+    expect(actualFlips & 1, `${lStrings} / ${iStrings} / ${rStrings}`)
+    .toBe(referenceFlips & 1);
   }
 });
