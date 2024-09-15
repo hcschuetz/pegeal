@@ -26,8 +26,6 @@ for (const file of [
 
   "sandwich",
 
-  "inverse-check",
-
   "wasm",
 ]) {
   console.log(`

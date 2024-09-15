@@ -94,6 +94,34 @@ suite("product relationships - dummy back end", () => {
       });
     });
   });
+
+  suite("inverse and geometric product", () => {
+    forAlgebras(alg => {
+      forData(alg, (a, b) => {
+        for (const mv of [
+          a,
+          b,
+          // some more test data:
+          alg.one(),
+          ...alg.basisVectors(),
+          alg.pseudoScalar(),
+          alg.geometricProduct(a, b),
+          alg.contractLeft(a, b),
+          alg.exp(a),
+        ]) {
+          expectNearby(
+            alg.geometricProduct(a, alg.inverse(a)),
+            alg.one(),
+          );
+
+          expectNearby(
+            alg.geometricProduct(alg.inverse(a), a),
+            alg.one(),
+          );
+        }
+      });
+    });
+  });
 });
 
 // TODO test other kinds of products
