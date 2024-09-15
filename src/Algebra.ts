@@ -277,17 +277,18 @@ export class Algebra<T> {
   }
 
   outermorphism(matrix: (Scalar<T> | undefined)[][], mv: Multivector<T>): Multivector<T> {
-    // See `doc/Outermorphism.md` for explanations.
+    // See `../doc/Outermorphism.md` for explanations.
 
     const {nDimensions} = this;
     return new Multivector(this, "morph", add => {
       // no `this.checkMine(mv)` here as `mv` may actually come from elsewhere
-      for (const [bitmapIn, f] of mv) {
+      for (const [bitmapIn, valueIn] of mv) {
+
         function recur(i: number, bitmapOut: number, flips: number, product: Term<T>) {
           const iBit = 1 << i;
           if (iBit > bitmapIn) {
             // Fully traversed bitmapIn.  Contribute to the output:
-            add(bitmapOut, [...product, f], flips & 1);
+            add(bitmapOut, product, flips & 1);
           } else if (!(iBit & bitmapIn)) {
             // The i-th basis vector is not in bitmapIn.  Skip it:
             recur(i + 1, bitmapOut, flips, product);
@@ -306,7 +307,7 @@ export class Algebra<T> {
           }
         }
 
-        recur(0, 0, 0, []);
+        recur(0, 0, 0, [valueIn]);
       }
     });
   }
