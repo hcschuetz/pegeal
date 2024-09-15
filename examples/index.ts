@@ -4,12 +4,10 @@ for (const file of [
   "basics",
   "wasm",
   "multi-backend",
+  "numbered-coords",
 
   // While all these examples work, some are redundant or outdated.
   // TODO Clean up examples.
-
-  "numbered-coords",
-  "numbered-coords-long",
 
   "homogeneous",
   "homogeneous2",
