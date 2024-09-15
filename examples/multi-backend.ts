@@ -4,7 +4,12 @@ import DummyBackEnd from "../src/DummyBackEnd";
 import WebGLBackEnd from "../src/WebGLBackEnd";
 import { euclidean, p, q_ } from "./utils";
 
-p(`// Slerp - WebGL + eval\n`);
+p(`// Multi-back-end example\n`);
+
+// This example is not about its geometry.
+// It rather shows that the same geometric code can be used with
+// multiple back ends.
+
 
 const coords = "xyz";
 
@@ -21,5 +26,7 @@ const be = new WebGLBackEnd();
 const result = slerpTest(be);
 p(be.text);
 p("// " + result);
+
+// TODO also use `slerpTest` with WASM.
 
 q_(coords)("\nresult", slerpTest(new DummyBackEnd()));

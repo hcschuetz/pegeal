@@ -1,9 +1,10 @@
 
 for (const file of [
   "introduction",
-
   "basics",
-  "products",
+
+  // While all these examples work, some are redundant or outdated.
+  // TODO Clean up examples.
 
   "numbered-coords",
   "numbered-coords-long",
@@ -11,15 +12,9 @@ for (const file of [
   "homogeneous",
   "homogeneous2",
 
-  "blade-squaring",
-  "blade-exponentiation",
   "unitness-and-exp",
 
-  "rotation",
-  "rotor-log",
-  "rotor-log-2",
-  "slerp1",
-  "slerp2",
+  "multi-backend",
 
   "normalizability",
   "normalization",
@@ -28,8 +23,6 @@ for (const file of [
   "outermorphism",
 
   "determinants",
-
-  "precalc",
 
   "sandwich",
 
