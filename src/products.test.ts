@@ -3,28 +3,22 @@ import { euclidean } from "../examples/utils";
 import { Algebra, Multivector } from "./Algebra";
 import DummyBackEnd from "./DummyBackEnd";
 import { makeLetterNames } from "./componentNaming";
-import { expectNearby, forAlgebras, forDataFactories, makeTwoVectors } from "./test-utils";
+import { expectNearby, forAlgebras, forData, makeTwoVectors } from "./test-utils";
 
 
 suite("geometric product - dummy back end", () => {
   suite("preserves unitness", () => {
-    forDataFactories((mvFactory) => {
-      forAlgebras(alg => {
-        const {a, b} = mvFactory(alg);
-
-        const aU = alg.normalize(a);
-        const bU = alg.normalize(b);
-
-        expect(alg.geometricProduct(aU, bU).knownUnit).toBe(true);
+    forAlgebras(alg => {
+      forData(alg, (a, b) => {
+        const gp = alg.geometricProduct(alg.normalize(a), alg.normalize(b));
+        expect(gp.knownUnit).toBe(true);
       });
     });
   });
 
   suite("commutes with norm(alization)", () => {
-    forDataFactories((mvFactory) => {
-      forAlgebras(alg => {
-        const {a, b} = mvFactory(alg);
-
+    forAlgebras(alg => {
+      forData(alg, (a, b) => {
         expect(alg.norm(alg.geometricProduct(a, b)))
         .toBeCloseTo((alg.norm(a) * alg.norm(b)));
 
@@ -42,8 +36,9 @@ suite("geometric product - dummy back end", () => {
 
 suite("product relationships - dummy back end", () => {
   suite("geom/wedge/scalar", () => {
-    suite("1-vectors", () => {
-      forAlgebras(alg => {
+    forAlgebras(alg => {
+      // This test is tailored to 1-vectors and will not work with other data:
+      test("1-vectors", () => {
         const {a, b} = makeTwoVectors(alg);
 
         expectNearby(
@@ -60,14 +55,11 @@ suite("product relationships - dummy back end", () => {
         );
       });
     });
-    // The test above is tailored to 1-vectors and will not work with rotors.
     });
 
   suite("geom/scalar/scalar", () => {
-    forDataFactories((mvFactory) => {
-      forAlgebras(alg => {
-        const {a, b} = mvFactory(alg);
-
+    forAlgebras(alg => {
+      forData(alg, (a, b) => {
         expectNearby(
           alg.extractGrade(0, alg.geometricProduct(a, b)),
           alg.scalarProductMV(a, b),
@@ -80,10 +72,8 @@ suite("product relationships - dummy back end", () => {
   });
 
   suite("contraction left and right", () => {
-    forDataFactories((mvFactory) => {
-      forAlgebras(alg => {
-        const {a, b} = mvFactory(alg);
-
+    forAlgebras(alg => {
+      forData(alg, (a, b) => {
         expectNearby(
           alg.contractRight(alg.reverse(b), alg.reverse(a)),
           alg.reverse(alg.contractLeft(a, b))

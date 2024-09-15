@@ -1,10 +1,10 @@
-import { expect, suite } from "vitest";
-import { expectNearby, forAlgebras } from "./test-utils";
+import { expect, test } from "vitest";
+import { expectNearby, forAlgebras, makeTwoVersors } from "./test-utils";
 
 const coords = "xyz";
 
-suite("rotor vs. slerp - dummy back end", () => {
-  forAlgebras(alg => {
+forAlgebras(alg => {
+  test("rotor vs. slerp - dummy back end", () => {
     const aNorm = alg.normalize(alg.mv("a", {x: 0.7, y: 0.8, z: 0.9}));
     const bNorm = alg.normalize(alg.mv("b", {x: -0.4, y: 0.5, z: 0.2}));
     const nSteps = 7;
@@ -33,6 +33,8 @@ suite("rotor vs. slerp - dummy back end", () => {
     }
   });
 });
+
+// TODO Rotate something that is not a 1-vector (such as another rotor).
 
 // TODO Make the same with the WASM backend and symbolic input vectors,
 // then run the WASM code with numeric inpug to see if we get the same results.
