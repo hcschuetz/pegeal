@@ -1,43 +1,3 @@
-<style>
-  .warning {
-    margin: 1ex 0 2ex;
-    border: 2px solid red;
-    padding: 3px 6px;
-    font-size: larger;
-    font-weight: bold;
-    color: red;
-  }
-
-  td, th {
-    vertical-align: top;
-  }
-
-  /* based on https://2ality.com/2012/01/numbering-headingshtml.html */
-  h1 {
-    counter-reset: h2counter;
-  }
-  h2 {
-    &:before {
-      content: counter(h2counter) ".\0000a0\0000a0";
-    }
-    counter-increment: h2counter;
-    counter-reset: h3counter;
-  }
-  h3 {
-    &:before {
-      content: counter(h2counter) "." counter(h3counter) ".\0000a0\0000a0";
-    }
-    counter-increment: h3counter;
-    counter-reset: h4counter;
-  }
-  h4 {
-    &:before {
-      content: counter(h2counter) "." counter(h3counter) "." counter(h4counter) ".\0000a0\0000a0";
-    }
-    counter-increment: h4counter;
-  }
-</style>
-
 PEGEAL:<br>Partial Evaluation for Geometric Algebra
 ===================================================
 
@@ -46,7 +6,7 @@ This package translates geometric-algebra expressions to lower-level code.
 Currently WebGL and WebAssembly (WASM) can be generated, but implementing
 backends for other languages is very little effort.
 
-> <span class="warning">WARNING</span>
+> ## WARNING
 >
 > This is not a ready-made library but still experimental code.
 >
