@@ -26,7 +26,7 @@ p(`// Determinants - eval\n`);
   q("I", I);
   q("|I|", alg.norm(I));
   
-  const mI = alg2.outermorphism(I, m);
+  const mI = alg2.outermorphism(m, I);
   q2("f_m(I)", mI);
   q2("|f_m(I)|", alg2.norm(mI));
   
@@ -40,5 +40,5 @@ p(`// Determinants - eval\n`);
   // an endomorphisms (co-domain === domain).  So the identical metrics of
   // domain and co-domain cancel each other out and thus the mapping determinant
   // coincides with the matrix determinant.
-  q("det(endomorphism)", alg.norm(alg.outermorphism(I, m)) / alg.norm(I));
+  q("det(endomorphism)", alg.norm(alg.outermorphism(m, I)) / alg.norm(I));
   

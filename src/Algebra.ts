@@ -276,7 +276,7 @@ export class Algebra<T> {
     });
   }
 
-  outermorphism(mv: Multivector<T>, matrix: (Scalar<T> | undefined)[][]): Multivector<T> {
+  outermorphism(matrix: (Scalar<T> | undefined)[][], mv: Multivector<T>): Multivector<T> {
     // See `doc/Outermorphism.md` for explanations.
 
     const {nDimensions} = this;

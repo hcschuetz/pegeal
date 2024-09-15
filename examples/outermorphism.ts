@@ -48,7 +48,7 @@ function testOM<T>(be: BackEnd<T>) {
     xyz: 9,
   });
 
-  return alg2.outermorphism(A, m3);
+  return alg2.outermorphism(m3, A);
 }
 
 const webBE = new WebGLBackEnd();
