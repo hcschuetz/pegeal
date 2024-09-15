@@ -319,7 +319,10 @@ export class Algebra<T> {
           add(bitmap, [alpha, value]);
         }
       }
-    });
+    }).markAsUnit(
+      mv.knownUnit &&
+      (typeof alpha === "number" && Math.abs(alpha) === 1)
+    );
   }
 
   negate(mv: Multivector<T>): Multivector<T> {
