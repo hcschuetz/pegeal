@@ -90,7 +90,8 @@ The caller has to pass these parameters to the `Algebra` constructor:
 
   Currently there are back-ends for WebGL and WebAssembly/WASM.
   There is also a "dummy" back-end that does not generate any code,
-  but can be used to 
+  but can be used in cases where all input is numeric and thus the
+  entire calculation can be performed immediately.
 
   Additional back-ends are quite easy to implement.
 
