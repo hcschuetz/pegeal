@@ -118,6 +118,25 @@ suite("product relationships - dummy back end", () => {
       });
     });
   });
+
+  suite("outermorphism and wedge product", () => {
+    const matrix = [
+      [4,  .2],
+      [3, -.9,  5  ],
+      [0,    , -4.2],
+    ];
+    forAlgebras(alg => {
+      forData(alg, (a, b) => {
+        expectNearby(
+          alg.wedgeProduct(
+            alg.outermorphism(matrix, a),
+            alg.outermorphism(matrix, b),
+          ),
+          alg.outermorphism(matrix, alg.wedgeProduct(a, b)),
+        );
+      });
+    });
+  });
 });
 
 // TODO test other kinds of products
