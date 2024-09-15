@@ -81,6 +81,19 @@ suite("product relationships - dummy back end", () => {
       });
     });
   });
+
+  suite("sandwich vs. geometric product", () => {
+    forAlgebras(alg => {
+      forData(alg, (a, b) => {
+        const sw = alg.sandwich(a, b.basisBlades())(b);
+        const gp = alg.geometricProduct(a, b, alg.reverse(a));
+
+        expectNearby(sw, gp);
+
+        expect([...sw.basisBlades()]).not.to.include(7);
+      });
+    });
+  });
 });
 
 // TODO test other kinds of products
