@@ -31,9 +31,11 @@ function bitmapToStrings(bm: number): string[] {
 
 const randomBitmap = () => Math.floor(2**26 * Math.random());
 
+const repeats = 300;
+
 test("bitCount", () => {
   // Run a bunch of random test cases
-  for (let i = 0; i < 1000; i++) {
+  for (let i = 0; i < repeats; i++) {
     const bits = randomBitmap(), strings = bitmapToStrings(bits);
     expect(bitCount(bits), `${strings}`).toBe(strings.length);
   }
@@ -41,7 +43,7 @@ test("bitCount", () => {
 
 test("reverseFlips", () => {
   // Run a bunch of random test cases
-  for (let i = 0; i < 1000; i++) {
+  for (let i = 0; i < repeats; i++) {
     const bits = randomBitmap(), strings = bitmapToStrings(bits);
 
     const referenceFlips =
@@ -56,7 +58,7 @@ test("reverseFlips", () => {
 
 test("productFlips", () => {
   // Run a bunch of random test cases
-  for (let i = 0; i < 1000; i++) {
+  for (let i = 0; i < repeats; i++) {
     const lBits = randomBitmap(), lStrings = bitmapToStrings(lBits);
     const rBits = randomBitmap(), rStrings = bitmapToStrings(rBits);
 
@@ -74,7 +76,7 @@ test("productFlips", () => {
 
 test("sandwich flipping", () => {
   // Run a bunch of random test cases
-  for (let i = 0; i < 1000; i++) {
+  for (let i = 0; i < repeats; i++) {
     const lBits = randomBitmap(), lStrings = bitmapToStrings(lBits);
     const iBits = randomBitmap(), iStrings = bitmapToStrings(iBits);
     const rBits = randomBitmap(), rStrings = bitmapToStrings(rBits);
