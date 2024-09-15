@@ -16,7 +16,6 @@ for (const file of [
 
   "multi-backend",
 
-  "normalizability",
   "normalization",
   "norm-and-normalization-special-cases",
 
