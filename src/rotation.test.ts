@@ -1,7 +1,5 @@
 import { expect, test } from "vitest";
-import { expectNearby, forAlgebras, makeTwoVersors } from "./test-utils";
-
-const coords = "xyz";
+import { expectNearby, forAlgebras } from "./test-utils";
 
 forAlgebras(alg => {
   test("rotor vs. slerp - dummy back end", () => {
