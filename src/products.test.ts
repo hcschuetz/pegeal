@@ -1,8 +1,4 @@
 import { expect, suite, test } from "vitest";
-import { euclidean } from "../examples/utils";
-import { Algebra, Multivector } from "./Algebra";
-import DummyBackEnd from "./DummyBackEnd";
-import { makeLetterNames } from "./componentNaming";
 import { expectNearby, forAlgebras, forData, makeTwoVectors } from "./test-utils";
 
 
