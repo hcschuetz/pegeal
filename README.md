@@ -129,7 +129,7 @@ will always be 0 at run time.
 
 In such cases the application programmer should either re-formulate
 the algebraic expressions or explicitly drop some components using the method
-`+t` or `extractGrade`.
+`extract` or `extractGrade`.
 (Multivector products also accept an inclusion condition for pairs of basis
 blades.  See [below](#products).
 Also the [`sandwich`](#sandwich-products) method helps to avoid creating
