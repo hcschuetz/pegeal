@@ -1,4 +1,4 @@
-import { Term, Scalar, BackEnd, Var, truth } from "./Algebra";
+import { Scalar, BackEnd, Var, truth } from "./Algebra";
 
 function formatFactor(f: Scalar<string>): string {
   switch (typeof f) {

@@ -1,5 +1,5 @@
 import B from "binaryen";
-import { Term, Scalar, BackEnd, Var, truth } from "./Algebra";
+import { Scalar, BackEnd, Var, truth } from "./Algebra";
 
 export class LocalRef {
   constructor(readonly locNum: number) {}
