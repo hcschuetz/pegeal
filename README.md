@@ -155,18 +155,15 @@ from within the multivector constructor.
 It receives a callback function usually named `add`.
 (Since the initialization function is already a callback,
 the `add` function could be called a "second-order" callback.)
-The `add` function is used to populate the multivector.
-It takes three parameters:
-- a basis blade represented as a bitmap (telling to which component
-  this addition contributes),
-- a numeric or symbolic value that will be added to the component,
-- and optionally a negation flag
-  (telling whether the value's sign should be inverted or, in other words,
-  whether the value should be subtracted rather than added).
+The `add` callback is used to populate the multivector.
+It takes two parameters:
+- a basis blade represented as a bitmap telling to which component
+  this addition contributes
+- and a numeric or symbolic value to be added to the component.
 
 Notice that `add` is *not* a setter function for multivector components.
 You can call it multiple times with the same basis blade
-and the provided values will be added up (or subtracted).
+and the provided values will be added up.
 
 This API is quite convenient for creating new multivectors in the algebra code:
 - It protects the multivector from being modified inadvertently

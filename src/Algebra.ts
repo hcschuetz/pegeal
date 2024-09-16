@@ -16,14 +16,14 @@ export abstract class Var<T> {
   #frozen = false;
   #numericPart = 0;
 
-  add(value: Scalar<T>, negate?: truth): void {
+  add(value: Scalar<T>): void {
     if (this.#frozen) fail("trying to update frozen variable");
 
     if (typeof value === "number") {
       if (value === 0) return;
-      this.#numericPart += negate ? -value : value;
+      this.#numericPart += value;
     } else {
-      this.addValue(value, negate, !this.#created);
+      this.addValue(value, !this.#created);
       this.#created = true;
     }
   }
@@ -31,14 +31,14 @@ export abstract class Var<T> {
   value(): Scalar<T> {
     if (!this.#frozen) {
       if (this.#created && this.#numericPart !== 0) {
-        this.addValue(this.#numericPart, false, false);
+        this.addValue(this.#numericPart, false);
       }
       this.#frozen = true;
     }
     return this.#created ? this.getValue() : this.#numericPart;
   }
 
-  protected abstract addValue(value: Scalar<T>, negate: truth, create: boolean): void;
+  protected abstract addValue(value: Scalar<T>, create: boolean): void;
   protected abstract getValue(): T;
 }
 
@@ -56,22 +56,22 @@ export class Multivector<T> implements Iterable<[number, Scalar<T>]> {
     readonly alg: Algebra<T>,
     nameHint: string,
     initialize: (
-      add: (bm: number, term: Scalar<T>, negate?: truth) => unknown,
+      add: (bm: number, term: Scalar<T>) => unknown,
     ) => unknown,
   ) {
     this.name = `${nameHint}_${alphabetic(alg.mvCount++)}`;
     alg.be.comment(`${this.name}`);
-    initialize((bm, term, negate?) => {
+    initialize((bm, value) => {
       // This check is not really needed.  Without it a Var<T> might be created
       // unnecessarily, but still without a backing target-language variable.
-      if (term === 0) return;
+      if (value === 0) return;
 
       let variable = this.#components[bm];
       if (variable === undefined) {
         variable = this.#components[bm] =
           this.alg.be.makeVar(this.name + "_" + this.alg.bitmapToString[bm]);
       }
-      variable.add(term, negate);
+      variable.add(value);
     });
   }
 
@@ -287,7 +287,7 @@ export class Algebra<T> {
           const iBit = 1 << i;
           if (iBit > bitmapIn) {
             // Fully traversed bitmapIn.  Contribute to the output:
-            add(bitmapOut, product(), flips & 1);
+            add(bitmapOut, this.flipIf(flips & 1, product()));
           } else if (!(iBit & bitmapIn)) {
             // The i-th basis vector is not in bitmapIn.  Skip it:
             recur(i + 1, bitmapOut, flips, product);
@@ -333,7 +333,7 @@ export class Algebra<T> {
   negate(mv: Multivector<T>): Multivector<T> {
     return new Multivector(this, "negate", add => {
       for (const [bitmap, value] of this.checkMine(mv)) {
-        add(bitmap, value, true);
+        add(bitmap, this.scalarOp("unaryMinus", value));
       }
     }).markAsUnit(mv.knownUnit);
   }
@@ -341,7 +341,7 @@ export class Algebra<T> {
   gradeInvolution(mv: Multivector<T>): Multivector<T> {
     return new Multivector(this, "gradeInvolution", add => {
       for (const [bitmap, value] of this.checkMine(mv)) {
-        add(bitmap, value, gradeInvolutionFlips(bitmap));
+        add(bitmap, this.flipIf(gradeInvolutionFlips(bitmap), value));
       }
     }).markAsUnit(mv.knownUnit);
   }
@@ -349,7 +349,7 @@ export class Algebra<T> {
   reverse(mv: Multivector<T>): Multivector<T> {
     return new Multivector(this, "reverse", add => {
       for (const [bitmap, value] of this.checkMine(mv)) {
-        add(bitmap, value, reverseFlips(bitmap));
+        add(bitmap, this.flipIf(reverseFlips(bitmap), value));
       }
     }).markAsUnit(mv.knownUnit);
   }
@@ -436,7 +436,10 @@ export class Algebra<T> {
         for (const [bm, val] of mv) {
           const mf = this.metricFactors(bm) ||
             fail(`trying to invert null vector ${mv}`);
-          add(bm, this.scalarOp("/", 1, this.times(val, mf)), reverseFlips(bm));
+          add(
+            bm,
+            this.scalarOp("/", reverseFlips(bm) ? -1 : +1, this.times(val, mf)),
+          );
         }
       });
     }
@@ -508,7 +511,8 @@ export class Algebra<T> {
         for (const [bmB, valB] of b) {
           if (include(bmA, bmB)) {
             const mf = this.metricFactors(bmA & bmB);
-            add(bmA ^ bmB, this.times(mf, valA, valB), productFlips(bmA, bmB) & 1);
+            const flip = productFlips(bmA, bmB) & 1;
+            add(bmA ^ bmB, this.flipIf(flip, this.times(mf, valA, valB)));
           } else {
             skipped = true;
           }
@@ -565,7 +569,7 @@ export class Algebra<T> {
       const valB = b.value(bitmap);
       const mf = this.metricFactors(bitmap);
       // Notice that reverseFlips(bitmap) === productFlips(bitmap, bitmap) & 1:
-      variable.add(this.times(mf, valA, valB), reverseFlips(bitmap));
+      variable.add(this.flipIf(reverseFlips(bitmap), this.times(mf, valA, valB)));
     }
     return variable.value();
   }
@@ -703,7 +707,11 @@ export class Algebra<T> {
     return simplified.reduce((acc, t) => this.scalarOp("+", acc, t));
   }
 
-  scalarOp(name: string, ...args: Scalar<T>[]) {
+  flipIf(condition: truth, value: Scalar<T>): Scalar<T> {
+    return condition ? this.scalarOp("unaryMinus", value) : value;
+  }
+
+  scalarOp(name: string, ...args: Scalar<T>[]): Scalar<T> {
     return (
       args.every(arg => typeof arg === "number")
       ? scalarOp(name, ...args)

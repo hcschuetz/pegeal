@@ -18,13 +18,12 @@ class VarImpl extends Var<string> {
     super();
   }
 
-  addValue(val: Scalar<string>, negate: truth, create: boolean) {
+  addValue(val: Scalar<string>, create: boolean) {
     const expr = formatFactor(val);
-    const signedExpr = negate ? `-(${expr})` : `  ${expr}`;
     this.be.emit(
       create
-      ? `float ${this.name}  = ${signedExpr};`
-      : `      ${this.name} += ${signedExpr};`,
+      ? `float ${this.name}  = ${expr};`
+      : `      ${this.name} += ${expr};`,
     );
   }
 
@@ -45,7 +44,10 @@ export default class WebGLBackEnd extends BackEnd<string> {
 
   scalarOp(name: string, ...args: Scalar<string>[]) {
     let varName: string
-    if (Object.hasOwn(binopLongName, name)) {
+    if (name === "unaryMinus") {
+      varName = `minus_${this.count++}`;
+      this.emit(`float ${varName} = -(${formatFactor(args[0])});`);
+    } else if (Object.hasOwn(binopLongName, name)) {
       varName = `${binopLongName[name]}_${this.count++}`;
       this.emit(`float ${varName} = ${formatFactor(args[0])} ${name} ${formatFactor(args[1])};`);
     } else {

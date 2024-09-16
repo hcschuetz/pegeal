@@ -9,7 +9,7 @@ So the respective methods in this module will no more be called.
 */
 
 class VarImpl extends Var<never> {
-  addValue(val: Scalar<never>, negate: truth, create: boolean): void {
+  addValue(val: Scalar<never>, create: boolean): void {
     throw new Error("This method should never be called");
   }
 

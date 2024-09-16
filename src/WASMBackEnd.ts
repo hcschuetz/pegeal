@@ -14,16 +14,15 @@ class VarImpl extends Var<LocalRef> {
 
   #localRef?: LocalRef;
 
-  addValue(val: Scalar<LocalRef>, negate: truth, create: boolean) {
+  addValue(val: Scalar<LocalRef>, create: boolean) {
     const {mod, body, convertFactor} = this.be;
     const expr = convertFactor(val);
-    const signedExpr = negate ? mod.f64.neg(expr) : expr;
     if (create) {
       this.#localRef = this.be.newLocal();
-      body.push(mod.local.set(this.#localRef.locNum, signedExpr));
+      body.push(mod.local.set(this.#localRef.locNum, expr));
     } else {
       body.push(mod.local.set(this.#localRef!.locNum,
-        mod.f64.add(mod.local.get(this.#localRef!.locNum, B.f64), signedExpr)
+        mod.f64.add(mod.local.get(this.#localRef!.locNum, B.f64), expr)
       ));
     }
   }
@@ -72,6 +71,7 @@ export default class WASMBackEnd extends BackEnd<LocalRef> {
     const localVar = this.newLocal();
     this.body.push(
       mod.local.set(localVar.locNum,
+        name === "unaryMinus" ? mod.f64.neg(convertFactor(args[0])) :
         Object.hasOwn(binopName, name)
         ? mod.f64[binopName[name]](convertFactor(args[0]), convertFactor(args[1]))
         : mod.call(name, args.map(convertFactor), B.f64)
