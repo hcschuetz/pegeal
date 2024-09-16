@@ -307,7 +307,6 @@ under the following conditions depending on the product kind:
 | right contraction | `A ⊃ B`             | `\|Out\| = \|A\| - \|B\|`
 | scalar            | `A = B`             | `\|Out\| = 0`
 | dot               | `A ⊂ B` or `A ⊃ B`  | `\|Out\| = abs(\|A\| - \|B\|)`
-|
 
 Here `|S|` denotes the cardinality of a set `S`
 and thus the grade of a basis blade.
@@ -321,7 +320,6 @@ equivalently as:
 |--------------|:-------------------:|:---------------------
 | scalar       | `A ⊂ B` and `A ⊃ B` | `\|Out\| = \|B\| - \|A\|` and `\|Out\| = \|A\| - \|B\|`
 | dot          | `A ⊂ B` or  `A ⊃ B` | `\|Out\| = \|B\| - \|A\|` or  `\|Out\| = \|A\| - \|B\|`
-|
 
 Notice that in all cases
 the set-based conditions can be formulated using just the inputs
