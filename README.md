@@ -121,8 +121,8 @@ and their computation by generated run-time code whenever possible.
 
 But note that this optimization is only performed per-operation
 and not globally.
-So the algebra will not recognize that certain complex expressions such as
-`M + (-M)` or `a^b + b^a` (with 1-vectors a and b) are actually 0.
+So Pegeal will not recognize that certain complex expressions such as
+`M + (-M)` or `(a ∧ b) + (b ∧ a)` (with 1-vectors `a` and `b`) are actually 0.
 
 In such cases the application programmer should either re-formulate
 the algebraic expressions or explicitly drop some components using the method
