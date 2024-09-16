@@ -123,12 +123,17 @@ But note that this optimization is only performed per-operation
 and not globally.
 So Pegeal will not recognize that certain complex expressions such as
 `M + (-M)` or `(a ∧ b) + (b ∧ a)` (with 1-vectors `a` and `b`) are actually 0.
+Similarly, a sandwich product `a b ~a` (with a versor `a` and a 1-vector `b`)
+may produce a multivector with a grade-3 component even though that component
+will always be 0 at run time.
 
 In such cases the application programmer should either re-formulate
 the algebraic expressions or explicitly drop some components using the method
 `+t` or `extractGrade`.
 (Multivector products also accept an inclusion condition for pairs of basis
-blades.  See [below](#products).)
+blades.  See [below](#products).
+Also the [`sandwich`](#sandwich-products) method helps to avoid creating
+superfluous components.)
 
 ### Data Structure
 
@@ -154,14 +159,14 @@ The `add` function is used to populate the multivector.
 It takes three parameters:
 - a basis blade represented as a bitmap (telling to which component
   this addition contributes),
-- a number or symbolic value that will be added to the component,
+- a numeric or symbolic value that will be added to the component,
 - and optionally a negation flag
-  (telling whether the term's sign should be inverted or, in other words,
-  whether the term should be subtracted rather than added).
+  (telling whether the value's sign should be inverted or, in other words,
+  whether the value should be subtracted rather than added).
 
 Notice that `add` is *not* a setter function for multivector components.
 You can call it multiple times with the same basis blade
-and the provided terms will be added up (or subtracted).
+and the provided values will be added up (or subtracted).
 
 This API is quite convenient for creating new multivectors in the algebra code:
 - It protects the multivector from being modified inadvertently
