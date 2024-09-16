@@ -47,6 +47,8 @@ Parameters of the recursive function:
     corresponding to the accumulated bitmap.
 - The accumulated number of flips (adjacent transpositions)
   for permuting the output basis vectors into the proper order.
-- An accumulated "value":
+- An accumulated product:
   - Start with `A_b` and
-  - multiply (symbolically) with `M_ji` in each recursion step.
+  - multiply with `M_ji` in each recursion step.
+    (The multiplication is done lazily to avoid code generation if all
+    sub-branches of the recursion should fail.)

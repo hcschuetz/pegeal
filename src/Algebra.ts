@@ -275,17 +275,19 @@ export class Algebra<T> {
 
   outermorphism(matrix: (Scalar<T> | undefined)[][], mv: Multivector<T>): Multivector<T> {
     // See `../doc/Outermorphism.md` for explanations.
-
-    const {nDimensions} = this;
     return new Multivector(this, "morph", add => {
       // no `this.checkMine(mv)` here as `mv` may actually come from elsewhere
       for (const [bitmapIn, valueIn] of mv) {
-
-        const recur = (i: number, bitmapOut: number, flips: number, product: Scalar<T>[]) => {
+        const recur = (
+          i: number,
+          bitmapOut: number,
+          flips: number,
+          product: () => Scalar<T>,
+        ) => {
           const iBit = 1 << i;
           if (iBit > bitmapIn) {
             // Fully traversed bitmapIn.  Contribute to the output:
-            add(bitmapOut, this.times(...product), flips & 1);
+            add(bitmapOut, product(), flips & 1);
           } else if (!(iBit & bitmapIn)) {
             // The i-th basis vector is not in bitmapIn.  Skip it:
             recur(i + 1, bitmapOut, flips, product);
@@ -293,18 +295,23 @@ export class Algebra<T> {
             // The i-th basis vector is in bitmapIn.
             // Iterate over the output basis vectors and recur for the
             // "appropriate ones":
-            for (let j = 0; j < nDimensions; j++) {
+            for (let j = 0; j < this.nDimensions; j++) {
               const jBit = 1 << j;
               if (jBit & bitmapOut) continue; // wedge prod with duplicate is 0
               const elem = (matrix[j] ?? [])[i] ?? 0;
               if (elem === 0) continue; // omit product with a factor 0
               const newFlips = bitCount(bitmapOut & ~(jBit - 1));
-              recur(i + 1, bitmapOut | jBit, flips + newFlips, [...product, elem]);
+              recur(
+                i + 1,
+                bitmapOut | jBit,
+                flips + newFlips,
+                lazy(() => this.times(product(), elem)),
+              );
             }
           }
         }
 
-        recur(0, 0, 0, [valueIn]);
+        recur(0, 0, 0, () => valueIn);
       }
     });
   }
