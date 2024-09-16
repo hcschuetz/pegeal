@@ -87,20 +87,16 @@ The caller has to pass these parameters to the `Algebra` constructor:
   in the code that a Euclidean metric is being used.
 
 - A back-end that knows how to generate code for a particular target language.
-
-  Currently there are back-ends for WebGL and WebAssembly/WASM.
-  There is also a "dummy" back-end that does not generate any code,
-  but can be used in cases where all input is numeric and thus the
-  entire calculation can be performed immediately.
-
-  Additional back-ends are quite easy to implement.
+  (See section "[Back-End Implementations](#back-end-implementations)".)
 
 - A list of basis-blade names.
   This list should have length `2**n` and should not contain duplicates.
 
-  Some utility functions (`makeLetterNames` and `makeNumberedNames`)
+  Utility functions `makeLetterNames` and `makeNumberedNames`
   are available to produce typical component names,
-  but the application programmer is free to choose another naming scheme.
+  but the application programmer is free to choose a different naming scheme.
+  (Component names should however be usable as parts of target-language
+  identifiers names by some backends.)
 
 ## Multivectors
 
@@ -248,7 +244,7 @@ fully numeric and do not contain symbolic values.
 (`addValue` and `getValue`).
 These are only called if and when a symbolic value is actually needed.
 
-### Back-End Imlementations
+### Back-End Implementations
 
 #### Dummy Back-End
 
