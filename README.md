@@ -202,19 +202,18 @@ This API is quite convenient for creating new multivectors in the algebra code:
 
 ## Back-Ends
 
-... for lower-level code generation.
+An algebra uses a back-end to actually generate lower-level code.
 
-... multiple implementations
-
-Various types have a type parameter `T`, which is the type that the
+Various types have a type parameter `T`.  It represents the type that the
 back-end uses to represent "symbolic values", that is, scalar variables
 in the target language.
 
 For example:
 - `Scalar<T>`: A scalar value, either a number known at code-generation time
   or a symbolic value.
-- `Var<T>` and its implementations: A scalar variable in the "source language",
-  possibly backed by a scalar variable of type `T` in the "target language".
+- `Var<T>`: A scalar variable in the "source language",
+  possibly (if the value cannot be determined at code-generation time)
+  backed by a scalar variable of type `T` in the "target language".
 - `Multivector<T>`: A multivector whose component magnitudes are stored as
   `Var<T>`s.
 
