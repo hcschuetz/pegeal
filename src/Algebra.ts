@@ -298,14 +298,14 @@ export class Algebra<T> {
             for (let j = 0; j < this.nDimensions; j++) {
               const jBit = 1 << j;
               if (jBit & bitmapOut) continue; // wedge prod with duplicate is 0
-              const elem = (matrix[j] ?? [])[i] ?? 0;
-              if (elem === 0) continue; // omit product with a factor 0
+              const m_ij = (matrix[j] ?? [])[i] ?? 0;
+              if (m_ij === 0) continue; // omit product with a factor 0
               const newFlips = bitCount(bitmapOut & ~(jBit - 1));
               recur(
                 i + 1,
                 bitmapOut | jBit,
                 flips + newFlips,
-                lazy(() => this.times(product(), elem)),
+                lazy(() => this.times(product(), m_ij)),
               );
             }
           }
