@@ -126,8 +126,9 @@ So Pegeal will not recognize that certain complex expressions such as
 
 In such cases the application programmer should either re-formulate
 the algebraic expressions or explicitly drop some components using the method
-`extract` or `extractGrade`. 
-It is also possible to provide a 
+`+t` or `extractGrade`.
+(Multivector products also accept an inclusion condition for pairs of basis
+blades.  See [below](#products).)
 
 ### Data Structure
 
@@ -153,12 +154,12 @@ The `add` function is used to populate the multivector.
 It takes three parameters:
 - a basis blade represented as a bitmap (telling to which component
   this addition contributes),
-- a term (a list of numbers and symbolic values whose members will be
-  multiplied and then added to the component),
-- and a negation flag (telling whether the term's sign should be inverted,
-  or, in other words, whether the term should be subtracted rather than added).
+- a number or symbolic value that will be added to the component,
+- and optionally a negation flag
+  (telling whether the term's sign should be inverted or, in other words,
+  whether the term should be subtracted rather than added).
 
-To repeat: `add` is *not* a setter function for multivector components.
+Notice that `add` is *not* a setter function for multivector components.
 You can call it multiple times with the same basis blade
 and the provided terms will be added up (or subtracted).
 
@@ -329,6 +330,9 @@ I also consider the set conditions easier to understand.
 They can also be implemented as bitmap operations easily.
 The resulting basis blade `Out` is easily implemented
 as an XOR between the bitmaps for `A` and `B`.
+
+In addition to the conditions described above, application programmers
+can also provide their own inclusion conditions for pairs of base blades.
 
 The metric factors of the basis vectors in `A ⋂ B` are included in the
 partial-product term.
