@@ -81,16 +81,22 @@ export abstract class Var<T> {
     }
   }
 
-  value(): Scalar<T> {
-    if (!this.#frozen) {
-      if (this.#created && this.#numericPart !== 0) {
-        this.addValue(this.#numericPart, false);
-      }
-      this.#frozen = true;
+  freeze(): void {
+    if (this.#frozen) fail("trying to re-freeze a variable");
+
+    if (this.#created && this.#numericPart !== 0) {
+      this.addValue(this.#numericPart, false);
     }
+    this.#frozen = true;
+  }
+
+  value(): Scalar<T> {
+    if (!this.#frozen) fail("trying to read non-frozen variable");
+
     return this.#created ? this.getValue() : this.#numericPart;
   }
 
+  // TODO? move these to a separate object (delegation instead of inheritance)
   protected abstract addValue(value: Scalar<T>, create: boolean): void;
   protected abstract getValue(): Scalar<T>;
 }
@@ -126,6 +132,7 @@ export class Multivector<T> implements Iterable<[number, Scalar<T>]> {
       }
       variable.add(value);
     });
+    this.#components.forEach(variable => variable.freeze());
   }
 
   value(bm: number): Scalar<T> { return this.#components[bm]?.value() ?? 0; }
@@ -435,6 +442,7 @@ export class Algebra<T> {
       const mf = this.metricFactors(bitmap);
       variable.add(this.times(mf, value, value));
     }
+    variable.freeze();
     return variable.value();
   }
 
@@ -627,6 +635,7 @@ export class Algebra<T> {
       // Notice that reverseFlips(bitmap) === productFlips(bitmap, bitmap) & 1:
       variable.add(this.flipIf(reverseFlips(bitmap), this.times(mf, valA, valB)));
     }
+    variable.freeze();
     return variable.value();
   }
 
