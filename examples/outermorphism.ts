@@ -3,7 +3,7 @@ import { euclidean } from "../src/euclidean";
 import { Algebra, BackEnd, Scalar } from "../src/Algebra";
 import { makeLetterNames } from "../src/componentNaming";
 import WebGLBackEnd from "../src/WebGLBackEnd";
-import DummyBackEnd from "../src/DummyBackEnd";
+import NumericBackEnd from "../src/NumericBackEnd";
 
 p(`// Outermorphism - WebGL and eval\n`);
 
@@ -58,7 +58,7 @@ const m4 = [
 
 
 q2("result", testOM(
-  new DummyBackEnd(),
+  new NumericBackEnd(),
   m3,
   {
     "1": 1111,

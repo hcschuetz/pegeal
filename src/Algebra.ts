@@ -1,6 +1,60 @@
 import alphabetic from "./alphabetic";
 import scalarOp from "./scalarOp";
 
+
+type Optimization =
+| "bitCount"
+| "evalNumbers"
+| "lazy"
+| "plusSingle"
+| "sandwich_lr_iMetric0"
+| "sandwich_lrMetric0"
+| "scalarOp"
+| "scalarSum"
+| "scale0"
+| "singleEuclideanNorm"
+| "singleEuclideanNormalize"
+| "singleInverse"
+| "skipZeroAdd"
+| "skipZeroIter"
+| "skipZeroOM"
+| "times"
+| "unitInverse"
+| "unitNormSq"
+| "unitNorm"
+| "unitNormalize"
+
+| "default"
+;
+
+const optimizations: Partial<Record<Optimization, boolean>> = {
+  // bitCount: false,
+  // evalNumbers: false,
+  // lazy: false,
+  // plusSingle: false,
+  // sandwich_lr_iMetric0: false,
+  // sandwich_lrMetric0: false,
+  // scalarOp: false,
+  // scalarSum: false,
+  // scale0: false,
+  // singleEuclideanNorm: false,
+  // singleEuclideanNormalize: false,
+  // singleInverse: false,
+  // skipZeroAdd: false,
+  // skipZeroIter: false,
+  // skipZeroOM: false,
+  // times: false,
+  // unitInverse: false,
+  // unitNorm: false,
+  // unitNormalize: false,
+  // unitNormSq: false,
+
+  default: true,
+};
+
+export const optimize = (opt: Optimization): boolean =>
+  optimizations[opt] ?? optimizations.default ?? false;
+
 /**
  * Semantically a boolean, but for convenience any value.
  * Only its truthiness should be used.
@@ -19,8 +73,7 @@ export abstract class Var<T> {
   add(value: Scalar<T>): void {
     if (this.#frozen) fail("trying to update frozen variable");
 
-    if (typeof value === "number") {
-      if (value === 0) return;
+    if (optimize("evalNumbers") && typeof value === "number") {
       this.#numericPart += value;
     } else {
       this.addValue(value, !this.#created);
@@ -39,7 +92,7 @@ export abstract class Var<T> {
   }
 
   protected abstract addValue(value: Scalar<T>, create: boolean): void;
-  protected abstract getValue(): T;
+  protected abstract getValue(): Scalar<T>;
 }
 
 export abstract class BackEnd<T> {
@@ -64,7 +117,7 @@ export class Multivector<T> implements Iterable<[number, Scalar<T>]> {
     initialize((bm, value) => {
       // This check is not really needed.  Without it a Var<T> might be created
       // unnecessarily, but still without a backing target-language variable.
-      if (value === 0) return;
+      if (optimize("skipZeroAdd") && value === 0) return;
 
       let variable = this.#components[bm];
       if (variable === undefined) {
@@ -81,7 +134,7 @@ export class Multivector<T> implements Iterable<[number, Scalar<T>]> {
     for (const [bitmap, variable] of this.#components.entries()) {
       if (variable === undefined) continue;
       const value = variable.value();
-      if (value === 0) continue;
+      if (optimize("skipZeroIter") && value === 0) continue;
       yield [bitmap, value];
     }
   }
@@ -151,13 +204,16 @@ export function bitList(bm: number): number[] {
 // and subsequent solutions for alternative implementations.
 export function bitCount(bitmap: number) {
   let result = 0;
-  // Kernighan method:
-  while (bitmap) {
-    bitmap &= bitmap - 1;
-    result++;
+  if (optimize("bitCount")) {
+    // Kernighan method:
+    while (bitmap) {
+      bitmap &= bitmap - 1;
+      result++;
+    }
+  } else {
+    // Naive version:
+    forBitmap(bitmap, () => result++);
   }
-  // // Naive version:
-  // forBitmap(bitmap, () => result++);
   return result;
 }
 
@@ -299,7 +355,7 @@ export class Algebra<T> {
               const jBit = 1 << j;
               if (jBit & bitmapOut) continue; // wedge prod with duplicate is 0
               const m_ij = (matrix[j] ?? [])[i] ?? 0;
-              if (m_ij === 0) continue; // omit product with a factor 0
+              if (optimize("skipZeroOM") && m_ij === 0) continue; // omit product with a factor 0
               const newFlips = bitCount(bitmapOut & ~(jBit - 1));
               recur(
                 i + 1,
@@ -319,7 +375,7 @@ export class Algebra<T> {
   /** The scalar `alpha` should be given as a target-code expression. */
   scale(alpha: Scalar<T>, mv: Multivector<T>): Multivector<T> {
     return new Multivector(this, "scale", add => {
-      if (alpha !== 0) {
+      if (!optimize("scale0") || alpha !== 0) {
         for (const [bitmap, value] of this.checkMine(mv)) {
           add(bitmap, this.times(alpha, value));
         }
@@ -368,7 +424,7 @@ export class Algebra<T> {
   // normSquared precisely for this purpose.)
   normSquared(mv: Multivector<T>): Scalar<T> {
     this.checkMine(mv);
-    if (mv.knownUnit) return 1; // TODO or -1?
+    if (optimize("unitNormSq") && mv.knownUnit) return 1; // TODO or -1?
 
     // TODO If the entire multivector and the relevant metric factors
     // are given as numbers, precalculate the result.
@@ -408,10 +464,10 @@ export class Algebra<T> {
 
   norm(mv: Multivector<T>): Scalar<T> {
     this.checkMine(mv);
-    if (mv.knownUnit) return 1;
+    if (optimize("unitNorm") && mv.knownUnit) return 1;
 
     const se = this.singleEuclidean(mv);
-    if (se !== null) return this.scalarOp("abs", mv.value(se));
+    if (optimize("singleEuclideanNorm") && se !== null) return this.scalarOp("abs", mv.value(se));
 
     return this.scalarOp("sqrt",
       // As in the [DFM07] reference implementation we floor the squared norm
@@ -429,9 +485,9 @@ export class Algebra<T> {
   /** **This is only correct for versors!** */
   inverse(mv: Multivector<T>): Multivector<T> {
     this.checkMine(mv);
-    if (mv.knownUnit) return mv;
+    if (optimize("unitInverse") && mv.knownUnit) return mv;
     // TODO provide nicer check for number of components
-    if ([...mv].length === 1) {
+    if (optimize("singleInverse") && [...mv].length === 1) {
       return new Multivector(this, "inverse", add => {
         for (const [bm, val] of mv) {
           const mf = this.metricFactors(bm) ||
@@ -450,10 +506,10 @@ export class Algebra<T> {
 
   /** **This is only correct for versors!** */
   normalize(mv: Multivector<T>): Multivector<T> {
-    if (mv.knownUnit) return mv;
+    if (optimize("unitNormalize") && mv.knownUnit) return mv;
 
     const se = this.singleEuclidean(mv);
-    if (se !== null) {
+    if (optimize("singleEuclideanNormalize") && se !== null) {
       return new Multivector(this, "normSE", add => {
         add(se, this.scalarOp("sign", mv.value(se)));
       }).markAsUnit();
@@ -489,7 +545,7 @@ export class Algebra<T> {
   }
 
   plus(...mvs: Multivector<T>[]): Multivector<T> {
-    if (mvs.length === 1) {
+    if (optimize("plusSingle") && mvs.length === 1) {
       return this.checkMine(mvs[0]);
     }
     return new Multivector(this, "plus", add => {
@@ -672,6 +728,9 @@ export class Algebra<T> {
 
   // TODO similar optimizations for other scalar operators/functions
   times(...factors: Scalar<T>[]): Scalar<T> {
+    if (!optimize("times")) {
+      return factors.reduce((acc, f) => this.scalarOp("*", acc, f), 1);
+    }
     let num = 1;
     const sym: T[] = [];
     for (const factor of factors) {
@@ -693,6 +752,9 @@ export class Algebra<T> {
 
   // The name "plus" is already taken for the sum of multivectors.
   scalarSum(...terms: Scalar<T>[]): Scalar<T> {
+    if (!optimize("scalarSum")) {
+      return terms.reduce((acc, f) => this.scalarOp("+", acc, f), 0);
+    }
     let num = 0;
     const sym: T[] = [];
     for (const term of terms) {
@@ -713,7 +775,7 @@ export class Algebra<T> {
 
   scalarOp(name: string, ...args: Scalar<T>[]): Scalar<T> {
     return (
-      args.every(arg => typeof arg === "number")
+      optimize("scalarOp") && args.every(arg => typeof arg === "number")
       ? scalarOp(name, ...args)
       : this.be.scalarOp(name, ...args)
     );
@@ -765,7 +827,7 @@ export class Algebra<T> {
     for (const [lBitmap, lVal] of operator) {
       for (const [rBitmap, rVal] of operator) {
         const lrMetric = this.metricFactors(lBitmap & rBitmap);
-        if (lrMetric === 0) continue;
+        if (optimize("sandwich_lrMetric0") && lrMetric === 0) continue;
 
         const lrKey = [lBitmap, rBitmap].sort((x, y) => x - y).join(",");
         const lrVal = lrVals[lrKey] ??=
@@ -774,7 +836,7 @@ export class Algebra<T> {
         const lrBitmap = lBitmap ^ rBitmap;
         for (const iBitmap of componentBitmaps) {
           const lr_iMetric = this.metricFactors(lrBitmap & iBitmap);
-          if (lr_iMetric === 0) continue;
+          if (optimize("sandwich_lr_iMetric0") && lr_iMetric === 0) continue;
 
           const liBitmap = lBitmap ^ iBitmap;
           const lirBitmap = liBitmap ^ rBitmap;
@@ -832,7 +894,7 @@ function lazy<T>(exec: () => T): () => T {
   return () => {
     if (!done) {
       result = exec();
-      done = true;
+      done = optimize("lazy") && true;
     }
     return result;
   }

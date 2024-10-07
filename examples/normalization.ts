@@ -1,6 +1,6 @@
 import { Algebra } from "../src/Algebra";
 import { makeLetterNames } from "../src/componentNaming";
-import DummyBackEnd from "../src/DummyBackEnd";
+import NumericBackEnd from "../src/NumericBackEnd";
 import { p, q_ } from "./utils";
 
 p(`// Normalization - eval\n`);
@@ -9,7 +9,7 @@ const coords = "xyzw";
 const q = q_(coords);
 
 function test_normalize(m: number[]) {
-  const alg = new Algebra(m, new DummyBackEnd(), makeLetterNames(coords));
+  const alg = new Algebra(m, new NumericBackEnd(), makeLetterNames(coords));
 
   const B1 = alg.mv("B1", {x: 5, y: 2, z: 3});
   const B2 = alg.mv("B2", {x: 2, y:-1, z: 2});

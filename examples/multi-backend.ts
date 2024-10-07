@@ -1,7 +1,7 @@
 import binaryen from "binaryen";
 import { Algebra, BackEnd, Scalar } from "../src/Algebra";
 import { makeLetterNames } from "../src/componentNaming";
-import DummyBackEnd from "../src/DummyBackEnd";
+import NumericBackEnd from "../src/NumericBackEnd";
 import WASMBackEnd, { LocalRef } from "../src/WASMBackEnd";
 import WebGLBackEnd from "../src/WebGLBackEnd";
 import { p, q_ } from "./utils";
@@ -100,7 +100,7 @@ function slerpTest<T>(
 }
 
 q_(coords)("\nresult", slerpTest(
-  new DummyBackEnd(),
+  new NumericBackEnd(),
   euclidean(coords),
   {x: 1, y: 2},
   {x: 1, y: 1, z: 4},

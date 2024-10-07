@@ -2,7 +2,7 @@ import { expect, suite, test } from "vitest";
 import { euclidean } from "./euclidean";
 import { Algebra, Multivector } from "./Algebra";
 import { makeLetterNames } from "./componentNaming";
-import DummyBackEnd from "./DummyBackEnd";
+import NumericBackEnd from "./NumericBackEnd";
 
 const coords = "xyz";
 
@@ -13,7 +13,7 @@ const metrics = [euclidean(coords), [3, 0.9, -0.2], [0, 4.4, 2]];
 export function forAlgebras(fn: (algebra: Algebra<never>) => void) {
   for (const metric of metrics) {
     suite(`with metric ${JSON.stringify(metric)}`, () => {
-      fn(new Algebra(metric, new DummyBackEnd(), makeLetterNames(coords)));
+      fn(new Algebra(metric, new NumericBackEnd(), makeLetterNames(coords)));
     });
   }
 }

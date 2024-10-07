@@ -1,11 +1,11 @@
 import { Algebra } from "../src/Algebra";
 import { makeLetterNames } from "../src/componentNaming";
-import DummyBackEnd from "../src/DummyBackEnd";
+import NumericBackEnd from "../src/NumericBackEnd";
 import { p, q_ } from "./utils";
 
 p(`// Determinants - eval\n`);
 
-  const be = new DummyBackEnd();
+  const be = new NumericBackEnd();
 
   const coords = "xyz";
   const q = q_(coords);
