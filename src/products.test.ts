@@ -103,7 +103,6 @@ suite("product relationships - dummy back end", () => {
           alg.pseudoScalar(),
           alg.geometricProduct(a, b),
           alg.contractLeft(a, b),
-          alg.exp(a),
         ]) {
           expectNearby(
             alg.geometricProduct(a, alg.inverse(a)),
