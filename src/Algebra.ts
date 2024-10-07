@@ -65,10 +65,36 @@ function fail(msg: string): never { throw new Error(msg); };
 
 export type Scalar<T> = number | T;
 
-export abstract class Var<T> {
-  #created = false;
-  #frozen = false;
+/** A variable as provided by a `BackEnd` */
+export interface BEVariable<T> {
+  add(value: Scalar<T>): void;
+  value(): Scalar<T>;
+}
+
+export abstract class BackEnd<T> {
+  abstract makeVar(nameHint: string): BEVariable<T>;
+  abstract scalarOp(name: string, ...args: Scalar<T>[]): Scalar<T>;
+  comment(text: string): void {}
+}
+
+/**
+ * A "smart" variable wrapping a back-end variable.
+ * 
+ * - Numbers are added separately from symbolic values (if this optimization is
+ *   enabled).
+ * - A back-end variable is only created as soon as a symbolic term is added.
+ * - A "freezing" step between  `.add()` and `.value()` calls is required
+ *   - to ensure that calls are in proper order and
+ *   - to merge the number sum into the symbolic sum (the back-end variable).
+ */
+class Variable<T> {
+  #beVar? : BEVariable<T>;
   #numericPart = 0;
+  #frozen = false;
+
+  constructor(
+    private createBEVar: () => BEVariable<T>,
+  ) {}
 
   add(value: Scalar<T>): void {
     if (this.#frozen) fail("trying to update frozen variable");
@@ -76,16 +102,15 @@ export abstract class Var<T> {
     if (optimize("evalNumbers") && typeof value === "number") {
       this.#numericPart += value;
     } else {
-      this.addValue(value, !this.#created);
-      this.#created = true;
+      (this.#beVar ??= this.createBEVar()).add(value);
     }
   }
 
   freeze(): void {
     if (this.#frozen) fail("trying to re-freeze a variable");
 
-    if (this.#created && this.#numericPart !== 0) {
-      this.addValue(this.#numericPart, false);
+    if (this.#beVar && this.#numericPart !== 0) {
+      this.#beVar.add(this.#numericPart);
     }
     this.#frozen = true;
   }
@@ -93,22 +118,12 @@ export abstract class Var<T> {
   value(): Scalar<T> {
     if (!this.#frozen) fail("trying to read non-frozen variable");
 
-    return this.#created ? this.getValue() : this.#numericPart;
+    return this.#beVar ? this.#beVar.value() : this.#numericPart;
   }
-
-  // TODO? move these to a separate object (delegation instead of inheritance)
-  protected abstract addValue(value: Scalar<T>, create: boolean): void;
-  protected abstract getValue(): Scalar<T>;
-}
-
-export abstract class BackEnd<T> {
-  abstract makeVar(nameHint: string): Var<T>;
-  abstract scalarOp(name: string, ...args: Scalar<T>[]): Scalar<T>;
-  comment(text: string): void {}
 }
 
 export class Multivector<T> implements Iterable<[number, Scalar<T>]> {
-  #components: Var<T>[] = [];
+  #components: Variable<T>[] = [];
   readonly name: string;
 
   constructor(
@@ -121,16 +136,15 @@ export class Multivector<T> implements Iterable<[number, Scalar<T>]> {
     this.name = `${nameHint}_${alphabetic(alg.mvCount++)}`;
     alg.be.comment(`${this.name}`);
     initialize((bm, value) => {
-      // This check is not really needed.  Without it a Var<T> might be created
-      // unnecessarily, but still without a backing target-language variable.
+      // This optimization is not really needed.
+      // Without it a Variable<T> might be created unnecessarily,
+      // but still without a backing target-language variable
+      // (if that optimization is enabled).
       if (optimize("skipZeroAdd") && value === 0) return;
 
-      let variable = this.#components[bm];
-      if (variable === undefined) {
-        variable = this.#components[bm] =
-          this.alg.be.makeVar(this.name + "_" + this.alg.bitmapToString[bm]);
-      }
-      variable.add(value);
+      (this.#components[bm] ??= alg.makeVariable(
+        this.name + "_" + alg.bitmapToString[bm],
+      )).add(value);
     });
     this.#components.forEach(variable => variable.freeze());
   }
@@ -292,6 +306,10 @@ export class Algebra<T> {
     });
   }
 
+  makeVariable(nameHint: string): Variable<T> {
+    return new Variable(() => this.be.makeVar(nameHint));
+  }
+
   /** Return the metric factor for squaring a basis blade. */
   metricFactors(bm: number): Scalar<T> {
     return this.times(...bitList(bm).map(i => this.metric[i]));
@@ -437,7 +455,7 @@ export class Algebra<T> {
     // are given as numbers, precalculate the result.
 
     this.be.comment("normSquared");
-    const variable = this.be.makeVar("normSquared");
+    const variable = this.makeVariable("normSquared");
     for (const [bitmap, value] of mv) {
       const mf = this.metricFactors(bitmap);
       variable.add(this.times(mf, value, value));
@@ -628,7 +646,7 @@ export class Algebra<T> {
     this.checkMine(a);
     this.checkMine(b);
     this.be.comment("scalar product");
-    const variable = this.be.makeVar("scalarProd");
+    const variable = this.makeVariable("scalarProd");
     for (const [bitmap, valA] of a) {
       const valB = b.value(bitmap);
       const mf = this.metricFactors(bitmap);

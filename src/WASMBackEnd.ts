@@ -1,23 +1,21 @@
 import B from "binaryen";
-import { Scalar, BackEnd, Var, truth } from "./Algebra";
+import { Scalar, BackEnd, BEVariable } from "./Algebra";
 
 export class LocalRef {
   constructor(readonly locNum: number) {}
 }
 
-class VarImpl extends Var<LocalRef> {
+class WASMVar implements BEVariable<LocalRef> {
   constructor(
     readonly be: WASMBackEnd,
-  ) {
-    super();
-  }
+  ) {}
 
   #localRef?: LocalRef;
 
-  addValue(val: Scalar<LocalRef>, create: boolean) {
+  add(val: Scalar<LocalRef>) {
     const {mod, body, convertFactor} = this.be;
     const expr = convertFactor(val);
-    if (create) {
+    if (!this.#localRef) {
       this.#localRef = this.be.newLocal();
       body.push(mod.local.set(this.#localRef.locNum, expr));
     } else {
@@ -27,7 +25,7 @@ class VarImpl extends Var<LocalRef> {
     }
   }
 
-  getValue() { return this.#localRef! };
+  value() { return this.#localRef! };
 }
 
 export default class WASMBackEnd extends BackEnd<LocalRef> {
@@ -48,7 +46,7 @@ export default class WASMBackEnd extends BackEnd<LocalRef> {
   get paramCount() { return this.paramHints.length; }
 
   makeVar() {
-    return new VarImpl(this);
+    return new WASMVar(this);
   }
 
   newLocal() {
