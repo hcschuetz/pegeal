@@ -31,7 +31,7 @@ class WebGLVar implements BEVariable<string> {
   value() { return this.name; }
 }
 
-export default class WebGLBackEnd extends BackEnd<string> {
+export default class WebGLBackEnd implements BackEnd<string> {
   private count = 0;
   public text = "";
 

@@ -28,7 +28,7 @@ class WASMVar implements BEVariable<LocalRef> {
   value() { return this.#localRef! };
 }
 
-export default class WASMBackEnd extends BackEnd<LocalRef> {
+export default class WASMBackEnd implements BackEnd<LocalRef> {
   varCount = 0;
   body: B.ExpressionRef[] = [];
   paramsByHint: Record<string, LocalRef> = {};
@@ -37,7 +37,6 @@ export default class WASMBackEnd extends BackEnd<LocalRef> {
     readonly mod: B.Module,
     readonly paramHints: string[],
   ) {
-    super();
     for (const hint of paramHints) {
       this.paramsByHint[hint] = this.newLocal();
     }

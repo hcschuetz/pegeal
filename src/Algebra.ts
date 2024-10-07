@@ -71,10 +71,10 @@ export interface BEVariable<T> {
   value(): Scalar<T>;
 }
 
-export abstract class BackEnd<T> {
-  abstract makeVar(nameHint: string): BEVariable<T>;
-  abstract scalarOp(name: string, ...args: Scalar<T>[]): Scalar<T>;
-  comment(text: string): void {}
+export interface BackEnd<T> {
+  makeVar(nameHint: string): BEVariable<T>;
+  scalarOp(name: string, ...args: Scalar<T>[]): Scalar<T>;
+  comment?(text: string): void;
 }
 
 /**
@@ -134,7 +134,7 @@ export class Multivector<T> implements Iterable<[number, Scalar<T>]> {
     ) => unknown,
   ) {
     this.name = `${nameHint}_${alphabetic(alg.mvCount++)}`;
-    alg.be.comment(`${this.name}`);
+    alg.be.comment?.(`${this.name}`);
     initialize((bm, value) => {
       // This optimization is not really needed.
       // Without it a Variable<T> might be created unnecessarily,
@@ -454,7 +454,7 @@ export class Algebra<T> {
     // TODO If the entire multivector and the relevant metric factors
     // are given as numbers, precalculate the result.
 
-    this.be.comment("normSquared");
+    this.be.comment?.("normSquared");
     const variable = this.makeVariable("normSquared");
     for (const [bitmap, value] of mv) {
       const mf = this.metricFactors(bitmap);
@@ -645,7 +645,7 @@ export class Algebra<T> {
   scalarProduct(a: Multivector<T>, b: Multivector<T>): Scalar<T> {
     this.checkMine(a);
     this.checkMine(b);
-    this.be.comment("scalar product");
+    this.be.comment?.("scalar product");
     const variable = this.makeVariable("scalarProd");
     for (const [bitmap, valA] of a) {
       const valB = b.value(bitmap);
