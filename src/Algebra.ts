@@ -166,6 +166,9 @@ export class Multivector<T> implements Iterable<[number, Scalar<T>]> {
     for (const [bitmap] of this) yield bitmap;
   }
 
+  // TODO Keep track of known squared norms instead of unitness at
+  // code-generation time.  Unitness can be derived from this and some more
+  // cases can be optimized.
   /** Do we know (at code-generation time) that this multivector has norm 1? */
   #knownUnit = false;
   public get knownUnit() {
@@ -464,6 +467,8 @@ export class Algebra<T> {
 
     // TODO If the entire multivector and the relevant metric factors
     // are given as numbers, precalculate the result.
+    // (Is this TODO outdated?  Lower-level optimizations probably already
+    // do this.  Check this.)
 
     return this.makeScalar("normSquared", add => {
       for (const [bitmap, value] of mv) {
