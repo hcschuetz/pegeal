@@ -9,8 +9,9 @@ type Optimization =
 | "plusSingle"
 | "sandwich_lr_iMetric0"
 | "sandwich_lrMetric0"
+| "sandwichCancel1"
+| "sandwichCancel2"
 | "scalarOp"
-| "scalarSum"
 | "scale0"
 | "singleEuclideanNorm"
 | "singleEuclideanNormalize"
@@ -34,8 +35,9 @@ const optimizations: Partial<Record<Optimization, boolean>> = {
   // plusSingle: false,
   // sandwich_lr_iMetric0: false,
   // sandwich_lrMetric0: false,
+  // sandwichCancel1: false,
+  // sandwichCancel2: false,
   // scalarOp: false,
-  // scalarSum: false,
   // scale0: false,
   // singleEuclideanNorm: false,
   // singleEuclideanNormalize: false,
@@ -781,25 +783,6 @@ export class Algebra<T> {
     return simplified.reduce((acc, f) => this.scalarOp("*", acc, f));
   }
 
-  // The name "plus" is already taken for the sum of multivectors.
-  scalarSum(...terms: Scalar<T>[]): Scalar<T> {
-    if (!optimize("scalarSum")) {
-      return terms.reduce((acc, f) => this.scalarOp("+", acc, f), 0);
-    }
-    let num = 0;
-    const sym: T[] = [];
-    for (const term of terms) {
-      if (typeof term === "number") {
-        num += term;
-      } else {
-        sym.push(term);
-      }
-    }
-    const simplified: Scalar<T>[] =
-      num !== 0 || sym.length === 0 ? [...sym, num] : sym;
-    return simplified.reduce((acc, t) => this.scalarOp("+", acc, t));
-  }
-
   flipIf(condition: truth, value: Scalar<T>): Scalar<T> {
     return condition ? this.scalarOp("unaryMinus", value) : value;
   }
@@ -889,15 +872,22 @@ export class Algebra<T> {
     }
 
     // Pre-compute matrix entries:
-    cache.forEach(cache1 => {
-      cache1.forEach(cache2 => {
-        cache2.entry = this.scalarSum(
-          ...[...Object.values(cache2.children)].map(({count, term}) => 
-            // TODO Construct an example where the laziness of term avoids
-            // generating some superfluous code.  (Or remove the laziness.)
-            count && this.times(count, term())
-          )
-        );
+    cache.forEach((cache1, iBitmap) => {
+      cache1.forEach((cache2, lirBitmap) => {
+        const from = this.bitmapToString[iBitmap];
+        const to   = this.bitmapToString[lirBitmap];
+        const entry = this.makeScalar(`matrix_${from}_${to}`, add => {
+          for (const {count, term} of Object.values(cache2.children)) {
+            if (!optimize("sandwichCancel1") || count != 0) {
+              // TODO Construct an example where the laziness of term avoids
+              // generating some superfluous code.  (Or remove the laziness.)
+              add(this.times(count, term()));
+            }
+          }
+        });
+        if (!optimize("sandwichCancel2") || entry !== 0) {
+          cache2.entry = entry;
+        }
       });
     });
 
