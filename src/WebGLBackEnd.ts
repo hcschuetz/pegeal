@@ -1,6 +1,6 @@
 import { Scalar, BackEnd, BEVariable } from "./Algebra";
 
-function formatFactor(f: Scalar<string>): string {
+function formatScalar(f: Scalar<string>): string {
   switch (typeof f) {
     case "number": {
       const s = f.toString();
@@ -19,11 +19,11 @@ class WebGLVar implements BEVariable<string> {
   ) {}
 
   add(val: Scalar<string>) {
-    const expr = formatFactor(val);
+    const term = formatScalar(val);
     this.be.emit(
       !this.#created
-      ? `float ${this.name}  = ${expr};`
-      : `      ${this.name} += ${expr};`,
+      ? `float ${this.name}  = ${term};`
+      : `      ${this.name} += ${term};`,
     );
     this.#created = true;
   }
@@ -47,13 +47,13 @@ export default class WebGLBackEnd implements BackEnd<string> {
     let varName: string
     if (name === "unaryMinus") {
       varName = `minus_${this.count++}`;
-      this.emit(`float ${varName} = -(${formatFactor(args[0])});`);
+      this.emit(`float ${varName} = -(${formatScalar(args[0])});`);
     } else if (Object.hasOwn(binopLongName, name)) {
       varName = `${binopLongName[name]}_${this.count++}`;
-      this.emit(`float ${varName} = ${formatFactor(args[0])} ${name} ${formatFactor(args[1])};`);
+      this.emit(`float ${varName} = ${formatScalar(args[0])} ${name} ${formatScalar(args[1])};`);
     } else {
       varName = `${name}_${this.count++}`;
-      this.emit(`float ${varName} = ${name}(${args.map(formatFactor).join(", ")});`);
+      this.emit(`float ${varName} = ${name}(${args.map(formatScalar).join(", ")});`);
     }
     return varName;
   }

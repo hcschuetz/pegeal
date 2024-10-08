@@ -13,8 +13,8 @@ class WASMVar implements BEVariable<LocalRef> {
   #localRef?: LocalRef;
 
   add(val: Scalar<LocalRef>) {
-    const {mod, body, convertFactor} = this.be;
-    const expr = convertFactor(val);
+    const {mod, body, convertScalar} = this.be;
+    const expr = convertScalar(val);
     if (!this.#localRef) {
       this.#localRef = this.be.newLocal();
       body.push(mod.local.set(this.#localRef.locNum, expr));
@@ -53,10 +53,10 @@ export default class WASMBackEnd implements BackEnd<LocalRef> {
   }
 
   /**
-   * `convertFactor` is a bound function so that it can be used as
-   * `[...].map(this.convertFactor)`
+   * `convertScalar` is a bound function so that it can be used as
+   * `[...].map(this.convertScalar)`
    */
-  convertFactor = (f: Scalar<LocalRef>): B.ExpressionRef => {
+  convertScalar = (f: Scalar<LocalRef>): B.ExpressionRef => {
     switch (typeof f) {
       case "number": return this.mod.f64.const(f);
       case "object": return this.mod.local.get(f.locNum, B.f64);
@@ -64,14 +64,14 @@ export default class WASMBackEnd implements BackEnd<LocalRef> {
   }
 
   scalarOp(name: string, ...args: Scalar<LocalRef>[]) {
-    const {mod, convertFactor} = this;
+    const {mod, convertScalar} = this;
     const localVar = this.newLocal();
     this.body.push(
       mod.local.set(localVar.locNum,
-        name === "unaryMinus" ? mod.f64.neg(convertFactor(args[0])) :
+        name === "unaryMinus" ? mod.f64.neg(convertScalar(args[0])) :
         Object.hasOwn(binopName, name)
-        ? mod.f64[binopName[name]](convertFactor(args[0]), convertFactor(args[1]))
-        : mod.call(name, args.map(convertFactor), B.f64)
+        ? mod.f64[binopName[name]](convertScalar(args[0]), convertScalar(args[1]))
+        : mod.call(name, args.map(convertScalar), B.f64)
       )
     );
     return localVar;

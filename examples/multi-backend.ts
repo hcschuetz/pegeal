@@ -73,7 +73,7 @@ function slerpTest<T>(
 
   be.body.push(
     mod.return(mod.tuple.make(
-      [...result].map(([,val]) => be.convertFactor(val))
+      [...result].map(([,val]) => be.convertScalar(val))
     ))
   );
   

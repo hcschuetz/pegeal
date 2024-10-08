@@ -37,7 +37,7 @@ const results = inputs.map(inp => alg.scale(invNorm, sandwich_gh(inp)));
 // TODO make use of the bitmaps in result
 be.body.push(
   mod.return(mod.tuple.make(
-    results.flatMap(res => [...res].map(([,val]) => be.convertFactor(val)))
+    results.flatMap(res => [...res].map(([,val]) => be.convertScalar(val)))
   ))
 );
 
