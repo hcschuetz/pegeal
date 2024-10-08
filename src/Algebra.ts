@@ -310,6 +310,15 @@ export class Algebra<T> {
     return new Variable(() => this.be.makeVar(nameHint));
   }
 
+  /** Create a scalar with an initialization function similar to a `Multivector` */
+  makeScalar(name: string, init: (add: (value: Scalar<T>) => void) => void) {
+    this.be.comment?.(name);
+    const variable = this.makeVariable(name);
+    init(value => variable.add(value));
+    variable.freeze();
+    return variable.value();
+  }
+
   /** Return the metric factor for squaring a basis blade. */
   metricFactors(bm: number): Scalar<T> {
     return this.times(...bitList(bm).map(i => this.metric[i]));
@@ -454,14 +463,11 @@ export class Algebra<T> {
     // TODO If the entire multivector and the relevant metric factors
     // are given as numbers, precalculate the result.
 
-    this.be.comment?.("normSquared");
-    const variable = this.makeVariable("normSquared");
-    for (const [bitmap, value] of mv) {
-      const mf = this.metricFactors(bitmap);
-      variable.add(this.times(mf, value, value));
-    }
-    variable.freeze();
-    return variable.value();
+    return this.makeScalar("normSquared", add => {
+      for (const [bitmap, value] of mv) {
+        add(this.times(this.metricFactors(bitmap), value, value));
+      }
+    });
   }
 
   /**
@@ -645,16 +651,14 @@ export class Algebra<T> {
   scalarProduct(a: Multivector<T>, b: Multivector<T>): Scalar<T> {
     this.checkMine(a);
     this.checkMine(b);
-    this.be.comment?.("scalar product");
-    const variable = this.makeVariable("scalarProd");
-    for (const [bitmap, valA] of a) {
-      const valB = b.value(bitmap);
-      const mf = this.metricFactors(bitmap);
-      // Notice that reverseFlips(bitmap) === productFlips(bitmap, bitmap) & 1:
-      variable.add(this.flipIf(reverseFlips(bitmap), this.times(mf, valA, valB)));
-    }
-    variable.freeze();
-    return variable.value();
+    return this.makeScalar("scalarProd", add => {
+      for (const [bitmap, valA] of a) {
+        const valB = b.value(bitmap);
+        const mf = this.metricFactors(bitmap);
+        // Notice that reverseFlips(bitmap) === productFlips(bitmap, bitmap) & 1:
+        add(this.flipIf(reverseFlips(bitmap), this.times(mf, valA, valB)));
+      }
+    });
   }
 
   /**
