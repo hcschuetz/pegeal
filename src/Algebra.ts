@@ -142,9 +142,9 @@ export class Multivector<T> implements Iterable<[number, Scalar<T>]> {
       // (if that optimization is enabled).
       if (optimize("skipZeroAdd") && value === 0) return;
 
-      (this.#components[bm] ??= alg.makeVariable(
-        this.name + "_" + alg.bitmapToString[bm],
-      )).add(value);
+      (this.#components[bm] ??=
+        alg.makeVariable(this.name + "_" + alg.bitmapToString[bm])
+      ).add(value);
     });
     this.#components.forEach(variable => variable.freeze());
   }
