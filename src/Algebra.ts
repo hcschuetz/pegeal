@@ -7,6 +7,7 @@ type Optimization =
 | "evalNumbers"
 | "lazy"
 | "plusSingle"
+| "regressiveDirect"
 | "sandwich_lr_iMetric0"
 | "sandwich_lrMetric0"
 | "sandwichCancel1"
@@ -33,6 +34,7 @@ const optimizations: Partial<Record<Optimization, boolean>> = {
   // evalNumbers: false,
   // lazy: false,
   // plusSingle: false,
+  // regressiveDirect: false,
   // sandwich_lr_iMetric0: false,
   // sandwich_lrMetric0: false,
   // sandwichCancel1: false,
@@ -250,7 +252,7 @@ export function bitCount(bitmap: number) {
  * Instances of this function type should have a name that is suitable as an
  * identifier.
  */
-type ProdInclusionTest = (bmA: number, bmB: number) => boolean;
+type ProdInclusionTest = (bmA: number, bmB: number) => truth;
 
 // For each product kind a test whether the product of two basis blades
 // (represented as bitmaps) should be included in the product.
@@ -350,9 +352,13 @@ export class Algebra<T> {
   one(): Multivector<T> {
     return new Multivector(this, "one", add => add(0, 1)).markAsUnit();
   }
+  /** `this.wedgeProduct(...this.basisVectors())` */
   pseudoScalar(): Multivector<T> {
     return new Multivector(this, "ps", add => add(this.fullBitmap, 1))
-      .markAsUnit(this.metric.every(v => v === 1));
+      .markAsUnit(
+        !(this.metric.length & 2) // !reverseFlips(this.fullBitmap)
+        && this.metric.every(v => v === 1)
+      );
   }
   pseudoScalarInv(): Multivector<T> {
     return this.inverse(this.pseudoScalar());
@@ -451,6 +457,11 @@ export class Algebra<T> {
 
   dual(mv: Multivector<T>): Multivector<T> {
     return this.contractLeft(mv, this.pseudoScalarInv());
+    // TODO Implement directly?
+  }
+
+  undual(mv: Multivector<T>): Multivector<T> {
+    return this.contractLeft(mv, this.pseudoScalar());
     // TODO Implement directly?
   }
 
@@ -666,6 +677,40 @@ export class Algebra<T> {
         add(this.flipIf(reverseFlips(bitmap), this.times(mf, valA, valB)));
       }
     });
+  }
+
+  // The regressive product does not fully fit into the pattern of
+  // `this.product2(...)`.  We could generalize `product2`, but the extra
+  // complexity needed there appears not to be worthwhile.  So we have a
+  // specialized implementation here:
+  protected regressiveProduct2(a: Multivector<T>, b: Multivector<T>): Multivector<T> {
+    this.checkMine(a);
+    this.checkMine(b);
+    const {fullBitmap} = this;
+    return new Multivector(this, "regrProd", add => {
+      for (const [bmA, valA] of a) {
+        const bmACompl = fullBitmap ^ bmA;
+        for (const [bmB, valB] of b) {
+          const bmBCompl = fullBitmap ^ bmB;
+          if (!(bmACompl & bmBCompl)) {
+            // The regressive product is non-metric (like the wedge product).
+            // So we need no metric factors.
+            const flip = productFlips(bmACompl, bmBCompl) & 1;
+            add(bmA & bmB, this.flipIf(flip, this.times(valA, valB)));
+          }
+        }
+      }
+    });
+    // TODO under which conditions is the result a known unit?
+  }
+
+  regressiveProduct(...mvs: Multivector<T>[]): Multivector<T> {
+    if (!optimize("regressiveDirect")) {
+      return this.undual(this.wedgeProduct(...mvs.map(mv => this.dual(mv))));
+    }
+    return mvs.length === 0
+      ? new Multivector(this, "regr1", add => add(this.fullBitmap, 1)).markAsUnit()
+      : mvs.reduce((acc, mv) => this.regressiveProduct2(acc, mv));
   }
 
   /**

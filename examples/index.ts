@@ -7,6 +7,7 @@ for (const file of [
   "determinants",
   "sandwich",
   "homogeneous",
+  "regressive-product",
 
   "numbered-coords",
   "wasm",

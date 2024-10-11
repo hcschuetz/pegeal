@@ -19,34 +19,36 @@ export function forAlgebras(fn: (algebra: Algebra<never>) => void) {
 }
 
 
-export type MVFactory = (alg: Algebra<never>) => {
-  a: Multivector<never>;
-  b: Multivector<never>;
-};
+export type MVFactory = (alg: Algebra<never>) => ([
+  Multivector<never>,
+  Multivector<never>,
+  Multivector<never>,
+]);
 
-export const makeTwoVectors = (alg: Algebra<never>) => ({
-  a: alg.mv("a", {x: 0.7, y: 0.8, z: 0.9}),
-  b: alg.mv("b", {x: -0.4, y: 0.5, z: 0.2}),
-});
+export const makeVectors: MVFactory = alg => ([
+  alg.mv("a", {x: 0.7, y: 0.8, z: 0.9}),
+  alg.mv("b", {x: -0.4, y: 0.5, z: 0.2}),
+  alg.mv("c", {x: 0.3, y: 0.4, z: -0.5}),
+]);
 
-export const makeTwoVersors = (alg: Algebra<never>) => ({
-  a: alg.geometricProduct(alg.mv("a1", {x: .3, y: 2}), alg.mv("a2", {x: .9, y: -1})),
-  b: alg.geometricProduct(alg.mv("b1", {x: .8, y: 1.1}), alg.mv("b2", {x: -.5, y: .4})),
-});
+export const makeVersors: MVFactory = alg => ([
+  alg.geometricProduct(alg.mv("a1", {x: .3, y: 2}), alg.mv("a2", {x: .9, y: -1})),
+  alg.geometricProduct(alg.mv("b1", {x: .8, y: 1.1}), alg.mv("b2", {x: -.5, y: .4})),
+  alg.geometricProduct(alg.mv("c1", {x: .5, y: 5}), alg.mv("c2", {x: .4, y: .3})),
+]);
 
 const dataFactories: [string, MVFactory][] = [
-  ["1-vectors", makeTwoVectors],
-  ["versors"  , makeTwoVersors ],
+  ["1-vectors", makeVectors],
+  ["versors"  , makeVersors],
 ];
 
 /** Run the function in a test body with all our data factories. */
 export function forData(
   alg: Algebra<never>,
-  fn: (a: Multivector<never>, b: Multivector<never>) => void,
+  fn: (a: Multivector<never>, b: Multivector<never>, c: Multivector<never>) => void,
 ) {
   for (const [name, mvFactory] of dataFactories) {
-    const {a, b} = mvFactory(alg);
-    test(name, () => fn(a, b));
+    test(name, () => fn(...mvFactory(alg)));
   }
 }
 

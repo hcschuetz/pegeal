@@ -1,8 +1,11 @@
 import { expect, suite, test } from "vitest";
-import { expectNearby, forAlgebras, forData, makeTwoVectors } from "./test-utils";
+import { expectNearby, forAlgebras, forData, makeVectors } from "./test-utils";
+import { Multivector, productFlips, reverseFlips } from "./Algebra";
 
 
-suite("geometric product - dummy back end", () => {
+// TODO test geometric and wedge product with 0/1/3 arguments
+
+suite("geometric product - numeric back end", () => {
   suite("preserves unitness", () => {
     forAlgebras(alg => {
       forData(alg, (a, b) => {
@@ -30,12 +33,12 @@ suite("geometric product - dummy back end", () => {
   });
 });
 
-suite("product relationships - dummy back end", () => {
+suite("product relationships - numeric back end", () => {
   suite("geom/wedge/scalar", () => {
     forAlgebras(alg => {
       // This test is tailored to 1-vectors and will not work with other data:
       test("1-vectors", () => {
-        const {a, b} = makeTwoVectors(alg);
+        const [a, b] = makeVectors(alg);
 
         expectNearby(
           alg.extractGrade(2, alg.geometricProduct(a, b)),
@@ -93,10 +96,11 @@ suite("product relationships - dummy back end", () => {
 
   suite("inverse and geometric product", () => {
     forAlgebras(alg => {
-      forData(alg, (a, b) => {
+      forData(alg, (a, b, c) => {
         for (const mv of [
           a,
           b,
+          c,
           // some more test data:
           alg.one(),
           ...alg.basisVectors(),
@@ -134,6 +138,109 @@ suite("product relationships - dummy back end", () => {
           alg.outermorphism(matrix, alg.wedgeProduct(a, b)),
         );
       });
+    });
+  });
+
+  suite("regressive and wedge product, dualization", () => {
+    forAlgebras(alg => {
+      forData(alg, (a, b, c) => {
+        if (alg.normSquared(alg.pseudoScalar()) !== 0) {
+          expectNearby(
+            alg.regressiveProduct(),
+            alg.undual(alg.wedgeProduct()),
+          );
+          expectNearby(
+            alg.regressiveProduct(a),
+            alg.undual(alg.wedgeProduct(alg.dual(a))),
+          );
+          expectNearby(
+            alg.regressiveProduct(a, b),
+            alg.undual(alg.wedgeProduct(alg.dual(a), alg.dual(b))),
+          );
+          expectNearby(
+            alg.regressiveProduct(a, b, c),
+            alg.undual(alg.wedgeProduct(alg.dual(a), alg.dual(b), alg.dual(c))),
+          );
+        }
+
+        // If the pseudoscalar squares to 0 we cannot use `alg.dual(...)`, but
+        // the regressive product works in that case as well since it is
+        // actually non-metric.  So we can use a duality based on any metric.
+        // The most straight-forward choice is the Euclidean metric.
+        // (See also [DFM09], p. 135, last paragraph, where the same idea is
+        // explained for the `meet` operation, which is closely related to the
+        // regressive product.)
+        expectNearby(
+          alg.regressiveProduct(),
+          euclideanUndual(alg.wedgeProduct()),
+        );
+        expectNearby(
+          alg.regressiveProduct(a),
+          euclideanUndual(alg.wedgeProduct(euclideanDual(a))),
+        );
+        expectNearby(
+          alg.regressiveProduct(a, b),
+          euclideanUndual(alg.wedgeProduct(euclideanDual(a), euclideanDual(b))),
+        );
+        expectNearby(
+          alg.regressiveProduct(a, b, c),
+          euclideanUndual(alg.wedgeProduct(euclideanDual(a), euclideanDual(b), euclideanDual(c))),
+        );
+    });
+    });
+  });
+});
+
+// TODO move these to the Algebra class?
+function euclideanDual<T>(mv: Multivector<T>) {
+  const {alg} = mv;
+  const {fullBitmap} = alg;
+  return new Multivector(alg, "dual", add => {
+    for (const [bm, val] of mv) {
+      const flips = productFlips(fullBitmap ^ bm, fullBitmap);
+      add(bm ^ fullBitmap, alg.flipIf(flips & 1, val));
+    }
+  });
+}
+function euclideanUndual<T>(mv: Multivector<T>) {
+  // TODO negate only for certain values of mv.alg.nDimensions?
+  // (Perhaps only for 2, 3, 6, 7, 10, 11, ...?)
+  // We should actually run this entire test file with several algebra
+  // dimensionalities.
+  return mv.alg.negate(euclideanDual(mv));
+}
+
+suite("dual", () => {
+  forAlgebras(alg => {
+    // Cannot compute a dual if the pseudoscalar is not invertible.
+    if (alg.normSquared(alg.pseudoScalar()) !== 0) {
+      suite("metric dual", () => {
+        forData(alg, (a, b, c) => {
+          for (const x of [a, b, c, alg.one(), alg.pseudoScalar(), ...alg.basisVectors()]) {
+            expectNearby(alg.undual(alg.dual(x)), x);
+            expectNearby(alg.dual(alg.undual(x)), x);
+          }
+        });
+      });
+    }
+    suite("euclidean dual", () => {
+      forData(alg, (a, b, c) => {
+        for (const x of [a, b, c, alg.plus(alg.geometricProduct(a, b), c)]) {
+          expectNearby(euclideanUndual(euclideanDual(x)), x);
+          expectNearby(euclideanDual(euclideanUndual(x)), x);
+        }
+      });
+    });
+  });
+});
+
+suite("pseudoscalar", () => {
+  forAlgebras(alg => {
+    test("should be equal to product of basis vectors", () => {
+      expectNearby(
+        alg.pseudoScalar(),
+        alg.wedgeProduct(...alg.basisVectors()),
+      );
     });
   });
 });

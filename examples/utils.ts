@@ -21,7 +21,14 @@ export const q_ = (
       write(label + " = " + x.toFixed(8).replace(/\.?0*$/, ""));
       return;
     default:
-      write(label + " =" + (x.knownUnit ? " [unit]" : ""));
+      write(
+        label + " ="
+        + (x.knownUnit ? " [unit]" : "")
+        + ([...x].every(([, x]) => x === 0) ? " [zero]" :
+           [...x].every(([, x]) => typeof x === "number" && Math.abs(x) < 1e-8) ? " [~zero]" :
+           ""
+          )
+      );
       for (const [bm, val] of x) {
         write(`  ${
           coords.split("").map((c, i) => (1 << i) & bm ? c : "_").join("")
