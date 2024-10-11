@@ -20,7 +20,7 @@ for (const file of [
 ]) {
   console.log(`
 ================================================================================`);
-  console.log(file);
+  console.log(`examples/${file}.ts`);
   console.log();
   await import("./" + file);
 }
