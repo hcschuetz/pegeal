@@ -722,8 +722,7 @@ export class Algebra<T> {
   euclideanUndual(mv: Multivector<T>) {
     // TODO negate only for certain values of mv.alg.nDimensions?
     // (Perhaps only for 2, 3, 6, 7, 10, 11, ...?)
-    // We should actually run this entire test file with several algebra
-    // dimensionalities.
+    // We should actually run tests with several algebra dimensionalities.
     return this.negate(this.euclideanDual(mv));
   }
 
