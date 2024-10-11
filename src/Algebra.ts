@@ -8,6 +8,7 @@ type Optimization =
 | "lazy"
 | "plusSingle"
 | "regressiveDirect"
+| "regressiveEuclidean"
 | "sandwich_lr_iMetric0"
 | "sandwich_lrMetric0"
 | "sandwichCancel1"
@@ -35,6 +36,7 @@ const optimizations: Partial<Record<Optimization, boolean>> = {
   // lazy: false,
   // plusSingle: false,
   // regressiveDirect: false,
+  // regressiveEuclidean: false,
   // sandwich_lr_iMetric0: false,
   // sandwich_lrMetric0: false,
   // sandwichCancel1: false,
@@ -704,13 +706,46 @@ export class Algebra<T> {
     // TODO under which conditions is the result a known unit?
   }
 
+  /** like `.dual(mv)`, but pretending a Euclidean metric. */
+  euclideanDual(mv: Multivector<T>) {
+    this.checkMine(mv);
+    const {fullBitmap} = this;
+    return new Multivector(this, "dual", add => {
+      for (const [bm, val] of mv) {
+        const flips = productFlips(bm ^ fullBitmap, fullBitmap);
+        add(bm ^ fullBitmap, this.flipIf(flips & 1, val));
+      }
+    });
+  }
+
+  /** like `.undual(mv)`, but pretending a Euclidean metric. */
+  euclideanUndual(mv: Multivector<T>) {
+    // TODO negate only for certain values of mv.alg.nDimensions?
+    // (Perhaps only for 2, 3, 6, 7, 10, 11, ...?)
+    // We should actually run this entire test file with several algebra
+    // dimensionalities.
+    return this.negate(this.euclideanDual(mv));
+  }
+
   regressiveProduct(...mvs: Multivector<T>[]): Multivector<T> {
-    if (!optimize("regressiveDirect")) {
+    if (optimize("regressiveDirect")) {
+      return mvs.length === 0
+        ? this.pseudoScalar()
+        : mvs.reduce((acc, mv) => this.regressiveProduct2(acc, mv));
+    } else if (optimize("regressiveEuclidean")) {
+      // If the pseudoscalar squares to 0 we cannot use `alg.dual(...)`, but
+      // the regressive product works in that case as well since it is
+      // actually non-metric.  So we can use a duality based on any metric.
+      // The most straight-forward choice is the Euclidean metric.
+      // (See also [DFM09], p. 135, last paragraph, where the same idea is
+      // explained for the `meet` operation, which is closely related to the
+      // regressive product.)
+      return this.euclideanUndual(this.wedgeProduct(
+        ...mvs.map(mv => this.euclideanDual(mv))
+      ));
+    } else {
       return this.undual(this.wedgeProduct(...mvs.map(mv => this.dual(mv))));
     }
-    return mvs.length === 0
-      ? new Multivector(this, "regr1", add => add(this.fullBitmap, 1)).markAsUnit()
-      : mvs.reduce((acc, mv) => this.regressiveProduct2(acc, mv));
   }
 
   /**

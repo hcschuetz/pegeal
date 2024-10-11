@@ -162,53 +162,26 @@ suite("product relationships - numeric back end", () => {
             alg.undual(alg.wedgeProduct(alg.dual(a), alg.dual(b), alg.dual(c))),
           );
         }
-
-        // If the pseudoscalar squares to 0 we cannot use `alg.dual(...)`, but
-        // the regressive product works in that case as well since it is
-        // actually non-metric.  So we can use a duality based on any metric.
-        // The most straight-forward choice is the Euclidean metric.
-        // (See also [DFM09], p. 135, last paragraph, where the same idea is
-        // explained for the `meet` operation, which is closely related to the
-        // regressive product.)
         expectNearby(
           alg.regressiveProduct(),
-          euclideanUndual(alg.wedgeProduct()),
+          alg.euclideanUndual(alg.wedgeProduct()),
         );
         expectNearby(
           alg.regressiveProduct(a),
-          euclideanUndual(alg.wedgeProduct(euclideanDual(a))),
+          alg.euclideanUndual(alg.wedgeProduct(alg.euclideanDual(a))),
         );
         expectNearby(
           alg.regressiveProduct(a, b),
-          euclideanUndual(alg.wedgeProduct(euclideanDual(a), euclideanDual(b))),
+          alg.euclideanUndual(alg.wedgeProduct(alg.euclideanDual(a), alg.euclideanDual(b))),
         );
         expectNearby(
           alg.regressiveProduct(a, b, c),
-          euclideanUndual(alg.wedgeProduct(euclideanDual(a), euclideanDual(b), euclideanDual(c))),
+          alg.euclideanUndual(alg.wedgeProduct(alg.euclideanDual(a), alg.euclideanDual(b), alg.euclideanDual(c))),
         );
     });
     });
   });
 });
-
-// TODO move these to the Algebra class?
-function euclideanDual<T>(mv: Multivector<T>) {
-  const {alg} = mv;
-  const {fullBitmap} = alg;
-  return new Multivector(alg, "dual", add => {
-    for (const [bm, val] of mv) {
-      const flips = productFlips(fullBitmap ^ bm, fullBitmap);
-      add(bm ^ fullBitmap, alg.flipIf(flips & 1, val));
-    }
-  });
-}
-function euclideanUndual<T>(mv: Multivector<T>) {
-  // TODO negate only for certain values of mv.alg.nDimensions?
-  // (Perhaps only for 2, 3, 6, 7, 10, 11, ...?)
-  // We should actually run this entire test file with several algebra
-  // dimensionalities.
-  return mv.alg.negate(euclideanDual(mv));
-}
 
 suite("dual", () => {
   forAlgebras(alg => {
@@ -226,8 +199,8 @@ suite("dual", () => {
     suite("euclidean dual", () => {
       forData(alg, (a, b, c) => {
         for (const x of [a, b, c, alg.plus(alg.geometricProduct(a, b), c)]) {
-          expectNearby(euclideanUndual(euclideanDual(x)), x);
-          expectNearby(euclideanDual(euclideanUndual(x)), x);
+          expectNearby(alg.euclideanUndual(alg.euclideanDual(x)), x);
+          expectNearby(alg.euclideanDual(alg.euclideanUndual(x)), x);
         }
       });
     });
