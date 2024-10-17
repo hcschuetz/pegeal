@@ -8,6 +8,7 @@ for (const file of [
   "sandwich",
   "homogeneous",
   "regressive-product",
+  "conformal",
 
   "numbered-coords",
   "wasm",

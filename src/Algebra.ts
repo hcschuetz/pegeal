@@ -67,7 +67,7 @@ export const optimize = (opt: Optimization): boolean =>
  */
 export type truth = unknown;
 
-function fail(msg: string): never { throw new Error(msg); };
+export function fail(msg: string): never { throw new Error(msg); };
 
 export type Scalar<T> = number | T;
 
@@ -136,12 +136,14 @@ export class Multivector<T> implements Iterable<[number, Scalar<T>]> {
     readonly alg: Algebra<T>,
     nameHint: string,
     initialize: (
-      add: (bm: number, term: Scalar<T>) => unknown,
+      add: (key: number | string, term: Scalar<T>) => unknown,
     ) => unknown,
   ) {
     this.name = `${nameHint}_${alphabetic(alg.mvCount++)}`;
     alg.be.comment?.(`${this.name}`);
-    initialize((bm, value) => {
+    initialize((key, value) => {
+      const bm = typeof key === "number" ? key : alg.stringToBitmap[key];
+
       // This optimization is not really needed.
       // Without it a Variable<T> might be created unnecessarily,
       // but still without a backing target-language variable
@@ -155,7 +157,10 @@ export class Multivector<T> implements Iterable<[number, Scalar<T>]> {
     this.#components.forEach(variable => variable.freeze());
   }
 
-  value(bm: number): Scalar<T> { return this.#components[bm]?.value() ?? 0; }
+  value(key: number | string): Scalar<T> {
+    const bm = typeof key === "number" ? key : this.alg.stringToBitmap[key];
+    return this.#components[bm]?.value() ?? 0;
+  }
 
   *[Symbol.iterator](): Iterator<[number, Scalar<T>]> {
     for (const [bitmap, variable] of this.#components.entries()) {
@@ -207,10 +212,11 @@ export class Multivector<T> implements Iterable<[number, Scalar<T>]> {
 
   toString() {
     return `${this.name} ${this.knownUnit ? "[unit] " : ""}{${
-      this.#components
-      .map((variable, bm) => `${this.alg.bitmapToString[bm]}: ${variable.value()}`)
-      .filter(val => val)
-      .join(", ")
+      this.#components.flatMap((variable, bm) => {
+        const key = this.alg.bitmapToString[bm];
+        const value = variable.value();
+        return value === 0 ? [] : [`${key}: ${value}`];
+      }).join(", ")
     }}`;
   }
 }

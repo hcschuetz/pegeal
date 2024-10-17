@@ -30,7 +30,7 @@ const input = (mv: Multivector<never>) => algP.plus(ew, algP.outermorphism(Id3, 
 
 /** Convert a (3+1)D projective vector to a 3D vector */
 const output = (mv: Multivector<never>) =>
-  algE.outermorphism(Id3, algP.scale(algP.scalarOp("/", 1, mv.value(algP.stringToBitmap.w)), mv));
+  algE.outermorphism(Id3, algP.scale(algP.scalarOp("/", 1, mv.value("w")), mv));
 
 
 const A1E = algE.mv("A1", {x: 3, y: 1, z: 5});

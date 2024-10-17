@@ -5,12 +5,14 @@ export const deg = (x: number, p?: number) => `${(x * (360 / TAU)).toFixed(p)}°
 
 export const p = console.log;
 
+type Loggable<T> = Multivector<T> | number | string | undefined;
+
 export const q_ = (
   coords: string,
   write: (text: string) => void = console.log,
 ) => <T>(
   label: string,
-  x: Multivector<T> | number | string | undefined,
+  x: Loggable<T>,
 ) => {
   switch (typeof x) {
     case "undefined":
@@ -40,3 +42,26 @@ export const q_ = (
       }
     }
 }
+
+export const log_ = (
+  coords: string,
+  write?: (text: string) => void,
+) => <T>(
+  obj: Record<string,  Loggable<T>>
+) => {
+  const q = q_(coords, write);
+  for (const [k, v] of Object.entries(obj)) {
+    q(k, v);
+  }
+};
+
+
+export const mapEntries = <K extends string, T, U>(
+  obj: Record<K, T>,
+  fn: (arg: T, name: K, o: typeof obj) => U,
+): Record<K, U> =>
+  // Type casts are needed since the declarations of Object.entries(...)
+  // and Object.fromEntries(...) do not preserve specialized key types.
+  Object.fromEntries(
+    Object.entries<T>(obj).map(([k, v]) => [k, fn(v, k as K, obj)])
+  ) as Record<K, U>;
