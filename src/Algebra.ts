@@ -893,27 +893,29 @@ export class Algebra<T> {
   }
 
   // TODO similar optimizations for other scalar operators/functions
-  times(...factors: Scalar<T>[]): Scalar<T> {
+  times(...args: Scalar<T>[]): Scalar<T> {
     if (!optimize("times")) {
-      return factors.reduce((acc, f) => this.scalarOp("*", acc, f), 1);
+      return args.reduce((acc, arg) => this.scalarOp("*", acc, arg), 1);
     }
     let num = 1;
     const sym: T[] = [];
-    for (const factor of factors) {
-      if (typeof factor === "number") {
+    for (const arg of args) {
+      if (typeof arg === "number") {
         // This is not absolutely correct.  If one operator is 0 and another one
         // is NaN or infinity, the unoptimized computation would not return 0.
         // (But we are in "fast-math mode". ;-)
-        if (factor === 0) return 0;
-        num *= factor;
+        if (arg === 0) return 0;
+        num *= arg;
       } else {
-        sym.push(factor);
+        sym.push(arg);
       }
     }
     const simplified: Scalar<T>[] =
       // TODO If num === -1, use unary minus?
       num !== 1 || sym.length === 0 ? [...sym, num] : sym;
-    return simplified.reduce((acc, f) => this.scalarOp("*", acc, f));
+    return simplified.reduce((acc, x) => this.scalarOp("*", acc, x));
+  }
+
   }
 
   flipIf(condition: truth, value: Scalar<T>): Scalar<T> {
