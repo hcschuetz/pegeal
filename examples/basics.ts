@@ -18,13 +18,13 @@ const I = alg.pseudoScalar();
 be.emit("\n// ---------------");
 const mv =
   true
-  ? alg.mv("foo", {
+  ? alg.mv({
       "1": "foo_scalar",
       x: "foo_x", y: "foo_y", z: "foo_z",
       xy: "foo_xy", xz: "foo_xz", yz: "foo_yx",
       xyz: "foo_xyz",
     })
-  : alg.mv("bar", {1: "S", x: "X", yz: "YZ", xyz: "PS"});
+  : alg.mv({1: "S", x: "X", yz: "YZ", xyz: "PS"});
 
 alg.gradeInvolution(mv);
 alg.reverse(mv);
@@ -38,7 +38,7 @@ const result =
     alg.wedgeProduct(ey, one),
     alg.wedgeProduct(
       alg.plus(alg.scale("2.0", ex), ex, ey, I, zero, alg.plus()),
-      alg.negate(alg.mv("myVec", {y: "1.0", x: "4.0", z: "3.0"})),
+      alg.negate(alg.mv({y: "1.0", x: "4.0", z: "3.0"})),
       alg.wedgeProduct(),
     )
   );
@@ -53,8 +53,8 @@ alg.contractLeft(ex, alg.contractLeft(ez, mv));
 const X = 1, Y = 2, Z = 4;
 be.emit(`\n// extracted: ${mv.value(X|Y)}`);
 
-const mv2 = alg.mv("mv2", {x: "3", z: "2"});
-const mv3 = alg.mv("mv3", {xy: "3", xz: "2", zw: "8"});
+const mv2 = alg.mv({x: "3", z: "2"});
+const mv3 = alg.mv({xy: "3", xz: "2", zw: "8"});
 
 be.emit(`\n// contractLeft`);
 alg.contractLeft(mv2, mv2);

@@ -19,7 +19,7 @@ function testOM<T>(
   const alg = new Algebra(euclidean(coords), be, makeLetterNames(coords));
   const alg2 = new Algebra(euclidean(coords2), be, makeLetterNames(coords2));
 
-  const mvIn = alg.mv("mvIn", dataIn);
+  const mvIn = alg.mv(dataIn);
   return alg2.outermorphism(matrix, mvIn);
 }
 

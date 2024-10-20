@@ -2,7 +2,7 @@ import { Algebra, Multivector } from "../src/Algebra";
 import { makeLetterNames } from "../src/componentNaming";
 import { euclidean } from "../src/euclidean";
 import NumericBackend from "../src/NumericBackEnd.js";
-import { p, q_ } from "./utils";
+import { mapEntries, p, q_ } from "./utils";
 
 
 // This example is not only about the regressive product,
@@ -32,12 +32,13 @@ const input = (mv: Multivector<never>) => algP.plus(ew, algP.outermorphism(Id3, 
 const output = (mv: Multivector<never>) =>
   algE.outermorphism(Id3, algP.scale(algP.scalarOp("/", 1, mv.value("w")), mv));
 
-
-const A1E = algE.mv("A1", {x: 3, y: 1, z: 5});
-const A2E = algE.mv("A2", {x: 2, y: 2, z: 5});
-const A3E = algE.mv("A3", {x: 2, y: 1, z: 4});
-const A4E = algE.mv("A4", {x: 2, y: 1, z: 5});
-const XE  = algE.mv("X" , {x: 4, y: 3, z: 4});
+const [A1E, A2E, A3E, A4E, XE] = Object.entries({
+  A1: [3, 1, 5],
+  A2: [2, 2, 5],
+  A3: [2, 1, 4],
+  A4: [2, 1, 5],
+  X : [4, 3, 4],
+}).map(([k, [x, y, z]]) => algE.mv({x, y, z}, {nameHint: k}));
 
 const [A1P, A2P, A3P, A4P, XP] = [A1E, A2E, A3E, A4E, XE].map(input);
 

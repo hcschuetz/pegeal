@@ -134,11 +134,12 @@ export class Multivector<T> implements Iterable<[number, Scalar<T>]> {
 
   constructor(
     readonly alg: Algebra<T>,
-    nameHint: string,
     initialize: (
       add: (key: number | string, term: Scalar<T>) => unknown,
     ) => unknown,
+    options?: {nameHint?: string},
   ) {
+    const {nameHint = "aux"} = options ?? {};
     this.name = `${nameHint}_${alphabetic(alg.mvCount++)}`;
     alg.be.comment?.(`${this.name}`);
     initialize((key, value) => {
@@ -344,25 +345,25 @@ export class Algebra<T> {
     return mv;
   }
 
-  mv(nameHint: string, obj: Record<string, Scalar<T>>) {
-    return new Multivector(this, nameHint, add => {
+  mv(obj: Record<string, Scalar<T>>, options?: {nameHint?: string}) {
+    return new Multivector(this, add => {
       for (const [key, val] of Object.entries(obj)) {
         const bm = this.stringToBitmap[key] ??
           fail(`unexpected key in mv data: ${key}`);
         add(bm, val);
       }
-    });
+    }, options);
   }
 
   zero(): Multivector<T> {
-    return new Multivector(this, "zero", () => {});
+    return new Multivector(this, () => {}, {nameHint: "zero"});
   };
   one(): Multivector<T> {
-    return new Multivector(this, "one", add => add(0, 1)).markAsUnit();
+    return new Multivector(this, add => add(0, 1), {nameHint: "#"}).markAsUnit();
   }
   /** `this.wedgeProduct(...this.basisVectors())` */
   pseudoScalar(): Multivector<T> {
-    return new Multivector(this, "ps", add => add(this.fullBitmap, 1))
+    return new Multivector(this, add => add(this.fullBitmap, 1), {nameHint: "ps"})
       .markAsUnit(
         !(this.metric.length & 2) // !reverseFlips(this.fullBitmap)
         && this.metric.every(v => v === 1)
@@ -376,15 +377,15 @@ export class Algebra<T> {
       const bitmap = 1 << i;
       return new Multivector(
         this,
-        "basis_" + this.bitmapToString[bitmap],
         add => add(bitmap, 1),
+        {nameHint: "basis_" + this.bitmapToString[bitmap]},
       ).markAsUnit(this.metric[i] === 1)
     });
   }
 
   outermorphism(matrix: (Scalar<T> | undefined)[][], mv: Multivector<T>): Multivector<T> {
     // See `../doc/Outermorphism.md` for explanations.
-    return new Multivector(this, "morph", add => {
+    return new Multivector(this, add => {
       // no `this.checkMine(mv)` here as `mv` may actually come from elsewhere
       for (const [bitmapIn, valueIn] of mv) {
         const recur = (
@@ -422,45 +423,45 @@ export class Algebra<T> {
 
         recur(0, 0, 0, () => valueIn);
       }
-    });
+    }, {nameHint: "morph"});
   }
 
   /** The scalar `alpha` should be given as a target-code expression. */
   scale(alpha: Scalar<T>, mv: Multivector<T>): Multivector<T> {
-    return new Multivector(this, "scale", add => {
+    return new Multivector(this, add => {
       if (!optimize("scale0") || alpha !== 0) {
         for (const [bitmap, value] of this.checkMine(mv)) {
           add(bitmap, this.times(alpha, value));
         }
       }
-    }).markAsUnit(
+    }, {nameHint: "scale"}).markAsUnit(
       mv.knownUnit &&
       (typeof alpha === "number" && Math.abs(alpha) === 1)
     );
   }
 
   negate(mv: Multivector<T>): Multivector<T> {
-    return new Multivector(this, "negate", add => {
+    return new Multivector(this, add => {
       for (const [bitmap, value] of this.checkMine(mv)) {
         add(bitmap, this.scalarOp("unaryMinus", value));
       }
-    }).markAsUnit(mv.knownUnit);
+    }, {nameHint: "negate"}).markAsUnit(mv.knownUnit);
   }
 
   gradeInvolution(mv: Multivector<T>): Multivector<T> {
-    return new Multivector(this, "gradeInvolution", add => {
+    return new Multivector(this, add => {
       for (const [bitmap, value] of this.checkMine(mv)) {
         add(bitmap, this.flipIf(gradeInvolutionFlips(bitmap), value));
       }
-    }).markAsUnit(mv.knownUnit);
+    }, {nameHint: "gradeInvolution"}).markAsUnit(mv.knownUnit);
   }
 
   reverse(mv: Multivector<T>): Multivector<T> {
-    return new Multivector(this, "reverse", add => {
+    return new Multivector(this, add => {
       for (const [bitmap, value] of this.checkMine(mv)) {
         add(bitmap, this.flipIf(reverseFlips(bitmap), value));
       }
-    }).markAsUnit(mv.knownUnit);
+    }, {nameHint: "reverse"}).markAsUnit(mv.knownUnit);
   }
 
   dual(mv: Multivector<T>): Multivector<T> {
@@ -546,7 +547,7 @@ export class Algebra<T> {
     if (optimize("unitInverse") && mv.knownUnit) return mv;
     // TODO provide nicer check for number of components
     if (optimize("singleInverse") && [...mv].length === 1) {
-      return new Multivector(this, "inverse", add => {
+      return new Multivector(this, add => {
         for (const [bm, val] of mv) {
           const mf = this.metricFactors(bm) ||
             fail(`trying to invert null vector ${mv}`);
@@ -555,7 +556,7 @@ export class Algebra<T> {
             this.scalarOp("/", reverseFlips(bm) ? -1 : +1, this.times(val, mf)),
           );
         }
-      });
+      }, {nameHint: "inverse"});
     }
     const norm2 = this.normSquared(mv) ||
       fail(`trying to invert null vector ${mv}`);
@@ -568,9 +569,9 @@ export class Algebra<T> {
 
     const se = this.singleEuclidean(mv);
     if (optimize("singleEuclideanNormalize") && se !== null) {
-      return new Multivector(this, "normSE", add => {
+      return new Multivector(this, add => {
         add(se, this.scalarOp("sign", mv.value(se)));
-      }).markAsUnit();
+      }, {nameHint: "normSE"}).markAsUnit();
     }
 
     const normSq = this.normSquared(mv) ||
@@ -589,13 +590,13 @@ export class Algebra<T> {
     test: (bm: number, value: Scalar<T>) => boolean,
     mv: Multivector<T>,
   ): Multivector<T> {
-    return new Multivector(this, "extract", add => {
+    return new Multivector(this, add => {
       for (const [bitmap, value] of this.checkMine(mv)) {
         if (test(bitmap, value)) {
           add(bitmap, value);
         }
       }
-    });
+    }, {nameHint: "extract"});
   }
 
   extractGrade(grade: number, mv: Multivector<T>): Multivector<T> {
@@ -606,13 +607,13 @@ export class Algebra<T> {
     if (optimize("plusSingle") && mvs.length === 1) {
       return this.checkMine(mvs[0]);
     }
-    return new Multivector(this, "plus", add => {
+    return new Multivector(this, add => {
       for (const mv of mvs) {
         for (const [bitmap, value] of this.checkMine(mv)) {
           add(bitmap, value);
         }
       }
-    });
+    }, {nameHint: "plus"});
   }
 
   /** The core functionality for all kinds of products */
@@ -620,7 +621,7 @@ export class Algebra<T> {
     this.checkMine(a);
     this.checkMine(b);
     let skipped = false;
-    return new Multivector(this, include.name + "Prod", add => {
+    return new Multivector(this, add => {
       for (const [bmA, valA] of a) {
         for (const [bmB, valB] of b) {
           if (include(bmA, bmB)) {
@@ -632,7 +633,8 @@ export class Algebra<T> {
           }
         }
       }
-    }).markAsUnit(!skipped && a.knownUnit && b.knownUnit);
+    }, {nameHint: include.name + "Prod"})
+    .markAsUnit(!skipped && a.knownUnit && b.knownUnit);
     // We do not  restrict "unitness propagation" to geometric products.
     // It suffices if the product happens to behave like a geometric product
     // for the given input vectors (i.e., no skipped component pairs).
@@ -641,7 +643,8 @@ export class Algebra<T> {
   /** Like `product2`, but for an arbitrary number of multivectors */
   product(include: ProdInclusionTest, mvs: Multivector<T>[]): Multivector<T> {
     return mvs.length === 0
-      ? new Multivector(this, include + "1", add => add(0, 1)).markAsUnit()
+      ? new Multivector(this, add => add(0, 1), {nameHint: include + "1"})
+        .markAsUnit()
       : mvs.reduce((acc, mv) => this.product2(include, acc, mv));
   }
 
@@ -695,7 +698,7 @@ export class Algebra<T> {
     this.checkMine(a);
     this.checkMine(b);
     const {fullBitmap} = this;
-    return new Multivector(this, "regrProd", add => {
+    return new Multivector(this, add => {
       for (const [bmA, valA] of a) {
         const bmACompl = fullBitmap ^ bmA;
         for (const [bmB, valB] of b) {
@@ -708,7 +711,7 @@ export class Algebra<T> {
           }
         }
       }
-    });
+    }, {nameHint: "regrProd"});
     // TODO under which conditions is the result a known unit?
   }
 
@@ -716,12 +719,12 @@ export class Algebra<T> {
   euclideanDual(mv: Multivector<T>) {
     this.checkMine(mv);
     const {fullBitmap} = this;
-    return new Multivector(this, "dual", add => {
+    return new Multivector(this, add => {
       for (const [bm, val] of mv) {
         const flips = productFlips(bm ^ fullBitmap, fullBitmap);
         add(bm ^ fullBitmap, this.flipIf(flips & 1, val));
       }
-    });
+    }, {nameHint: "dual"});
   }
 
   /** like `.undual(mv)`, but pretending a Euclidean metric. */
@@ -762,12 +765,12 @@ export class Algebra<T> {
     // Notice that [DFM09] p. 185 use A**2, which is -norm2 for a 2-blade.
     const norm2 = this.normSquared(A);
     if (norm2 === 0) {
-      return new Multivector(this, "expNull", add => {
+      return new Multivector(this, add => {
         add(0, 1);
         for (const [bitmap, value] of A) {
           add(bitmap, value);
         }
-      })
+      }, {nameHint: "expNull"})
       // TODO can we mark this as unit unconditionally?
       .markAsUnit([...A].every(([_, value]) => value === 0));
     } else {
@@ -776,12 +779,12 @@ export class Algebra<T> {
       const cos = this.scalarOp("cos", alpha);
       const sin = this.scalarOp("sin", alpha);
       const sinByAlpha = this.scalarOp("/", sin, alpha);
-      return new Multivector(this, "exp", add => {
+      return new Multivector(this, add => {
         add(0, cos);
         for (const [bitmap, value] of A) {
           add(bitmap, this.times(sinByAlpha, value));
         }
-      }).markAsUnit(); // this is even correct with a non-Euclidean metric
+      }, {nameHint: "exp"}).markAsUnit(); // this is even correct with a non-Euclidean metric
     }
   }
 
@@ -983,7 +986,7 @@ export class Algebra<T> {
 
     return (operand) => {
       this.checkMine(operand);
-      return new Multivector<T>(this, "sandwich", add => {
+      return new Multivector<T>(this, add => {
         // The remaining code is essentially a matrix/vector multiplication:
         for (const [iBitmap, iVal] of operand) {
           const cache1 = cache[iBitmap] ?? fail(
@@ -994,7 +997,7 @@ export class Algebra<T> {
             add(lirBitmap, this.times(cache2.entry, iVal));
           });
         }
-      }).markAsUnit(operator.knownUnit && operand.knownUnit);
+      }, {nameHint: "sandwich"}).markAsUnit(operator.knownUnit && operand.knownUnit);
     };
   }
 }

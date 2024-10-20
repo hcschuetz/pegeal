@@ -14,8 +14,8 @@ const sandwichReference = (p: Multivector<string>, q: Multivector<string>) =>
   alg.geometricProduct(alg.geometricProduct(p, q), alg.reverse(p));
 
 for (const create of [
-  () => [alg.mv("a", {x: "ax", y: "ay"}), alg.mv("b", {x: "bx", y: "by", z: "bz"})],
-  () => [alg.mv("a", {x: 1   , y: 1   }), alg.mv("b", {x: 1   , y: 1   , z: 1   })],
+  () => [alg.mv({x: "ax", y: "ay"}), alg.mv({x: "bx", y: "by", z: "bz"})],
+  () => [alg.mv({x: 1   , y: 1   }), alg.mv({x: 1   , y: 1   , z: 1   })],
 ]) {
   const [a, b] = create();
   be.emit(`// a: ${a}`);
@@ -26,7 +26,7 @@ for (const create of [
   be.emit(`// rotor: ${rotor}`);
   be.emit(`// rotor~: ${alg.reverse(rotor)}`);
   const sw_rotor = alg.sandwich(rotor, ["x", "y"]);
-  for (const c of [alg.mv("a", {x: "ax", y: "ay"}), alg.mv("a", {x: 1, y: 1})]) {
+  for (const c of [alg.mv({x: "ax", y: "ay"}), alg.mv({x: 1, y: 1})]) {
     be.emit(`// c: ${c}`);
     be.emit(`// sandwich: ${sw_rotor(c)}`);
     be.emit(`// sandwich1: ${sandwichReference(rotor, c)}`);
@@ -45,8 +45,8 @@ for (const create of [
 // Minimalistic example where the cancelling performed by `alg.sandwich(...)`
 // omits the zero-valued xyz component:
 for (const create of [
-  () => [alg.mv("a", {x: Math.SQRT1_2, y: Math.SQRT1_2}).markAsUnit(), alg.mv("b", {z: 1}).markAsUnit()],
-  () => [alg.mv("a", {x: "ax", y: "ay"}), alg.mv("b", {z: "bz"})],
+  () => [alg.mv({x: Math.SQRT1_2, y: Math.SQRT1_2}).markAsUnit(), alg.mv({z: 1}).markAsUnit()],
+  () => [alg.mv({x: "ax", y: "ay"}), alg.mv({z: "bz"})],
 ]) {
   let [a, b] = create();
   a = alg.normalize(a);

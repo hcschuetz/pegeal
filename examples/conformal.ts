@@ -24,7 +24,7 @@ const logR = log_(coordsR);
 
 /** Convert a base-space 1-vector to a representation-space 1-vector */
 function baseToRepr(mv: Multivector<never>) {
-  return new Multivector(algR, mv.name + "R", add => {
+  return new Multivector(algR, add => {
     for (const [bm, val] of mv) {
       if (bitCount(bm) === 1) {
         add(bm, val);
@@ -35,12 +35,12 @@ function baseToRepr(mv: Multivector<never>) {
     const i = 0.5 * algB.normSquared(mv);
     add("m", i + 0.5);
     add("p", i - 0.5);
-  });
+  }, {nameHint: mv.name + "R"});
 }
 
 /** Convert a representation-space 1-vector to a base-space 1-vector */
 function reprToBase(mv: Multivector<never>) {
-  const result = new Multivector(algB, mv.name + "B", add => {
+  const result = new Multivector(algB, add => {
     const o = (mv.value("m") - mv.value("p"));
     const scale = 1 / o;
     for (const [bm, val] of mv) {
@@ -52,11 +52,11 @@ function reprToBase(mv: Multivector<never>) {
         fail("reprToBase: not a 1-vector");
       } // else ignore almost-zero non-grade-1 component
     }
-  });
+  }, {nameHint: mv.name + "B"});
   return result;
 }
 
-const ei = algR.mv("ei", {m: 1, p: 1}); // infinity
+const ei = algR.mv({m: 1, p: 1}, {nameHint: "ei"}); // infinity
 const eo = baseToRepr(algB.zero());     // origin
 
 const normalizeBivector = (bv: Multivector<never>) =>
@@ -88,10 +88,10 @@ const relativePoints = {
 
 // With the values above line (a,b) and plane (c,d,e) intersect at the origin.
 // We move all the points to get a "more interesting" intersection point.
-const offsetB = algB.mv("offset", {x: 2, y: 5, z: -3});
+const offsetB = algB.mv({x: 2, y: 5, z: -3}, {nameHint: "offset"});
 
 const pointsB = mapEntries(relativePoints,
-  ([x, y, z], name) => algB.plus(offsetB, algB.mv(name, {x, y, z}))
+  ([x, y, z], key) => algB.plus(offsetB, algB.mv({x, y, z}, {nameHint: key}))
 );
 
 // line and plane intersect in a conformal point pair consisting of ei and

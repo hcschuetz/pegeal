@@ -3,8 +3,8 @@ import { expectNearby, forAlgebras } from "./test-utils";
 
 forAlgebras(alg => {
   test("rotor vs. slerp - dummy back end", () => {
-    const aNorm = alg.normalize(alg.mv("a", {x: 0.7, y: 0.8, z: 0.9}));
-    const bNorm = alg.normalize(alg.mv("b", {x: -0.4, y: 0.5, z: 0.2}));
+    const aNorm = alg.normalize(alg.mv({x: 0.7, y: 0.8, z: 0.9}));
+    const bNorm = alg.normalize(alg.mv({x: -0.4, y: 0.5, z: 0.2}));
     const nSteps = 7;
 
     const phi = alg.getAngle(aNorm, bNorm);

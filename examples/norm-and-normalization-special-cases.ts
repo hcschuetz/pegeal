@@ -24,7 +24,7 @@ const q = q_(coords, c);
 ] as Record<string, Scalar<string>>[]).forEach((data, i) => {
   c("");
   c("-----------");
-  const mv = alg.mv(`mv${i}`, data);
+  const mv = alg.mv(data);
   q("mv", mv)
   q(`norm`, alg.norm(mv));
   const normalized = alg.normalize(mv);

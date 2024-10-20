@@ -23,8 +23,8 @@ function slerpTest<T>(
 ) {
   const alg = new Algebra(metric, be, makeLetterNames(coords));
 
-  const v1 = alg.mv("v1", v1Components);
-  const v2 = alg.mv("v2", v2Components);
+  const v1 = alg.mv(v1Components);
+  const v2 = alg.mv(v2Components);
   const slerpArc = alg.slerp(v1, v2);
   return slerpArc(.3);
 }

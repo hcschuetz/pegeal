@@ -23,12 +23,12 @@ const param = be.paramsByHint;
 const coords = "xyzw";
 const alg = new Algebra([1,333,param.m_z,-1], be, makeLetterNames(coords));
 
-const g = alg.mv("g", {x: param.g_x, y: param.g_y, z: param.g_z});
-const h = alg.mv("h", {x: param.h_x, y: param.h_y, z: param.h_z});
+const g = alg.mv({x: param.g_x, y: param.g_y, z: param.g_z});
+const h = alg.mv({x: param.h_x, y: param.h_y, z: param.h_z});
 const gh = alg.geometricProduct(g, h);
 const inputs = [
-  // alg.mv("d", {x: 2.22, z: param.d_z, w: 4.44}),
-  alg.mv("e", {x: param.e_x, w: param.e_w}),
+  // alg.mv({x: 2.22, z: param.d_z, w: 4.44}),
+  alg.mv({x: param.e_x, w: param.e_w}),
 ];
 
 const sandwich_gh = alg.sandwich(gh, ["1", "x", "y", "z", "w"]);

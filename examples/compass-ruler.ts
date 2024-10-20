@@ -19,7 +19,7 @@ const logR = log_(coordsR);
 
 /** Convert a base-space 1-vector to a representation-space 1-vector */
 function b2r(mv: Multivector<never>) {
-  return new Multivector(R, mv.name + "R", add => {
+  return new Multivector(R, add => {
     for (const [bm, val] of mv) {
       if (bitCount(bm) === 1) {
         add(bm, val);
@@ -30,12 +30,12 @@ function b2r(mv: Multivector<never>) {
     const i = 0.5 * B.normSquared(mv);
     add("m", i + 0.5);
     add("p", i - 0.5);
-  });
+  }, {nameHint: mv.name + "R"});
 }
 
 /** Convert a representation-space 1-vector to a base-space 1-vector */
 function r2b(mv: Multivector<never>) {
-  const result = new Multivector(B, mv.name + "B", add => {
+  const result = new Multivector(B, add => {
     const o = (mv.value("m") - mv.value("p"));
     const scale = 1 / o;
     for (const [bm, val] of mv) {
@@ -47,11 +47,11 @@ function r2b(mv: Multivector<never>) {
         fail("reprToBase: not a 1-vector");
       } // else ignore almost-zero non-grade-1 component
     }
-  });
+  }, {nameHint: mv.name + "B"});
   return result;
 }
 
-const ei = R.mv("ei", {m: 1, p: 1}); // infinity
+const ei = R.mv({m: 1, p: 1}, {nameHint: "ei"}); // infinity
 const eo = b2r(B.zero());     // origin
 
 // --------------------------------------------------------------
@@ -61,12 +61,12 @@ const eo = b2r(B.zero());     // origin
 
 // Line defined by unit normal and distance from the origin:
 const line1 = R.plus(
-  R.mv("normal1", {x: 0, y: 1}),
+  R.mv({x: 0, y: 1}),
   R.scale(1, ei),
 );
 
 // We can also define a line using the point closest to the (R) origin:
-const normal2 = R.mv("normal2", {x: 2, y: 2});
+const normal2 = R.mv({x: 2, y: 2});
 const line2 = R.plus(R.inverse(normal2), ei);
 
 // While the two lines are given as ker(.line1) and ker(.line2),
@@ -83,7 +83,7 @@ logB({finiteB: r2b(finite)});
 p("-------------------------");
 
 // The circle around (1, 2) with radius 5 given as ker(.circle):
-const centerB = B.mv("center", {x: 1, y: 2});
+const centerB = B.mv({x: 1, y: 2});
 const center = b2r(centerB);
 const circle = R.plus(center, R.scale(-.5 * 5**2, ei));
 
@@ -101,7 +101,7 @@ const [p1, p2] = [-pp_squared, pp_squared].map(n =>
 
 const [p1B, p2B] = [p1, p2].map(r2b);
 
-const normal2B = B.mv("normal2", {x: 2, y: 2});
+const normal2B = B.mv({x: 2, y: 2});
 
 logB({
   p1B, p2B,

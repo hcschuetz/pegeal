@@ -26,15 +26,15 @@ export type MVFactory = (alg: Algebra<never>) => ([
 ]);
 
 export const makeVectors: MVFactory = alg => ([
-  alg.mv("a", {x: 0.7, y: 0.8, z: 0.9}),
-  alg.mv("b", {x: -0.4, y: 0.5, z: 0.2}),
-  alg.mv("c", {x: 0.3, y: 0.4, z: -0.5}),
+  alg.mv({x: 0.7, y: 0.8, z: 0.9}),
+  alg.mv({x: -0.4, y: 0.5, z: 0.2}),
+  alg.mv({x: 0.3, y: 0.4, z: -0.5}),
 ]);
 
 export const makeVersors: MVFactory = alg => ([
-  alg.geometricProduct(alg.mv("a1", {x: .3, y: 2}), alg.mv("a2", {x: .9, y: -1})),
-  alg.geometricProduct(alg.mv("b1", {x: .8, y: 1.1}), alg.mv("b2", {x: -.5, y: .4})),
-  alg.geometricProduct(alg.mv("c1", {x: .5, y: 5}), alg.mv("c2", {x: .4, y: .3})),
+  alg.geometricProduct(alg.mv({x: .3, y: 2  }), alg.mv({x:  .9, y: -1})),
+  alg.geometricProduct(alg.mv({x: .8, y: 1.1}), alg.mv({x: -.5, y: .4})),
+  alg.geometricProduct(alg.mv({x: .5, y: 5  }), alg.mv({x:  .4, y: .3})),
 ]);
 
 const dataFactories: [string, MVFactory][] = [

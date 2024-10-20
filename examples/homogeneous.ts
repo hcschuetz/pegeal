@@ -24,7 +24,7 @@ for (const metric_w of [1, -1, "metric_w"]) {
   const ewInv = alg.inverse(ew);
   q("ewInv", ewInv);
 
-  const point = alg.mv("point", {x: "px", y: "py", z: "pz", w: "pw"});
+  const point = alg.mv({x: "px", y: "py", z: "pz", w: "pw"});
 
   // With our optimizations (and the expected optimizations by the WebGL
   // compiler) the extractions of weight and location should be as efficient
