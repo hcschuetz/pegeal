@@ -1,4 +1,4 @@
-import { Scalar, BackEnd } from "./Algebra";
+import { Scalar, BackEnd, fail } from "./Algebra";
 
 function formatScalar(f: Scalar<string>): string {
   switch (typeof f) {
@@ -18,22 +18,35 @@ export default class WebGLBackEnd implements BackEnd<string> {
     this.text += newText + "\n";
   }
 
-  scalarOp(name: string, args: Scalar<string>[], options?: {nameHint?: string}) {
-    const {nameHint} = options ?? {};
-    let varName: string;
-    if (name === "unaryMinus") {
-      varName = `${nameHint ?? "minus"}_${this.count++}`;
-      this.emit(`float ${varName} = -(${formatScalar(args[0])});`);
-    } else if (Object.hasOwn(multiOpLongName, name)) {
-      varName = `${nameHint ?? multiOpLongName[name]}_${this.count++}`;
-      this.emit(`float ${varName} = ${args.map(formatScalar).join(` ${name} `)};`);
-    } else if (Object.hasOwn(binopLongName, name)) {
-      varName = `${nameHint ?? binopLongName[name]}_${this.count++}`;
-      this.emit(`float ${varName} = ${formatScalar(args[0])} ${name} ${formatScalar(args[1])};`);
-    } else {
-      varName = `${nameHint ?? name}_${this.count++}`;
-      this.emit(`float ${varName} = ${name}(${args.map(formatScalar).join(", ")});`);
+  scalarOp(opName: string, args: Scalar<string>[], options?: {nameHint?: string}) {
+    const [baseName, expr, correctNArgs] =
+      opName === "unaryMinus" ? [
+        "minus",
+        `-(${formatScalar(args[0])})`,
+        args.length === 1,
+      ] :
+      Object.hasOwn(multiOpLongName, opName) ? [
+        multiOpLongName[opName],
+        args.map(formatScalar).join(` ${opName} `),
+        args.length >= 1,
+      ] :
+      Object.hasOwn(binopLongName, opName) ? [
+        binopLongName[opName],
+        `${formatScalar(args[0])} ${opName} ${formatScalar(args[1])}`,
+        args.length === 2,
+      ] :
+      [
+        opName,
+        `${opName}(${args.map(formatScalar).join(", ")});`,
+        opName === "atan2" ? args.length === 2 :
+        opName === "max" ? args.length >= 1 :
+        args.length === 1,
+      ];
+    if (!correctNArgs) {
+      fail(`Unexpected number of arguments for "${opName}": ${args.length}`);
     }
+    const varName = `${options?.nameHint ?? baseName}_${this.count++}`;
+    this.emit(`float ${varName} = ${expr};`);
     return varName;
   }
 
