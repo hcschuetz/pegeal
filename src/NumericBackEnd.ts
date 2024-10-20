@@ -9,7 +9,7 @@ A back end for purely numeric input.
 purely numeric expressions.)
 */
 export default class NumericBackEnd implements BackEnd<never> {
-  scalarOp(name: string, ...args: number[]): Scalar<never> {
-    return scalarOp(name, ...args);
+  scalarOp(name: string, args: number[], options?: {}): Scalar<never> {
+    return scalarOp(name, args);
   }
 }

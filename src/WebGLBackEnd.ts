@@ -18,16 +18,20 @@ export default class WebGLBackEnd implements BackEnd<string> {
     this.text += newText + "\n";
   }
 
-  scalarOp(name: string, ...args: Scalar<string>[]) {
-    let varName: string
+  scalarOp(name: string, args: Scalar<string>[], options?: {nameHint?: string}) {
+    const {nameHint} = options ?? {};
+    let varName: string;
     if (name === "unaryMinus") {
-      varName = `minus_${this.count++}`;
+      varName = `${nameHint ?? "minus"}_${this.count++}`;
       this.emit(`float ${varName} = -(${formatScalar(args[0])});`);
+    } else if (Object.hasOwn(multiOpLongName, name)) {
+      varName = `${nameHint ?? multiOpLongName[name]}_${this.count++}`;
+      this.emit(`float ${varName} = ${args.map(formatScalar).join(` ${name} `)};`);
     } else if (Object.hasOwn(binopLongName, name)) {
-      varName = `${binopLongName[name]}_${this.count++}`;
+      varName = `${nameHint ?? binopLongName[name]}_${this.count++}`;
       this.emit(`float ${varName} = ${formatScalar(args[0])} ${name} ${formatScalar(args[1])};`);
     } else {
-      varName = `${name}_${this.count++}`;
+      varName = `${nameHint ?? name}_${this.count++}`;
       this.emit(`float ${varName} = ${name}(${args.map(formatScalar).join(", ")});`);
     }
     return varName;
@@ -38,9 +42,12 @@ export default class WebGLBackEnd implements BackEnd<string> {
   }
 }
 
-const binopLongName: Record<string, string> = {
+const multiOpLongName: Record<string, string> = {
   "+": "plus",
-  "-": "minus",
   "*": "times",
+};
+
+const binopLongName: Record<string, string> = {
+  "-": "minus",
   "/": "div",
 };

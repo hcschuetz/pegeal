@@ -1,8 +1,8 @@
-import { Algebra, Multivector } from "../src/Algebra";
+import { Algebra, BackEnd, Multivector } from "../src/Algebra";
 import { makeLetterNames } from "../src/componentNaming";
 import { euclidean } from "../src/euclidean";
 import NumericBackend from "../src/NumericBackEnd.js";
-import { mapEntries, p, q_ } from "./utils";
+import { p, q_ } from "./utils";
 
 
 // This example is not only about the regressive product,
@@ -10,7 +10,7 @@ import { mapEntries, p, q_ } from "./utils";
 // (a plain Euclidean algebra and the corresponding
 // homogeneous/projective algebra).
 
-const be = new NumericBackend();
+const be: BackEnd<never> = new NumericBackend();
 
 // Use suffix E for identifiers related to the Euclidean 3D space
 const coordsE = "xyz"
@@ -30,7 +30,7 @@ const input = (mv: Multivector<never>) => algP.plus(ew, algP.outermorphism(Id3, 
 
 /** Convert a (3+1)D projective vector to a 3D vector */
 const output = (mv: Multivector<never>) =>
-  algE.outermorphism(Id3, algP.scale(algP.scalarOp("/", 1, mv.value("w")), mv));
+  algE.outermorphism(Id3, algP.scale(algP.scalarOp("/", [1, mv.value("w")]), mv));
 
 const [A1E, A2E, A3E, A4E, XE] = Object.entries({
   A1: [3, 1, 5],

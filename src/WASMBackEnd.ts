@@ -36,14 +36,21 @@ export default class WASMBackEnd implements BackEnd<LocalRef> {
     }
   }
 
-  scalarOp(name: string, ...args: Scalar<LocalRef>[]) {
+  scalarOp(name: string, args: Scalar<LocalRef>[], options?: {}) {
     const {mod, convertScalar} = this;
     const localVar = this.newLocal();
     this.body.push(
       mod.local.set(localVar.locNum,
-        name === "unaryMinus" ? mod.f64.neg(convertScalar(args[0])) :
-        Object.hasOwn(binopName, name)
+        name === "unaryMinus"
+        ? mod.f64.neg(convertScalar(args[0]))
+        : Object.hasOwn(binopName, name)
         ? mod.f64[binopName[name]](convertScalar(args[0]), convertScalar(args[1]))
+        : Object.hasOwn(multiopName, name)
+        ? args.slice(1).reduce(
+            (acc: B.ExpressionRef, arg: Scalar<LocalRef>) =>
+              mod.f64[multiopName[name]](acc, convertScalar(arg)),
+            convertScalar(args[0]),
+          )
         : mod.call(name, args.map(convertScalar), B.f64)
       )
     );
@@ -51,9 +58,12 @@ export default class WASMBackEnd implements BackEnd<LocalRef> {
   }
 }
 
-const binopName: Record<string, "add" | "sub" | "mul" | "div"> = {
+const multiopName: Record<string, "add" | "mul"> = {
   "+": "add",
-  "-": "sub",
   "*": "mul",
+};
+
+const binopName: Record<string,"sub" | "div"> = {
+  "-": "sub",
   "/": "div",
 };
