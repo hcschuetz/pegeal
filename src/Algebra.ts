@@ -81,7 +81,7 @@ export interface BackEnd<T> {
 }
 
 export class Multivector<T> implements Iterable<[number, Scalar<T>]> {
-  #components: Scalar<T>[] = [];
+  #components: Scalar<T>[];
   readonly name: string;
 
   constructor(
@@ -94,17 +94,16 @@ export class Multivector<T> implements Iterable<[number, Scalar<T>]> {
     const {nameHint = "aux"} = options ?? {};
     this.name = `${nameHint}_${alphabetic(alg.mvCount++)}`;
     alg.be.comment?.(`${this.name}`);
-    /** The outer array is indexed by bitmaps, the inner array is just a list */
-    const termss: Scalar<T>[][] = [];
+    // The outer array is indexed by component bitmaps,
+    // the inner arrays are just lists:
+    const componentTerms: Scalar<T>[][] = [];
     initialize((key, value) => {
       const bm = typeof key === "number" ? key : alg.stringToBitmap[key];
-
-      // TODO use name this.name + "_" + alg.bitmapToString[bm]
-      (termss[bm] ??= []).push(value);
+      (componentTerms[bm] ??= []).push(value);
     });
-    termss.forEach((terms, bm) => {
-      this.#components[bm] = this.alg.sum(terms, {nameHint: this.name + "_" + alg.bitmapToString[bm]})
-    });
+    this.#components = componentTerms.map((terms, bm) =>
+      this.alg.sum(terms, {nameHint: this.name + "_" + alg.bitmapToString[bm]})
+    );
   }
 
   value(key: number | string): Scalar<T> {
