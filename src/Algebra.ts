@@ -4,7 +4,6 @@ import scalarOp from "./scalarOp";
 
 type Optimization =
 | "bitCount"
-| "evalNumbers"
 | "knownNormSq"
 | "knownNormSqInInverse"
 | "knownNormSqInNorm"
@@ -22,7 +21,6 @@ type Optimization =
 | "singleEuclideanNorm"
 | "singleEuclideanNormalize"
 | "singleInverse"
-| "skipZeroAdd"
 | "skipZeroIter"
 | "skipZeroOM"
 | "sum"
@@ -34,7 +32,6 @@ type Optimization =
 
 const optimizations: Partial<Record<Optimization, boolean>> = {
   // bitCount: false,
-  // evalNumbers: false,
   // knownNormSq: false,
   // knownNormSqInInverse: false,
   // knownNormSqInNorm: false,
@@ -52,7 +49,6 @@ const optimizations: Partial<Record<Optimization, boolean>> = {
   // singleEuclideanNorm: false,
   // singleEuclideanNormalize: false,
   // singleInverse: false,
-  // skipZeroAdd: false,
   // skipZeroIter: false,
   // skipZeroOM: false,
   // sum: false;
