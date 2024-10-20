@@ -1,4 +1,4 @@
-import { Scalar, BackEnd, BEVariable } from "./Algebra";
+import { Scalar, BackEnd } from "./Algebra";
 
 function formatScalar(f: Scalar<string>): string {
   switch (typeof f) {
@@ -10,37 +10,12 @@ function formatScalar(f: Scalar<string>): string {
   }
 }
 
-class WebGLVar implements BEVariable<string> {
-  #created = false;
-
-  constructor(
-    readonly be: WebGLBackEnd,
-    readonly name: string
-  ) {}
-
-  add(val: Scalar<string>) {
-    const term = formatScalar(val);
-    this.be.emit(
-      !this.#created
-      ? `float ${this.name}  = ${term};`
-      : `      ${this.name} += ${term};`,
-    );
-    this.#created = true;
-  }
-
-  value() { return this.name; }
-}
-
 export default class WebGLBackEnd implements BackEnd<string> {
   private count = 0;
   public text = "";
 
   emit(newText: string) {
     this.text += newText + "\n";
-  }
-
-  makeVar(nameHint: string) {
-    return new WebGLVar(this, `${nameHint}_${this.count++}`);
   }
 
   scalarOp(name: string, ...args: Scalar<string>[]) {

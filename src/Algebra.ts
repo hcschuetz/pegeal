@@ -25,6 +25,7 @@ type Optimization =
 | "skipZeroAdd"
 | "skipZeroIter"
 | "skipZeroOM"
+| "sum"
 | "times"
 
 | "default"
@@ -53,6 +54,7 @@ const optimizations: Partial<Record<Optimization, boolean>> = {
   // skipZeroAdd: false,
   // skipZeroIter: false,
   // skipZeroOM: false,
+  // sum: false;
   // times: false,
 
   default: true,
@@ -71,65 +73,13 @@ export function fail(msg: string): never { throw new Error(msg); };
 
 export type Scalar<T> = number | T;
 
-/** A variable as provided by a `BackEnd` */
-export interface BEVariable<T> {
-  add(value: Scalar<T>): void;
-  value(): Scalar<T>;
-}
-
 export interface BackEnd<T> {
-  makeVar(nameHint: string): BEVariable<T>;
   scalarOp(name: string, ...args: Scalar<T>[]): Scalar<T>;
   comment?(text: string): void;
 }
 
-/**
- * A "smart" variable wrapping a back-end variable.
- * 
- * - Numbers are added separately from symbolic values (if this optimization is
- *   enabled).
- * - A back-end variable is only created as soon as a symbolic term is added.
- * - A "freezing" step between  `.add()` and `.value()` calls is required
- *   - to ensure that calls are in proper order and
- *   - to merge the number sum into the symbolic sum (the back-end variable).
- */
-class Variable<T> {
-  #beVar? : BEVariable<T>;
-  #numericPart = 0;
-  #frozen = false;
-
-  constructor(
-    private createBEVar: () => BEVariable<T>,
-  ) {}
-
-  add(value: Scalar<T>): void {
-    if (this.#frozen) fail("trying to update frozen variable");
-
-    if (optimize("evalNumbers") && typeof value === "number") {
-      this.#numericPart += value;
-    } else {
-      (this.#beVar ??= this.createBEVar()).add(value);
-    }
-  }
-
-  freeze(): void {
-    if (this.#frozen) fail("trying to re-freeze a variable");
-
-    if (this.#beVar && this.#numericPart !== 0) {
-      this.#beVar.add(this.#numericPart);
-    }
-    this.#frozen = true;
-  }
-
-  value(): Scalar<T> {
-    if (!this.#frozen) fail("trying to read non-frozen variable");
-
-    return this.#beVar ? this.#beVar.value() : this.#numericPart;
-  }
-}
-
 export class Multivector<T> implements Iterable<[number, Scalar<T>]> {
-  #components: Variable<T>[] = [];
+  #components: Scalar<T>[] = [];
   readonly name: string;
 
   constructor(
@@ -142,31 +92,28 @@ export class Multivector<T> implements Iterable<[number, Scalar<T>]> {
     const {nameHint = "aux"} = options ?? {};
     this.name = `${nameHint}_${alphabetic(alg.mvCount++)}`;
     alg.be.comment?.(`${this.name}`);
+    /** The outer array is indexed by bitmaps, the inner array is just a list */
+    const termss: Scalar<T>[][] = [];
     initialize((key, value) => {
       const bm = typeof key === "number" ? key : alg.stringToBitmap[key];
 
-      // This optimization is not really needed.
-      // Without it a Variable<T> might be created unnecessarily,
-      // but still without a backing target-language variable
-      // (if that optimization is enabled).
-      if (optimize("skipZeroAdd") && value === 0) return;
-
-      (this.#components[bm] ??=
-        alg.makeVariable(this.name + "_" + alg.bitmapToString[bm])
-      ).add(value);
+      // TODO use name this.name + "_" + alg.bitmapToString[bm]
+      (termss[bm] ??= []).push(value);
     });
-    this.#components.forEach(variable => variable.freeze());
+    termss.forEach((terms, bm) => {
+      this.alg.be.comment?.(this.name + "_" + alg.bitmapToString[bm]);
+      this.#components[bm] = this.alg.sum(...terms)
+    });
   }
 
   value(key: number | string): Scalar<T> {
     const bm = typeof key === "number" ? key : this.alg.stringToBitmap[key];
-    return this.#components[bm]?.value() ?? 0;
+    return this.#components[bm] ?? 0;
   }
 
   *[Symbol.iterator](): Iterator<[number, Scalar<T>]> {
-    for (const [bitmap, variable] of this.#components.entries()) {
-      if (variable === undefined) continue;
-      const value = variable.value();
+    for (const [bitmap, value] of this.#components.entries()) {
+      if (value === undefined) continue;
       if (optimize("skipZeroIter") && value === 0) continue;
       yield [bitmap, value];
     }
@@ -211,9 +158,8 @@ export class Multivector<T> implements Iterable<[number, Scalar<T>]> {
 
   toString() {
     return `${this.name} ${this.#knownSqNorm ? `[${this.#knownSqNorm}] ` : ""}{${
-      this.#components.flatMap((variable, bm) => {
+      this.#components.flatMap((value, bm) => {
         const key = this.alg.bitmapToString[bm];
-        const value = variable.value();
         return value === 0 ? [] : [`${key}: ${value}`];
       }).join(", ")
     }}`;
@@ -318,19 +264,6 @@ export class Algebra<T> {
       if (this.stringToBitmap[name]) fail(`duplicate base-blade name "${name}"`);
       this.stringToBitmap[name] = bm;
     });
-  }
-
-  makeVariable(nameHint: string): Variable<T> {
-    return new Variable(() => this.be.makeVar(nameHint));
-  }
-
-  /** Create a scalar with an initialization function similar to a `Multivector` */
-  makeScalar(name: string, init: (add: (value: Scalar<T>) => void) => void) {
-    this.be.comment?.(name);
-    const variable = this.makeVariable(name);
-    init(value => variable.add(value));
-    variable.freeze();
-    return variable.value();
   }
 
   /** Return the metric factor for squaring a basis blade. */
@@ -500,11 +433,10 @@ export class Algebra<T> {
     // (Is this TODO outdated?  Lower-level optimizations probably already
     // do this.  Check this.)
 
-    return this.makeScalar("normSquared", add => {
-      for (const [bitmap, value] of mv) {
-        add(this.times(this.metricFactors(bitmap), value, value));
-      }
-    });
+    this.be.comment?.("normSquared")
+    return this.sum(...[...mv].map(([bitmap, value]) =>
+      this.times(this.metricFactors(bitmap), value, value)
+    ));
   }
 
   /**
@@ -716,14 +648,13 @@ export class Algebra<T> {
   scalarProduct(a: Multivector<T>, b: Multivector<T>): Scalar<T> {
     this.checkMine(a);
     this.checkMine(b);
-    return this.makeScalar("scalarProd", add => {
-      for (const [bitmap, valA] of a) {
-        const valB = b.value(bitmap);
-        const mf = this.metricFactors(bitmap);
-        // Notice that reverseFlips(bitmap) === productFlips(bitmap, bitmap) & 1:
-        add(this.flipIf(reverseFlips(bitmap), this.times(mf, valA, valB)));
-      }
-    });
+    this.be.comment?.("scalar product");
+    return this.sum(...[...a].map(([bitmap, valA]) => {
+      const valB = b.value(bitmap);
+      const mf = this.metricFactors(bitmap);
+      // Notice that reverseFlips(bitmap) === productFlips(bitmap, bitmap) & 1:
+      return this.flipIf(reverseFlips(bitmap), this.times(mf, valA, valB));
+    }))
   }
 
   // The regressive product does not fully fit into the pattern of
@@ -916,6 +847,22 @@ export class Algebra<T> {
     return simplified.reduce((acc, x) => this.scalarOp("*", acc, x));
   }
 
+  sum(...args: Scalar<T>[]): Scalar<T> {
+    if (!optimize("sum")) {
+      return args.reduce((acc, arg) => this.scalarOp("+", acc, arg), 0);
+    }
+    let num = 0;
+    const sym: T[] = [];
+    for (const arg of args) {
+      if (typeof arg === "number") {
+        num += arg;
+      } else {
+        sym.push(arg);
+      }
+    }
+    const simplified: Scalar<T>[] =
+      num !== 0 || sym.length === 0 ? [...sym, num] : sym;
+    return simplified.reduce((acc, x) => this.scalarOp("+", acc, x));
   }
 
   flipIf(condition: truth, value: Scalar<T>): Scalar<T> {
@@ -1011,15 +958,16 @@ export class Algebra<T> {
       cache1.forEach((cache2, lirBitmap) => {
         const from = this.bitmapToString[iBitmap];
         const to   = this.bitmapToString[lirBitmap];
-        const entry = this.makeScalar(`matrix_${from}_${to}`, add => {
-          for (const {count, term} of Object.values(cache2.children)) {
-            if (!optimize("sandwichCancel1") || count != 0) {
-              // TODO Construct an example where the laziness of term avoids
-              // generating some superfluous code.  (Or remove the laziness.)
-              add(this.times(count, term()));
-            }
-          }
-        });
+        this.be.comment?.(`matrix_${from}_${to}`);
+        const entry = this.sum(
+          ...Object.values(cache2.children).flatMap(({count, term}) =>
+            !optimize("sandwichCancel1") || count != 0
+            // TODO Construct an example where the laziness of term avoids
+            // generating some superfluous code.  (Or remove the laziness.)
+            ? [this.times(count, term())]
+            : []
+          )
+        );
         if (!optimize("sandwichCancel2") || entry !== 0) {
           cache2.entry = entry;
         }

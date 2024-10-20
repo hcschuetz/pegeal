@@ -1,31 +1,8 @@
 import B from "binaryen";
-import { Scalar, BackEnd, BEVariable } from "./Algebra";
+import { Scalar, BackEnd } from "./Algebra";
 
 export class LocalRef {
   constructor(readonly locNum: number) {}
-}
-
-class WASMVar implements BEVariable<LocalRef> {
-  constructor(
-    readonly be: WASMBackEnd,
-  ) {}
-
-  #localRef?: LocalRef;
-
-  add(val: Scalar<LocalRef>) {
-    const {mod, body, convertScalar} = this.be;
-    const expr = convertScalar(val);
-    if (!this.#localRef) {
-      this.#localRef = this.be.newLocal();
-      body.push(mod.local.set(this.#localRef.locNum, expr));
-    } else {
-      body.push(mod.local.set(this.#localRef!.locNum,
-        mod.f64.add(mod.local.get(this.#localRef!.locNum, B.f64), expr)
-      ));
-    }
-  }
-
-  value() { return this.#localRef! };
 }
 
 export default class WASMBackEnd implements BackEnd<LocalRef> {
@@ -43,10 +20,6 @@ export default class WASMBackEnd implements BackEnd<LocalRef> {
   }
 
   get paramCount() { return this.paramHints.length; }
-
-  makeVar() {
-    return new WASMVar(this);
-  }
 
   newLocal() {
     return new LocalRef(this.varCount++);
