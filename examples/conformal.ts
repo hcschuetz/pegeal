@@ -130,12 +130,12 @@ const intersectionFinitePoint = algR.contractLeft(eo, intersection);
 // We can convert this to a base-space vector within algR with coordinate-free
 // operations:
 const intersectionXYZinR =
-  algR.plus(
+  algR.minus(
     algR.scale(
       1 / -algR.scalarProduct(ei, intersectionFinitePoint),
       intersectionFinitePoint
     ),
-    algR.negate(eo),
+    eo,
   );
 
 // We can also simply convert the point to algB:

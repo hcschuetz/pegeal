@@ -37,7 +37,10 @@ const result =
   alg.contractLeft(
     alg.wedgeProduct(ey, one),
     alg.wedgeProduct(
-      alg.plus(alg.scale("2.0", ex), ex, ey, I, zero, alg.plus()),
+      alg.plus(
+        alg.scale("2.0", ex),
+        alg.minus(ex, ey),
+        I, zero, alg.plus()),
       alg.negate(alg.vec(["4.0", "1.0", "3.0", 0])),
       alg.wedgeProduct(),
     )

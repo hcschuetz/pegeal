@@ -65,9 +65,8 @@ These should all be zero:
 qP("check intersection on plane (algP)", algP.wedgeProduct(intersectionP, planeP));
 qP("check intersection on line  (algP)", algP.wedgeProduct(intersectionP, lineP));
 
-const minusIntersectionE = algE.negate(intersectionE);
 const fromIntersection = (mv: Multivector<never>) =>
-  algE.plus(mv, minusIntersectionE);
+  algE.minus(mv, intersectionE);
 
 qE("check intersection on plane (algE)", algE.wedgeProduct(
   fromIntersection(A1E),

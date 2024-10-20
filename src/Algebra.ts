@@ -625,6 +625,20 @@ export class Algebra<T> {
     }, {nameHint: "plus"});
   }
 
+  /**
+   * Subtract a multivector from another one.
+   */
+  minus(pos: Multivector<T>, neg: Multivector<T>) {
+    return new Multivector(this, add => {
+      for (const [bitmap, value] of this.checkMine(pos)) {
+        add(bitmap, value);
+      }
+      for (const [bitmap, value] of this.checkMine(neg)) {
+        add(bitmap, this.scalarOp("unaryMinus", value));
+      }
+    }, {nameHint: "minus"});
+  }
+
   /** The core functionality for all kinds of products */
   product2(include: ProdInclusionTest, a: Multivector<T>, b: Multivector<T>): Multivector<T> {
     this.checkMine(a);
@@ -822,7 +836,7 @@ export class Algebra<T> {
   // Utilities (TODO Separate them from the core methods?)
 
   dist(a: Multivector<T>, b: Multivector<T>): Scalar<T> {
-    return this.norm(this.plus(a, this.negate(b)));
+    return this.norm(this.minus(a, b));
   }
   
   /** **EXPECTS 1-VECTORS** */

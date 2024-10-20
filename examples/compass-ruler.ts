@@ -106,11 +106,11 @@ const normal2B = B.vec([2, 2]);
 logB({
   p1B, p2B,
   // check orthogonality:
-  ortho1: B.scalarProduct(normal2B, B.plus(p1B, B.negate(normal2B))),
-  ortho2: B.scalarProduct(normal2B, B.plus(p2B, B.negate(normal2B))),
+  ortho1: B.scalarProduct(normal2B, B.minus(p1B, normal2B)),
+  ortho2: B.scalarProduct(normal2B, B.minus(p2B, normal2B)),
   // check distances:
-  dist1: B.norm(B.plus(p1B, B.negate(centerB))),
-  dist2: B.norm(B.plus(p1B, B.negate(centerB))),
+  dist1: B.norm(B.minus(p1B, centerB)),
+  dist2: B.norm(B.minus(p1B, centerB)),
 });
 
 p(`----------`);
@@ -118,8 +118,8 @@ p(`----------`);
 // Or do the checks in R:
 logR({
   // check orthogonality:
-  ortho1: R.scalarProduct(normal2, R.plus(p1, R.negate(normal2))),
-  ortho2: R.scalarProduct(normal2, R.plus(p2, R.negate(normal2))),
+  ortho1: R.scalarProduct(normal2, R.minus(p1, normal2)),
+  ortho2: R.scalarProduct(normal2, R.minus(p2, normal2)),
   // check distances:
   dist1: Math.sqrt(-2 * R.scalarProduct(p1, center)),
   dist2: Math.sqrt(-2 * R.scalarProduct(p2, center)),
