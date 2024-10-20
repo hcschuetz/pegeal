@@ -30,7 +30,7 @@ const q = q_(coords, c);
   const normalized = alg.normalize(mv);
   q(`normalized`, normalized);
   q(`norm(normalized)`, alg.norm(normalized));
-  normalized.markAsUnit(false);
+  normalized.withSqNorm(undefined);
   q(`norm(normalized) [computed]`, alg.norm(normalized));
 });
 

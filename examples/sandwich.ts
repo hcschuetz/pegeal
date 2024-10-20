@@ -45,7 +45,8 @@ for (const create of [
 // Minimalistic example where the cancelling performed by `alg.sandwich(...)`
 // omits the zero-valued xyz component:
 for (const create of [
-  () => [alg.vec([Math.SQRT1_2, Math.SQRT1_2, 0]).markAsUnit(), alg.vec([0,0,1]).markAsUnit()],
+  () => [alg.vec([Math.SQRT1_2, Math.SQRT1_2, 0]).withSqNorm(1),
+         alg.vec([0,0,1]).withSqNorm(1)],
   () => [alg.vec(["ax", "ay", 0]), alg.vec([0, 0, "bz"])],
 ]) {
   let [a, b] = create();

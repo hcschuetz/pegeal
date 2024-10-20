@@ -1,6 +1,5 @@
 import { expect, suite, test } from "vitest";
 import { expectNearby, forAlgebras, forData, makeVectors } from "./test-utils";
-import { Multivector, productFlips, reverseFlips } from "./Algebra";
 
 
 // TODO test geometric and wedge product with 0/1/3 arguments
@@ -10,7 +9,8 @@ suite("geometric product - numeric back end", () => {
     forAlgebras(alg => {
       forData(alg, (a, b) => {
         const gp = alg.geometricProduct(alg.normalize(a), alg.normalize(b));
-        expect(gp.knownUnit).toBe(true);
+        expect(gp.knownSqNorm).toBe(1);
+        // TODO check knownSqNorm in various other situations
       });
     });
   });

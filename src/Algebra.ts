@@ -5,6 +5,10 @@ import scalarOp from "./scalarOp";
 type Optimization =
 | "bitCount"
 | "evalNumbers"
+| "knownNormSq"
+| "knownNormSqInInverse"
+| "knownNormSqInNorm"
+| "knownNormSqInNormalize"
 | "lazy"
 | "plusSingle"
 | "regressiveDirect"
@@ -22,10 +26,6 @@ type Optimization =
 | "skipZeroIter"
 | "skipZeroOM"
 | "times"
-| "unitInverse"
-| "unitNormSq"
-| "unitNorm"
-| "unitNormalize"
 
 | "default"
 ;
@@ -33,6 +33,10 @@ type Optimization =
 const optimizations: Partial<Record<Optimization, boolean>> = {
   // bitCount: false,
   // evalNumbers: false,
+  // knownNormSq: false,
+  // knownNormSqInInverse: false,
+  // knownNormSqInNorm: false,
+  // knownNormSqInNormalize: false,
   // lazy: false,
   // plusSingle: false,
   // regressiveDirect: false,
@@ -50,10 +54,6 @@ const optimizations: Partial<Record<Optimization, boolean>> = {
   // skipZeroIter: false,
   // skipZeroOM: false,
   // times: false,
-  // unitInverse: false,
-  // unitNorm: false,
-  // unitNormalize: false,
-  // unitNormSq: false,
 
   default: true,
 };
@@ -176,17 +176,15 @@ export class Multivector<T> implements Iterable<[number, Scalar<T>]> {
     for (const [bitmap] of this) yield bitmap;
   }
 
-  // TODO Keep track of known squared norms instead of unitness at
-  // code-generation time.  Unitness can be derived from this and some more
-  // cases can be optimized.
   /** Do we know (at code-generation time) that this multivector has norm 1? */
-  #knownUnit = false;
-  public get knownUnit() {
-    return this.#knownUnit;
+  #knownSqNorm: number | undefined = undefined;
+  public get knownSqNorm() {
+    return this.#knownSqNorm;
   }
-  public set knownUnit(mark) {
+  public set knownSqNorm(value) {
     // // Debug code looking for non-unit multivectors being marked as unit:
     // checkUnit:
+    // TODO update commented-out code to use knownSqNorm
     // if (mark) {
     //   let n2 = 0;
     //   for (const [bm, val] of this) {
@@ -202,17 +200,17 @@ export class Multivector<T> implements Iterable<[number, Scalar<T>]> {
     //   }
     // }
 
-    this.#knownUnit = mark;
+    this.#knownSqNorm = value;
   }
 
-  /** Fluent wrapper around `this.knownUnit = ...` */
-  markAsUnit(mark: boolean = true): Multivector<T> {
-    this.knownUnit = mark;
+  /** Fluent wrapper around `this.knownSqNorm = ...` */
+  withSqNorm(value: number | undefined): Multivector<T> {
+    this.knownSqNorm = value;
     return this;
   }
 
   toString() {
-    return `${this.name} ${this.knownUnit ? "[unit] " : ""}{${
+    return `${this.name} ${this.#knownSqNorm ? `[${this.#knownSqNorm}] ` : ""}{${
       this.#components.flatMap((variable, bm) => {
         const key = this.alg.bitmapToString[bm];
         const value = variable.value();
@@ -368,27 +366,29 @@ export class Algebra<T> {
     return new Multivector(this, () => {}, {nameHint: "zero"});
   };
   one(): Multivector<T> {
-    return new Multivector(this, add => add(0, 1), {nameHint: "#"}).markAsUnit();
+    return new Multivector(this, add => add(0, 1), {nameHint: "#"}).withSqNorm(1);
   }
   /** `this.wedgeProduct(...this.basisVectors())` */
   pseudoScalar(): Multivector<T> {
     return new Multivector(this, add => add(this.fullBitmap, 1), {nameHint: "ps"})
-      .markAsUnit(
-        !(this.metric.length & 2) // !reverseFlips(this.fullBitmap)
-        && this.metric.every(v => v === 1)
+      .withSqNorm(
+        this.metric.every(factor => typeof factor === "number")
+        ? (this.nDimensions & 2 ? -1 : 1)
+          * this.metric.reduce((acc, factor) => acc * factor, 1)
+        : undefined
       );
   }
   pseudoScalarInv(): Multivector<T> {
     return this.inverse(this.pseudoScalar());
   }
   basisVectors(): Multivector<T>[] {
-    return this.metric.map((_, i) => {
+    return this.metric.map((factor, i) => {
       const bitmap = 1 << i;
       return new Multivector(
         this,
         add => add(bitmap, 1),
         {nameHint: "basis_" + this.bitmapToString[bitmap]},
-      ).markAsUnit(this.metric[i] === 1)
+      ).withSqNorm(typeof factor === "number" ? factor : undefined)
     });
   }
 
@@ -443,9 +443,10 @@ export class Algebra<T> {
           add(bitmap, this.times(alpha, value));
         }
       }
-    }, {nameHint: "scale"}).markAsUnit(
-      mv.knownUnit &&
-      (typeof alpha === "number" && Math.abs(alpha) === 1)
+    }, {nameHint: "scale"}).withSqNorm(
+      mv.knownSqNorm !== undefined && typeof alpha === "number"
+      ? mv.knownSqNorm * alpha
+      : undefined
     );
   }
 
@@ -454,7 +455,7 @@ export class Algebra<T> {
       for (const [bitmap, value] of this.checkMine(mv)) {
         add(bitmap, this.scalarOp("unaryMinus", value));
       }
-    }, {nameHint: "negate"}).markAsUnit(mv.knownUnit);
+    }, {nameHint: "negate"}).withSqNorm(mv.knownSqNorm);
   }
 
   gradeInvolution(mv: Multivector<T>): Multivector<T> {
@@ -462,7 +463,7 @@ export class Algebra<T> {
       for (const [bitmap, value] of this.checkMine(mv)) {
         add(bitmap, this.flipIf(gradeInvolutionFlips(bitmap), value));
       }
-    }, {nameHint: "gradeInvolution"}).markAsUnit(mv.knownUnit);
+    }, {nameHint: "gradeInvolution"}).withSqNorm(mv.knownSqNorm);
   }
 
   reverse(mv: Multivector<T>): Multivector<T> {
@@ -470,7 +471,7 @@ export class Algebra<T> {
       for (const [bitmap, value] of this.checkMine(mv)) {
         add(bitmap, this.flipIf(reverseFlips(bitmap), value));
       }
-    }, {nameHint: "reverse"}).markAsUnit(mv.knownUnit);
+    }, {nameHint: "reverse"}).withSqNorm(mv.knownSqNorm);
   }
 
   dual(mv: Multivector<T>): Multivector<T> {
@@ -492,7 +493,7 @@ export class Algebra<T> {
   // normSquared precisely for this purpose.)
   normSquared(mv: Multivector<T>): Scalar<T> {
     this.checkMine(mv);
-    if (optimize("unitNormSq") && mv.knownUnit) return 1; // TODO or -1?
+    if (optimize("knownNormSq") && mv.knownSqNorm !== undefined) return mv.knownSqNorm;
 
     // TODO If the entire multivector and the relevant metric factors
     // are given as numbers, precalculate the result.
@@ -532,10 +533,18 @@ export class Algebra<T> {
 
   norm(mv: Multivector<T>): Scalar<T> {
     this.checkMine(mv);
-    if (optimize("unitNorm") && mv.knownUnit) return 1;
+
+    let {knownSqNorm} = mv;
+    if (optimize("knownNormSqInNorm") && knownSqNorm !== undefined) {
+      // A slightly negative value might actually be 0 with a roundoff error.
+      if (-1e8 < knownSqNorm && knownSqNorm < 0) knownSqNorm = 0;
+      return Math.sqrt(knownSqNorm);
+    }
 
     const se = this.singleEuclidean(mv);
-    if (optimize("singleEuclideanNorm") && se !== null) return this.scalarOp("abs", mv.value(se));
+    if (optimize("singleEuclideanNorm") && se !== null) {
+      return this.scalarOp("abs", mv.value(se));
+    }
 
     return this.scalarOp("sqrt",
       // As in the [DFM07] reference implementation we floor the squared norm
@@ -543,9 +552,8 @@ export class Algebra<T> {
       // to rounding errors.
       // Unfortunately this leaves actual errors undetected if the squared norm
       // is significantly below 0.
-      // TODO Check for "truly" negative squared norm?
-      // But how to do this in gernerated code?
-      // Or just take the absolute value of `normSquared` (as in `normalize`)?
+      // TODO Generate code catching slightly negative values as in the
+      // optimized case above (using a scalar function "snapUpToZero")
       this.scalarOp("max", 0, this.normSquared(mv))
     );
   }
@@ -553,7 +561,8 @@ export class Algebra<T> {
   /** **This is only correct for versors!** */
   inverse(mv: Multivector<T>): Multivector<T> {
     this.checkMine(mv);
-    if (optimize("unitInverse") && mv.knownUnit) return mv;
+    if (optimize("knownNormSqInInverse") && mv.knownSqNorm === 1) return mv;
+
     // TODO provide nicer check for number of components
     if (optimize("singleInverse") && [...mv].length === 1) {
       return new Multivector(this, add => {
@@ -574,13 +583,13 @@ export class Algebra<T> {
 
   /** **This is only correct for versors!** */
   normalize(mv: Multivector<T>): Multivector<T> {
-    if (optimize("unitNormalize") && mv.knownUnit) return mv;
+    if (optimize("knownNormSqInNormalize") && mv.knownSqNorm === 1) return mv;
 
     const se = this.singleEuclidean(mv);
     if (optimize("singleEuclideanNormalize") && se !== null) {
       return new Multivector(this, add => {
         add(se, this.scalarOp("sign", mv.value(se)));
-      }, {nameHint: "normSE"}).markAsUnit();
+      }, {nameHint: "normSE"}).withSqNorm(1);
     }
 
     const normSq = this.normSquared(mv) ||
@@ -592,7 +601,7 @@ export class Algebra<T> {
         true ? this.scalarOp("abs", normSq) : normSq
       ),
       mv
-    ).markAsUnit();
+    ).withSqNorm(1);
   }
 
   extract(
@@ -657,8 +666,12 @@ export class Algebra<T> {
         }
       }
     }, {nameHint: include.name + "Prod"})
-    .markAsUnit(!skipped && a.knownUnit && b.knownUnit);
-    // We do not  restrict "unitness propagation" to geometric products.
+    .withSqNorm(
+      skipped || a.knownSqNorm === undefined || b.knownSqNorm === undefined
+      ? undefined
+      : a.knownSqNorm * b.knownSqNorm
+    );
+    // We do not  restrict "sqared-norm propagation" to geometric products.
     // It suffices if the product happens to behave like a geometric product
     // for the given input vectors (i.e., no skipped component pairs).
   }
@@ -667,7 +680,7 @@ export class Algebra<T> {
   product(include: ProdInclusionTest, mvs: Multivector<T>[]): Multivector<T> {
     return mvs.length === 0
       ? new Multivector(this, add => add(0, 1), {nameHint: include + "1"})
-        .markAsUnit()
+        .withSqNorm(1)
       : mvs.reduce((acc, mv) => this.product2(include, acc, mv));
   }
 
@@ -735,7 +748,7 @@ export class Algebra<T> {
         }
       }
     }, {nameHint: "regrProd"});
-    // TODO under which conditions is the result a known unit?
+    // TODO Set knownSqNorm when possible
   }
 
   /** like `.dual(mv)`, but pretending a Euclidean metric. */
@@ -794,8 +807,8 @@ export class Algebra<T> {
           add(bitmap, value);
         }
       }, {nameHint: "expNull"})
-      // TODO can we mark this as unit unconditionally?
-      .markAsUnit([...A].every(([_, value]) => value === 0));
+      // TODO refine:
+      .withSqNorm([...A].every(([_, value]) => value === 0) ? 1 : undefined);
     } else {
       // TODO detect and handle negative or zero norm2 at runtime
       const alpha = this.scalarOp("sqrt", norm2);
@@ -807,7 +820,7 @@ export class Algebra<T> {
         for (const [bitmap, value] of A) {
           add(bitmap, this.times(sinByAlpha, value));
         }
-      }, {nameHint: "exp"}).markAsUnit(); // this is even correct with a non-Euclidean metric
+      }, {nameHint: "exp"}).withSqNorm(1); // this is even correct with a non-Euclidean metric
     }
   }
 
@@ -869,8 +882,12 @@ export class Algebra<T> {
       );
       return (
         this.plus(this.scale(scaleA, a), this.scale(scaleB, b))
-        .markAsUnit(a.knownUnit && b.knownUnit)
-        // Unitness is not detected by the lower-level operations.
+        // knownSqNorm is not necessarily propagated by the lower-level operations:
+        .withSqNorm(
+          a.knownSqNorm !== b.knownSqNorm
+          ? undefined
+          : a.knownSqNorm
+        )
       );
     }
   }
@@ -1020,7 +1037,11 @@ export class Algebra<T> {
             add(lirBitmap, this.times(cache2.entry, iVal));
           });
         }
-      }, {nameHint: "sandwich"}).markAsUnit(operator.knownUnit && operand.knownUnit);
+      }, {nameHint: "sandwich"}).withSqNorm(
+        operator.knownSqNorm === undefined || operand.knownSqNorm === undefined
+        ? undefined
+        : operator.knownSqNorm * operand.knownSqNorm
+      );
     };
   }
 }

@@ -188,16 +188,16 @@ This API is quite convenient for creating new multivectors in the algebra code:
   ```
   without the need for an auxiliary variable `result`.
 
-### Unitness Flag
+### Known Squared Norm
 ...
-- avoids normalization, inversion, and computation of norms.
-- keeps track if a multivector is known to be a unit vector at code-generation
-  time.
+- simplifies/avoids normalization, inversion, and computation of norms.
+- keeps track of the squared norm of a multivector if it is known at compile
+  time (even if the components are not yet known).
 - set automatically in some operations, e.g.:
   - after normalization
 - can also be set by the user (that is, the application programmer)
   - e.g. slerp, if we did not have it in the algebra
-- .markAsUnit(...) for fluent programming
+- .withSqNorm(...) for fluent programming
 
 ...similar idea: versorness flag
 - log a warning (or throw?) if a method expecting a versor gets called with

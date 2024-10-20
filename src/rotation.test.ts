@@ -19,14 +19,14 @@ forAlgebras(alg => {
     for (let i = 0; i <= nSteps; i++) {
       const cBySlerp = slerp(i / nSteps);
       expectNearby(cBySlerp, cByRotor);
-      expect(cBySlerp.knownUnit).toBe(true);
+      expect(cBySlerp.knownSqNorm).toBe(1);
 
       expect(alg.getAngle(aNorm, cBySlerp)).toBeCloseTo(phi * (i / nSteps));
       expect(alg.getAngle(bNorm, cBySlerp)).toBeCloseTo(phi * (1 - (i / nSteps)));
 
       const cByRotorNew = rotate(cByRotor);
       expect(alg.getAngle(cByRotor, cByRotorNew)).toBeCloseTo(phi / nSteps);
-      expect(cByRotorNew.knownUnit).toBe(true);
+      expect(cByRotorNew.knownSqNorm).toBe(1);
       cByRotor = cByRotorNew;
     }
   });
