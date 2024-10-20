@@ -27,6 +27,7 @@ type Optimization =
 | "skipZeroOM"
 | "sum"
 | "times"
+| "trustKnownSqNorm"
 
 | "default"
 ;
@@ -56,6 +57,7 @@ const optimizations: Partial<Record<Optimization, boolean>> = {
   // skipZeroOM: false,
   // sum: false;
   // times: false,
+  // trustKnownSqNorm: false,
 
   default: true,
 };
@@ -128,23 +130,21 @@ export class Multivector<T> implements Iterable<[number, Scalar<T>]> {
     return this.#knownSqNorm;
   }
   public set knownSqNorm(value) {
-    // // Debug code looking for non-unit multivectors being marked as unit:
-    // checkUnit:
-    // TODO update commented-out code to use knownSqNorm
-    // if (mark) {
-    //   let n2 = 0;
-    //   for (const [bm, val] of this) {
-    //     const mf = this.alg.metricFactors(bm);
-    //     // Cannot check symbolic values here:
-    //     if (typeof mf !== "number" || typeof val !== "number") break checkUnit;
-    //     n2 += mf * val * val;
-    //   }
-    //   console.log("# UNIT: " + n2);
-    //   // n2 ~ -1 is also allowed:
-    //   if (Math.abs(Math.abs(n2) - 1) > 1e-10) {
-    //     fail("Marking a non-unit multivector as unit");
-    //   }
-    // }
+    // // Debug code looking for multivectors with wrong #knownSqNorm:
+    checkNormSq:
+    if (!optimize("trustKnownSqNorm") && this.#knownSqNorm !== undefined) {
+      let n2 = 0;
+      for (const [bm, val] of this) {
+        const mf = this.alg.metricFactors(bm);
+        // Cannot check symbolic values at code-generation time:
+        if (typeof mf !== "number" || typeof val !== "number") break checkNormSq;
+        n2 += mf * val * val;
+      }
+      console.log("# norm squared: " + n2);
+      if (Math.abs(n2 - this.#knownSqNorm) > 1e-10) {
+        fail("Wrong knownSqNorm detected");
+      }
+    }
 
     this.#knownSqNorm = value;
   }
