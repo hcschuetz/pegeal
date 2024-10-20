@@ -259,7 +259,7 @@ export class Algebra<T> {
       fail("sizes of metric and component names do not fit");
     }
     bitmapToString.forEach((name, bm) => {
-      if (this.stringToBitmap[name]) fail(`duplicate base-blade name "${name}"`);
+      if (this.stringToBitmap[name]) fail(`duplicate basis-blade name "${name}"`);
       this.stringToBitmap[name] = bm;
     });
   }
