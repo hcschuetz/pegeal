@@ -14,7 +14,8 @@ const q2 = q_(coords2);
 
 function testOM<T>(
   be: BackEnd<T>,
-  matrix: Scalar<T>[][], dataIn: Record<string, Scalar<T>>,
+  matrix: Scalar<T>[][],
+  dataIn: Record<string, Scalar<T>>,
 ) {
   const alg = new Algebra(euclidean(coords), be, makeLetterNames(coords));
   const alg2 = new Algebra(euclidean(coords2), be, makeLetterNames(coords2));
