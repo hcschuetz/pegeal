@@ -87,8 +87,7 @@ export class Multivector<T> implements Iterable<[number, Scalar<T>]> {
     ) => unknown,
     options?: {nameHint?: string},
   ) {
-    const {nameHint = "aux"} = options ?? {};
-    this.name = `${nameHint}_${alphabetic(alg.mvCount++)}`;
+    this.name = `${options?.nameHint ?? "mv"}_${alphabetic(alg.mvCount++)}`;
     alg.be.comment?.(`${this.name}`);
     // The outer array is indexed by component bitmaps,
     // the inner arrays are just lists:
