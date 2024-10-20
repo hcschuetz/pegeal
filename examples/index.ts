@@ -9,6 +9,7 @@ for (const file of [
   "homogeneous",
   "regressive-product",
   "conformal",
+  "compass-ruler",
 
   "numbered-coords",
   "wasm",
