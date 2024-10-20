@@ -355,6 +355,15 @@ export class Algebra<T> {
     }, options);
   }
 
+  vec(coords: Scalar<T>[], options?: {nameHint?: string}) {
+    if (coords.length !== this.nDimensions) {
+      fail(`vec expected ${this.nDimensions} coordinates but received ${coords.length}`);
+    }
+    return new Multivector(this, add => {
+      coords.forEach((val, i) => add(1 << i, val));
+    }, options);
+  }
+
   zero(): Multivector<T> {
     return new Multivector(this, () => {}, {nameHint: "zero"});
   };

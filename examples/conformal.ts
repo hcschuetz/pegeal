@@ -88,10 +88,10 @@ const relativePoints = {
 
 // With the values above line (a,b) and plane (c,d,e) intersect at the origin.
 // We move all the points to get a "more interesting" intersection point.
-const offsetB = algB.mv({x: 2, y: 5, z: -3}, {nameHint: "offset"});
+const offsetB = algB.vec([2, 5, -3], {nameHint: "offset"});
 
 const pointsB = mapEntries(relativePoints,
-  ([x, y, z], key) => algB.plus(offsetB, algB.mv({x, y, z}, {nameHint: key}))
+  (val, key) => algB.plus(offsetB, algB.vec(val, {nameHint: key}))
 );
 
 // line and plane intersect in a conformal point pair consisting of ei and

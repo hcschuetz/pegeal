@@ -38,7 +38,7 @@ const [A1E, A2E, A3E, A4E, XE] = Object.entries({
   A3: [2, 1, 4],
   A4: [2, 1, 5],
   X : [4, 3, 4],
-}).map(([k, [x, y, z]]) => algE.mv({x, y, z}, {nameHint: k}));
+}).map(([k, v]) => algE.vec(v, {nameHint: k}));
 
 const [A1P, A2P, A3P, A4P, XP] = [A1E, A2E, A3E, A4E, XE].map(input);
 

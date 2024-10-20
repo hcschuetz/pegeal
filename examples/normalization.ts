@@ -5,15 +5,15 @@ import { p, q_ } from "./utils";
 
 p(`// Normalization - eval\n`);
 
-const coords = "xyzw";
+const coords = "xyz";
 const q = q_(coords);
 
 function test_normalize(m: number[]) {
   const alg = new Algebra(m, new NumericBackEnd(), makeLetterNames(coords));
 
-  const B1 = alg.mv({x: 5, y: 2, z: 3});
-  const B2 = alg.mv({x: 2, y:-1, z: 2});
-  const B3 = alg.mv({x:-1, y: 4, z:-1});
+  const B1 = alg.vec([ 5,  2,  3]);
+  const B2 = alg.vec([ 2, -1,  2]);
+  const B3 = alg.vec([-1,  4, -1]);
 
   p("-----------");
   q("normalize(one)", alg.normalize(alg.one()));
@@ -36,6 +36,6 @@ function test_normalize(m: number[]) {
   );
 }
 
-for (let m of [[1,1,1,1],[2,-3,4,1]]) {
+for (let m of [[1,1,1],[1,-3,4]]) {
   test_normalize(m);
 }

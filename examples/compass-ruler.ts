@@ -83,7 +83,7 @@ logB({finiteB: r2b(finite)});
 p("-------------------------");
 
 // The circle around (1, 2) with radius 5 given as ker(.circle):
-const centerB = B.mv({x: 1, y: 2});
+const centerB = B.vec([1, 2]);
 const center = b2r(centerB);
 const circle = R.plus(center, R.scale(-.5 * 5**2, ei));
 
@@ -101,7 +101,7 @@ const [p1, p2] = [-pp_squared, pp_squared].map(n =>
 
 const [p1B, p2B] = [p1, p2].map(r2b);
 
-const normal2B = B.mv({x: 2, y: 2});
+const normal2B = B.vec([2, 2]);
 
 logB({
   p1B, p2B,

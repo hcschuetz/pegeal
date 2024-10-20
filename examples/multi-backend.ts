@@ -18,13 +18,13 @@ const coords = "xyz";
 function slerpTest<T>(
   be: BackEnd<T>,
   metric: Scalar<T>[],
-  v1Components: Record<string, Scalar<T>>,
-  v2Components: Record<string, Scalar<T>>,
+  v1Components: Scalar<T>[],
+  v2Components: Scalar<T>[],
 ) {
   const alg = new Algebra(metric, be, makeLetterNames(coords));
 
-  const v1 = alg.mv(v1Components);
-  const v2 = alg.mv(v2Components);
+  const v1 = alg.vec(v1Components);
+  const v2 = alg.vec(v2Components);
   const slerpArc = alg.slerp(v1, v2);
   return slerpArc(.3);
 }
@@ -35,8 +35,8 @@ function slerpTest<T>(
     be,
     // Mixed symbolic and numeric input:
     [1, 1, "metricZ"],
-    {x: "myX", y: 2},
-    {x: 1, y: "myY", z: 4},
+    ["myX", 2, 0],
+    [1, "myY", 4],
   ));
   p(be.text);
 }
@@ -67,8 +67,8 @@ function slerpTest<T>(
   const result = slerpTest(
     be,
     [1, 1, params.metricZ],
-    {x: params.myX, y: 2},
-    {x: 1, y: params.myY, z: 4},
+    [params.myX, 2, 0],
+    [1, params.myY, 4],
   )
 
   be.body.push(
@@ -102,6 +102,6 @@ function slerpTest<T>(
 q_(coords)("\nresult", slerpTest(
   new NumericBackEnd(),
   euclidean(coords),
-  {x: 1, y: 2},
-  {x: 1, y: 1, z: 4},
+  [1, 2, 0],
+  [1, 1, 4],
 ));

@@ -67,6 +67,9 @@ try {
   // Here we use a symbolic value for the w component.
   const b = alg.mv({x: -2, y: 1, w: "my_symbolic_b_w"}, {nameHint: "b"});
   output("b", b);
+  // There is also a shortcut for 1-vectors.
+  const c = alg.vec([-2, 0, 1, "my_symbolic_b_w"], {nameHint: "c"});
+  output("c", c);
 
   // Up to this place no code was generated since everything could be computed
   // immediately.  This is because we did not need any symbolic value yet.
@@ -159,8 +162,8 @@ try {
   rotationExample(
     "numeric",
     ["x", "y", "z"],
-    alg.mv({x: 1, y: -2}),
-    alg.mv({x: .5, y: .7, z: 1}),
+    alg.vec([ 1, -2, 0, 0]),
+    alg.vec([.5, .7, 1, 0]),
   );
 
   // Running the example with simple symbolic input generates code
@@ -168,8 +171,8 @@ try {
   rotationExample(
     "symbolic",
     ["x", "y", "z"], // Notice that "z" is not being used.
-    alg.mv({x: "a_x", y: "a_y"}),
-    alg.mv({x: "b_x", y: "b_y"}),
+    alg.vec(["a_x", "a_y", 0, 0]),
+    alg.vec(["b_x", "b_y", 0, 0]),
   );
 
   // Using our vectors from above produces more complex output:

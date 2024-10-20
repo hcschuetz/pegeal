@@ -26,15 +26,15 @@ export type MVFactory = (alg: Algebra<never>) => ([
 ]);
 
 export const makeVectors: MVFactory = alg => ([
-  alg.mv({x: 0.7, y: 0.8, z: 0.9}),
-  alg.mv({x: -0.4, y: 0.5, z: 0.2}),
-  alg.mv({x: 0.3, y: 0.4, z: -0.5}),
+  alg.vec([ 0.7, 0.8,  0.9]),
+  alg.vec([-0.4, 0.5,  0.2]),
+  alg.vec([ 0.3, 0.4, -0.5]),
 ]);
 
 export const makeVersors: MVFactory = alg => ([
-  alg.geometricProduct(alg.mv({x: .3, y: 2  }), alg.mv({x:  .9, y: -1})),
-  alg.geometricProduct(alg.mv({x: .8, y: 1.1}), alg.mv({x: -.5, y: .4})),
-  alg.geometricProduct(alg.mv({x: .5, y: 5  }), alg.mv({x:  .4, y: .3})),
+  alg.geometricProduct(alg.vec([.3, 2  , 0]), alg.vec([ .9, -1, 0])),
+  alg.geometricProduct(alg.vec([.8, 1.1, 0]), alg.vec([-.5, .4, 0])),
+  alg.geometricProduct(alg.vec([.5, 5  , 0]), alg.vec([ .4, .3, 0])),
 ]);
 
 const dataFactories: [string, MVFactory][] = [

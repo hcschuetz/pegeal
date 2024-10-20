@@ -38,7 +38,7 @@ const result =
     alg.wedgeProduct(ey, one),
     alg.wedgeProduct(
       alg.plus(alg.scale("2.0", ex), ex, ey, I, zero, alg.plus()),
-      alg.negate(alg.mv({y: "1.0", x: "4.0", z: "3.0"})),
+      alg.negate(alg.vec(["4.0", "1.0", "3.0", 0])),
       alg.wedgeProduct(),
     )
   );
