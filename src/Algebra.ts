@@ -124,9 +124,9 @@ export class Multivector<T> implements Iterable<[number, Scalar<T>]> {
     return this.#knownSqNorm;
   }
   public set knownSqNorm(value) {
-    // // Debug code looking for multivectors with wrong #knownSqNorm:
+    // Debug code looking for multivectors with wrong #knownSqNorm:
     checkNormSq:
-    if (!optimize("trustKnownSqNorm") && this.#knownSqNorm !== undefined) {
+    if (!optimize("trustKnownSqNorm") && value !== undefined) {
       let n2 = 0;
       for (const [bm, val] of this) {
         const mf = this.alg.metricFactors(bm);
@@ -134,8 +134,7 @@ export class Multivector<T> implements Iterable<[number, Scalar<T>]> {
         if (typeof mf !== "number" || typeof val !== "number") break checkNormSq;
         n2 += mf * val * val;
       }
-      console.log("# norm squared: " + n2);
-      if (Math.abs(n2 - this.#knownSqNorm) > 1e-10) {
+      if (Math.abs(n2 - value) > 1e-10) {
         fail("Wrong knownSqNorm detected");
       }
     }
@@ -299,8 +298,7 @@ export class Algebra<T> {
     return new Multivector(this, add => add(this.fullBitmap, 1), {nameHint: "ps"})
       .withSqNorm(
         this.metric.every(factor => typeof factor === "number")
-        ? (this.nDimensions & 2 ? -1 : 1)
-          * this.metric.reduce((acc, factor) => acc * factor, 1)
+        ? this.metric.reduce((acc, factor) => acc * factor, 1)
         : undefined
       );
   }
@@ -371,7 +369,7 @@ export class Algebra<T> {
       }
     }, {nameHint: "scale"}).withSqNorm(
       mv.knownSqNorm !== undefined && typeof alpha === "number"
-      ? mv.knownSqNorm * alpha
+      ? alpha * alpha * mv.knownSqNorm
       : undefined
     );
   }
@@ -483,7 +481,7 @@ export class Algebra<T> {
   /** **This is only correct for versors!** */
   inverse(mv: Multivector<T>): Multivector<T> {
     this.checkMine(mv);
-    if (optimize("knownNormSqInInverse") && mv.knownSqNorm === 1) return mv;
+    if (optimize("knownNormSqInInverse") && mv.knownSqNorm === 1) return this.reverse(mv);
 
     // TODO provide nicer check for number of components
     if (optimize("singleInverse") && [...mv].length === 1) {
@@ -517,13 +515,14 @@ export class Algebra<T> {
     const normSq = this.normSquared(mv) ||
       fail(`trying to normalize null vector ${mv}`);
     return this.scale(
-      this.scalarOp("inversesqrt",
-        // Use the absolute value for compatibility with the
-        // [DFM07] reference implementation.  Does it actually make sense?
-        [true ? this.scalarOp("abs", [normSq]) : normSq]
-      ),
+      this.scalarOp("inversesqrt", [
+        // The [DFM07] reference implementation uses the absolute value:
+        //   this.scalarOp("abs", [normSq])
+        // Why?
+        normSq
+      ]),
       mv
-    ).withSqNorm(1);
+    ).withSqNorm(typeof normSq === "number" && normSq > 0 ? 1 : undefined);
   }
 
   extract(
