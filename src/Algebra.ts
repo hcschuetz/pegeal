@@ -421,11 +421,6 @@ export class Algebra<T> {
     this.checkMine(mv);
     if (optimize("knownNormSq") && mv.knownSqNorm !== undefined) return mv.knownSqNorm;
 
-    // TODO If the entire multivector and the relevant metric factors
-    // are given as numbers, precalculate the result.
-    // (Is this TODO outdated?  Lower-level optimizations probably already
-    // do this.  Check this.)
-
     return this.sum(
       [...mv].map(([bitmap, value]) =>
         this.times([this.metricFactors(bitmap), value, value])
