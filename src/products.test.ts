@@ -9,8 +9,9 @@ suite("geometric product - numeric back end", () => {
     forAlgebras(alg => {
       forData(alg, (a, b) => {
         const gp = alg.geometricProduct(alg.normalize(a), alg.normalize(b));
-        expect(gp.knownSqNorm).toBe(1);
+        expect(alg.normSquared(gp)).toBeCloseTo(1);
         // TODO check knownSqNorm in various other situations
+        // (But we do not have knownSqNorm if it is configured away.)
       });
     });
   });
@@ -32,6 +33,16 @@ suite("geometric product - numeric back end", () => {
     });
   });
 });
+
+suite("normalization - numeric back end", () => {
+  forAlgebras(alg => {
+    forData(alg, (a, b) => {
+      expect(alg.normSquared(alg.normalize(a))).toBeCloseTo(1);
+      expect(alg.normSquared(alg.normalize(b))).toBeCloseTo(1);
+      expect(alg.normSquared(alg.normalize(alg.wedgeProduct(a, b)))).toBeCloseTo(1);
+    });
+  });
+})
 
 suite("product relationships - numeric back end", () => {
   suite("geom/wedge/scalar", () => {

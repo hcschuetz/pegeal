@@ -18,6 +18,7 @@ type Optimization =
 | "sandwichCancel2"
 | "scalarOp"
 | "scale0"
+| "setKnownSqNorm"
 | "singleEuclideanNorm"
 | "singleEuclideanNormalize"
 | "singleInverse"
@@ -46,6 +47,7 @@ const optimizations: Partial<Record<Optimization, boolean>> = {
   // sandwichCancel2: false,
   // scalarOp: false,
   // scale0: false,
+  // setKnownSqNorm: false,
   // singleEuclideanNorm: false,
   // singleEuclideanNormalize: false,
   // singleInverse: false,
@@ -124,9 +126,10 @@ export class Multivector<T> implements Iterable<[number, Scalar<T>]> {
     return this.#knownSqNorm;
   }
   public set knownSqNorm(value) {
+    if (!optimize("setKnownSqNorm")) return;
+
     // Debug code looking for multivectors with wrong #knownSqNorm:
-    checkNormSq:
-    if (!optimize("trustKnownSqNorm") && value !== undefined) {
+    if (!optimize("trustKnownSqNorm") && value !== undefined) checkNormSq: {
       let n2 = 0;
       for (const [bm, val] of this) {
         const mf = this.alg.metricFactors(bm);
@@ -514,15 +517,18 @@ export class Algebra<T> {
 
     const normSq = this.normSquared(mv) ||
       fail(`trying to normalize null vector ${mv}`);
+
     return this.scale(
       this.scalarOp("inversesqrt", [
-        // The [DFM07] reference implementation uses the absolute value:
-        //   this.scalarOp("abs", [normSq])
-        // Why?
-        normSq
+        // Using the absolute value as in the [DFM07] reference implementation
+        // so that we can also "normalize" multivectors squaring to a negative
+        // value (e.g. bivectors with a Euclidean metric):
+        this.scalarOp("abs", [normSq])
       ]),
       mv
-    ).withSqNorm(typeof normSq === "number" && normSq > 0 ? 1 : undefined);
+    ).withSqNorm(typeof normSq === "number" ? Math.sign(normSq) : undefined);
+    // TODO Write a test case that succeeds with `Math.sign(normSq)` but fails
+    // if it is replaced with `1`.
   }
 
   extract(

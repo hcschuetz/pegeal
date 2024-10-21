@@ -25,7 +25,10 @@ export const q_ = (
     default:
       write(
         label + " ="
-        + (x.knownUnit ? " [unit]" : "")
+        + (x.knownSqNorm === 1 ? " [unit]" :
+           x.knownSqNorm !== undefined ? ` [${x.knownSqNorm}]` :
+           ""
+          )
         + ([...x].every(([, x]) => x === 0) ? " [zero]" :
            [...x].every(([, x]) => typeof x === "number" && Math.abs(x) < 1e-8) ? " [~zero]" :
            ""
