@@ -51,7 +51,7 @@ const optimizations: Partial<Record<Optimization, boolean>> = {
   // singleInverse: false,
   // skipZeroIter: false,
   // skipZeroOM: false,
-  // sum: false;
+  // sum: false,
   // times: false,
   // trustKnownSqNorm: false,
 
