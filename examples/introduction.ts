@@ -138,7 +138,7 @@ try {
     // `sandwich(p, pattern)(q)` is an optimized version of `p q ~p`:
     // (The `pattern` parameter tells the `sandwich` method which
     // basis blades to expect in `q`.)
-    const rotate = alg.sandwich(oneTenthRotor, pattern)
+    const rotate = alg.sandwich(oneTenthRotor, pattern);
     const aRotated = rotate(a);
     output("rotate(a)", aRotated);
     // For comparison:
