@@ -4,6 +4,7 @@ import scalarOp from "./scalarOp";
 
 type Optimization =
 | "bitCount"
+| "checkScalarOp"
 | "knownNormSq"
 | "knownNormSqInInverse"
 | "knownNormSqInNorm"
@@ -35,6 +36,7 @@ type Optimization =
 
 const optimizations: Partial<Record<Optimization, boolean>> = {
   // bitCount: false,
+  // checkScalarOp: false,
   // knownNormSq: false,
   // knownNormSqInInverse: false,
   // knownNormSqInNorm: false,
@@ -904,11 +906,48 @@ export class Algebra<T> {
   }
 
   scalarOp(op: string, args: Scalar<T>[], options?: ScalarOpOptions): Scalar<T> {
+    if (optimize("checkScalarOp")) Algebra.checkScalarOp(op, args);
     return (
       optimize("scalarOp") && args.every(arg => typeof arg === "number")
       ? scalarOp(op, args)
       : this.be.scalarOp(op, args, options)
     );
+  }
+
+  /**
+   * Define which scalar operations are expected to be supported.
+   * 
+   * If this check fails, there is a problem on the algebra level.
+   * If this check succeeds and the back end fails, there is a problem
+   * with the back end.
+   * (Or there is a problem with this check...)
+   */
+  static checkScalarOp<T>(op: string, args: Scalar<T>[]): void {
+    const arity = args.length;
+    let ok: boolean;
+    switch (op) {
+      case "+":
+      case "*":
+      case "max":
+        ok = arity >= 1; break;
+      case "-":
+      case "/":
+      case "atan2":
+        ok = arity === 2; break;
+      case "abs":
+      case "cos":
+      case "inversesqrt":
+      case "sign":
+      case "sin":
+      case "sqrt":
+      case "unaryMinus":
+        ok = arity === 1; break;
+      default:
+        fail(`Unexpected scalar operation "${op}"`);
+    }
+    if (!ok) {
+      fail(`Unexpected number of arguments for scalar operation "${op}": ${arity}`);
+    }
   }
 
   /**

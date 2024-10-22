@@ -1,4 +1,4 @@
-import { Scalar, BackEnd, fail, ScalarOpOptions } from "./Algebra";
+import { Scalar, BackEnd, ScalarOpOptions } from "./Algebra";
 
 function formatScalar(f: Scalar<string>): string {
   switch (typeof f) {
@@ -19,28 +19,14 @@ export default class WebGLBackEnd implements BackEnd<string> {
   }
 
   scalarOp(op: string, args: Scalar<string>[], options?: ScalarOpOptions) {
-    const [expr, correctNArgs] =
-      op === "unaryMinus" ? [
-        `- ${formatScalar(args[0])}`,
-        args.length === 1,
-      ] :
-      Object.hasOwn(multiOpLongName, op) ? [
-        args.map(formatScalar).join(` ${op} `),
-        args.length >= 1,
-      ] :
-      Object.hasOwn(binopLongName, op) ? [
-        `${formatScalar(args[0])} ${op} ${formatScalar(args[1])}`,
-        args.length === 2,
-      ] :
-      [
-        `${op}(${args.map(formatScalar).join(", ")})`,
-        op === "atan2" ? args.length === 2 :
-        op === "max" ? args.length >= 1 :
-        args.length === 1,
-      ];
-    if (!correctNArgs) {
-      fail(`Unexpected number of arguments for "${op}": ${args.length}`);
-    }
+    const expr =
+      op === "unaryMinus"
+      ? `- ${formatScalar(args[0])}`
+      : Object.hasOwn(multiOpLongName, op)
+      ? args.map(formatScalar).join(` ${op} `)
+      : Object.hasOwn(binopLongName, op)
+      ? `${formatScalar(args[0])} ${op} ${formatScalar(args[1])}`
+      : `${op}(${args.map(formatScalar).join(", ")})`;
     if (options?.named) {
       const varName = `${options.named}_${this.count++}`;
       this.emit(`float ${varName} = ${expr};`);
