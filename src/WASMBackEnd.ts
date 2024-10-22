@@ -35,14 +35,14 @@ export default class WASMBackEnd implements BackEnd<Expression> {
 
   scalarOp(op: string, args: Scalar<Expression>[], options?: ScalarOpOptions) {
     const {mod, convertScalar} = this;
-    const generateExpr = () =>
+    const generateExpr =
       op === "unaryMinus"
-      ? mod.f64.neg(convertScalar(args[0]))
+      ? () => mod.f64.neg(convertScalar(args[0]))
       : Object.hasOwn(binopName, op)
-      ? mod.f64[binopName[op]](convertScalar(args[0]), convertScalar(args[1]))
+      ? () => mod.f64[binopName[op]](convertScalar(args[0]), convertScalar(args[1]))
       : Object.hasOwn(multiopName, op)
-      ? args.map(convertScalar).reduce(mod.f64[multiopName[op]])
-      : mod.call(op, args.map(convertScalar), B.f64)
+      ? () => args.map(convertScalar).reduce(mod.f64[multiopName[op]])
+      : () => mod.call(op, args.map(convertScalar), B.f64)
     if (options?.named) {
       const varNum = this.varCount++;
       this.body.push(mod.local.set(varNum, generateExpr()));
