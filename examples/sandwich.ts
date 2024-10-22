@@ -46,8 +46,9 @@ for (const create of [
 // omits the zero-valued xyz component:
 for (const create of [
   () => [alg.vec([Math.SQRT1_2, Math.SQRT1_2, 0]).withSqNorm(1),
-         alg.vec([0,0,1]).withSqNorm(1)],
-  () => [alg.vec(["ax", "ay", 0]), alg.vec([0, 0, "bz"])],
+         alg.vec([            0,           0, 1]).withSqNorm(1)],
+  () => [alg.vec(["ax", "ay",    0]),
+         alg.vec([   0,    0, "bz"])],
 ]) {
   let [a, b] = create();
   a = alg.normalize(a);
