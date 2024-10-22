@@ -22,7 +22,7 @@ export default class WebGLBackEnd implements BackEnd<string> {
     const [baseName, expr, correctNArgs] =
       opName === "unaryMinus" ? [
         "minus",
-        `-(${formatScalar(args[0])})`,
+        `- ${formatScalar(args[0])}`,
         args.length === 1,
       ] :
       Object.hasOwn(multiOpLongName, opName) ? [
