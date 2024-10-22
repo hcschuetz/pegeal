@@ -2,7 +2,7 @@ import binaryen from "binaryen";
 import { Algebra, BackEnd, Scalar } from "../src/Algebra";
 import { makeLetterNames } from "../src/componentNaming";
 import NumericBackEnd from "../src/NumericBackEnd";
-import WASMBackEnd, { LocalRef } from "../src/WASMBackEnd";
+import WASMBackEnd from "../src/WASMBackEnd";
 import WebGLBackEnd from "../src/WebGLBackEnd";
 import { p, q_ } from "./utils";
 import { euclidean } from "../src/euclidean";
@@ -59,17 +59,14 @@ function slerpTest<T>(
     mod.addFunctionImport(name, name, "Math", f64Tuple(arity), binaryen.f64);
   }
 
-  const paramNames = ["myX", "myY", "metricZ"];
-  const be = new WASMBackEnd(mod, paramNames);
-  const params = Object.fromEntries(
-    paramNames.map((name, i) => [name, new LocalRef(i)])
-  );
+  const be = new WASMBackEnd(mod, ["myX", "myY", "metricZ"]);
+  const {myX, myY, metricZ} = be.paramsByHint;
   const result = slerpTest(
     be,
-    [1, 1, params.metricZ],
-    [params.myX, 2, 0],
-    [1, params.myY, 4],
-  )
+    [  1,   1, metricZ],
+    [myX,   2,       0],
+    [  1, myY,       4],
+  );
 
   be.body.push(
     mod.return(mod.tuple.make(

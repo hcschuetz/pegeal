@@ -1,4 +1,4 @@
-import { Scalar, BackEnd, fail } from "./Algebra";
+import { Scalar, BackEnd, fail, ScalarOpOptions } from "./Algebra";
 
 function formatScalar(f: Scalar<string>): string {
   switch (typeof f) {
@@ -18,7 +18,7 @@ export default class WebGLBackEnd implements BackEnd<string> {
     this.text += newText + "\n";
   }
 
-  scalarOp(opName: string, args: Scalar<string>[], options?: {nameHint?: string}) {
+  scalarOp(opName: string, args: Scalar<string>[], options?: ScalarOpOptions) {
     const [baseName, expr, correctNArgs] =
       opName === "unaryMinus" ? [
         "minus",
@@ -45,6 +45,7 @@ export default class WebGLBackEnd implements BackEnd<string> {
     if (!correctNArgs) {
       fail(`Unexpected number of arguments for "${opName}": ${args.length}`);
     }
+    if (options?.inline) return `(${expr})`;
     const varName = `${options?.nameHint ?? baseName}_${this.count++}`;
     this.emit(`float ${varName} = ${expr};`);
     return varName;
