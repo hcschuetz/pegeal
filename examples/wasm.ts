@@ -21,7 +21,7 @@ const be = new WASMBackEnd(mod,
 );
 const param = be.paramsByHint;
 const coords = "xyzw";
-const alg = new Algebra([1,333,param.m_z,-1], be, makeLetterNames(coords));
+const alg = new Algebra([1, 333, param.m_z ,-1], be, makeLetterNames(coords));
 
 const g = alg.vec([param.g_x, param.g_y, param.g_z, 0]);
 const h = alg.vec([param.h_x, param.h_y, param.h_z, 0]);
