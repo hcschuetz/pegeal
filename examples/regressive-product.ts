@@ -30,7 +30,7 @@ const input = (mv: Multivector<never>) => algP.plus(ew, algP.outermorphism(Id3, 
 
 /** Convert a (3+1)D projective vector to a 3D vector */
 const output = (mv: Multivector<never>) =>
-  algE.outermorphism(Id3, algP.scale(algP.scalarOp("/", [1, mv.value("w")]), mv));
+  algE.outermorphism(Id3, algP.scale(algP.scalarOp("/", [1, mv.value("w")], {named: "wInv"}), mv));
 
 const [A1E, A2E, A3E, A4E, XE] = Object.entries({
   A1: [3, 1, 5],
@@ -38,7 +38,7 @@ const [A1E, A2E, A3E, A4E, XE] = Object.entries({
   A3: [2, 1, 4],
   A4: [2, 1, 5],
   X : [4, 3, 4],
-}).map(([k, v]) => algE.vec(v, {nameHint: k}));
+}).map(([k, v]) => algE.vec(v, {named: k}));
 
 const [A1P, A2P, A3P, A4P, XP] = [A1E, A2E, A3E, A4E, XE].map(input);
 

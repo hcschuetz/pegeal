@@ -77,15 +77,28 @@ export function fail(msg: string): never { throw new Error(msg); };
 
 export type Scalar<T> = number | T;
 
+/** Options for the back end when creating code for a scalar operation */
 export type ScalarOpOptions = Partial<{
-  nameHint: string,
-  inline: boolean,
+  /**
+   * If provided, the result of a scalar operation is stored in a variable
+   * and the returned expression just accesses the variable.
+   * Otherwise the generated expression is returned (for inlining).
+   */
+  named: string,
 }>
 
 export interface BackEnd<T> {
-  scalarOp(name: string, args: Scalar<T>[], options?: ScalarOpOptions): Scalar<T>;
+  scalarOp(op: string, args: Scalar<T>[], options?: ScalarOpOptions): Scalar<T>;
   comment?(text: string): void;
 }
+
+/** Options for the Multivector constructor */
+// This looks like ScalarOpOptions, but has different semantics right now
+// and may diverge in the future.
+export type MultivectorOptions = Partial<{
+  /** If provided, use this string in the multivector name. */
+  named: string,
+}>
 
 export class Multivector<T> implements Iterable<[number, Scalar<T>]> {
   #components: Scalar<T>[];
@@ -96,9 +109,9 @@ export class Multivector<T> implements Iterable<[number, Scalar<T>]> {
     initialize: (
       add: (key: number | string, term: Scalar<T>) => unknown,
     ) => unknown,
-    options?: ScalarOpOptions,
+    options?: MultivectorOptions,
   ) {
-    this.name = `${options?.nameHint ?? "mv"}_${alphabetic(alg.mvCount++)}`;
+    this.name = `${options?.named ?? "mv"}_${alphabetic(alg.mvCount++)}`;
     alg.be.comment?.(`${this.name}`);
     // The outer array is indexed by component bitmaps,
     // the inner arrays are just lists:
@@ -108,7 +121,7 @@ export class Multivector<T> implements Iterable<[number, Scalar<T>]> {
       (componentTerms[bm] ??= []).push(value);
     });
     this.#components = componentTerms.map((terms, bm) =>
-      this.alg.sum(terms, {nameHint: this.name + "_" + alg.bitmapToString[bm]})
+      this.alg.sum(terms, {named: this.name + "_" + alg.bitmapToString[bm]})
     );
   }
 
@@ -270,7 +283,7 @@ export class Algebra<T> {
     });
   }
 
-  /** Return the metric factor for squaring a basis blade. */
+  /** Return the (inlined) product of metric factors for squaring a basis blade. */
   metricFactors(bm: number): Scalar<T> {
     return this.times(bitList(bm).map(i => this.metric[i]));
   }
@@ -280,7 +293,7 @@ export class Algebra<T> {
     return mv;
   }
 
-  mv(obj: Record<string, Scalar<T>>, options?: ScalarOpOptions) {
+  mv(obj: Record<string, Scalar<T>>, options?: MultivectorOptions) {
     return new Multivector(this, add => {
       for (const [key, val] of Object.entries(obj)) {
         const bm = this.stringToBitmap[key] ??
@@ -290,7 +303,7 @@ export class Algebra<T> {
     }, options);
   }
 
-  vec(coords: Scalar<T>[], options?: ScalarOpOptions) {
+  vec(coords: Scalar<T>[], options?: MultivectorOptions) {
     if (coords.length !== this.nDimensions) {
       fail(`vec expected ${this.nDimensions} coordinates but received ${coords.length}`);
     }
@@ -300,14 +313,14 @@ export class Algebra<T> {
   }
 
   zero(): Multivector<T> {
-    return new Multivector(this, () => {}, {nameHint: "zero"});
+    return new Multivector(this, () => {}, {named: "zero"});
   };
   one(): Multivector<T> {
-    return new Multivector(this, add => add(0, 1), {nameHint: "#"}).withSqNorm(1);
+    return new Multivector(this, add => add(0, 1), {named: "one"}).withSqNorm(1);
   }
   /** `this.wedgeProduct(...this.basisVectors())` */
   pseudoScalar(): Multivector<T> {
-    return new Multivector(this, add => add(this.fullBitmap, 1), {nameHint: "ps"})
+    return new Multivector(this, add => add(this.fullBitmap, 1), {named: "ps"})
       .withSqNorm(
         this.metric.every(factor => typeof factor === "number")
         ? this.metric.reduce((acc, factor) => acc * factor, 1)
@@ -323,7 +336,7 @@ export class Algebra<T> {
       return new Multivector(
         this,
         add => add(bitmap, 1),
-        {nameHint: "basis_" + this.bitmapToString[bitmap]},
+        {named: "basis_" + this.bitmapToString[bitmap]},
       ).withSqNorm(typeof factor === "number" ? factor : undefined)
     });
   }
@@ -360,7 +373,7 @@ export class Algebra<T> {
                 i + 1,
                 bitmapOut | jBit,
                 flips + newFlips,
-                lazy(() => this.times([product(), m_ij])),
+                lazy(() => this.times([product(), m_ij], {named: "omAux"})),
               );
             }
           }
@@ -368,7 +381,7 @@ export class Algebra<T> {
 
         recur(0, 0, 0, () => valueIn);
       }
-    }, {nameHint: "morph"});
+    }, {named: "morph"});
   }
 
   /** The scalar `alpha` should be given as a target-code expression. */
@@ -379,7 +392,7 @@ export class Algebra<T> {
           add(bitmap, this.times([alpha, value]));
         }
       }
-    }, {nameHint: "scale"}).withSqNorm(
+    }, {named: "scale"}).withSqNorm(
       mv.knownSqNorm !== undefined && typeof alpha === "number"
       ? alpha * alpha * mv.knownSqNorm
       : undefined
@@ -391,7 +404,7 @@ export class Algebra<T> {
       for (const [bitmap, value] of this.checkMine(mv)) {
         add(bitmap, this.scalarOp("unaryMinus", [value]));
       }
-    }, {nameHint: "negate"}).withSqNorm(mv.knownSqNorm);
+    }, {named: "negate"}).withSqNorm(mv.knownSqNorm);
   }
 
   gradeInvolution(mv: Multivector<T>): Multivector<T> {
@@ -399,7 +412,7 @@ export class Algebra<T> {
       for (const [bitmap, value] of this.checkMine(mv)) {
         add(bitmap, this.flipIf(gradeInvolutionFlips(bitmap), value));
       }
-    }, {nameHint: "gradeInvolution"}).withSqNorm(mv.knownSqNorm);
+    }, {named: "gradeInvolution"}).withSqNorm(mv.knownSqNorm);
   }
 
   reverse(mv: Multivector<T>): Multivector<T> {
@@ -407,7 +420,7 @@ export class Algebra<T> {
       for (const [bitmap, value] of this.checkMine(mv)) {
         add(bitmap, this.flipIf(reverseFlips(bitmap), value));
       }
-    }, {nameHint: "reverse"}).withSqNorm(mv.knownSqNorm);
+    }, {named: "reverse"}).withSqNorm(mv.knownSqNorm);
   }
 
   dual(mv: Multivector<T>): Multivector<T> {
@@ -427,7 +440,7 @@ export class Algebra<T> {
   // other out.  Thus there are no sign flips here.
   // (It looks like the `reverse` operation is in the definition of
   // normSquared precisely for this purpose.)
-  normSquared(mv: Multivector<T>): Scalar<T> {
+  normSquared(mv: Multivector<T>, options?: ScalarOpOptions): Scalar<T> {
     this.checkMine(mv);
     if (optimize("knownNormSq") && mv.knownSqNorm !== undefined) return mv.knownSqNorm;
 
@@ -435,7 +448,7 @@ export class Algebra<T> {
       [...mv].map(([bitmap, value]) =>
         this.times([this.metricFactors(bitmap), value, value])
       ),
-      {nameHint: "normSquared"}
+      {named: "normSquared", ...options}
     );
   }
 
@@ -475,7 +488,7 @@ export class Algebra<T> {
 
     const se = this.singleEuclidean(mv);
     if (optimize("singleEuclideanNorm") && se !== null) {
-      return this.scalarOp("abs", [mv.value(se)]);
+      return this.scalarOp("abs", [mv.value(se)], {named: "normSE"});
     }
 
     return this.scalarOp("sqrt",
@@ -486,7 +499,8 @@ export class Algebra<T> {
       // is significantly below 0.
       // TODO Generate code catching slightly negative values as in the
       // optimized case above (using a scalar function "snapUpToZero")
-      [this.scalarOp("max", [0, this.normSquared(mv)])]
+      [this.scalarOp("max", [0, this.normSquared(mv)])],
+      {named: "norm"}
     );
   }
 
@@ -506,11 +520,11 @@ export class Algebra<T> {
             this.scalarOp("/", [reverseFlips(bm) ? -1 : +1, this.times([val, mf])]),
           );
         }
-      }, {nameHint: "inverse"});
+      }, {named: "inverse"});
     }
     const norm2 = this.normSquared(mv) ||
       fail(`trying to invert null vector ${mv}`);
-    return this.scale(this.scalarOp("/", [1, norm2]), this.reverse(mv));
+    return this.scale(this.scalarOp("/", [1, norm2], {named: "inverse"}), this.reverse(mv));
   }
 
   /** **This is only correct for versors!** */
@@ -521,7 +535,7 @@ export class Algebra<T> {
     if (optimize("singleEuclideanNormalize") && se !== null) {
       return new Multivector(this, add => {
         add(se, this.scalarOp("sign", [mv.value(se)]));
-      }, {nameHint: "normSE"}).withSqNorm(1);
+      }, {named: "normalizeSE"}).withSqNorm(1);
     }
 
     const normSq = this.normSquared(mv) ||
@@ -532,8 +546,8 @@ export class Algebra<T> {
         // Using the absolute value as in the [DFM07] reference implementation
         // so that we can also "normalize" multivectors squaring to a negative
         // value (e.g. bivectors with a Euclidean metric):
-        this.scalarOp("abs", [normSq])
-      ]),
+        this.scalarOp("abs", [normSq]),
+      ], {named: "normalizationFactor"}),
       mv
     ).withSqNorm(typeof normSq === "number" ? Math.sign(normSq) : undefined);
     // TODO Write a test case that succeeds with `Math.sign(normSq)` but fails
@@ -550,7 +564,7 @@ export class Algebra<T> {
           add(bitmap, value);
         }
       }
-    }, {nameHint: "extract"});
+    }, {named: "extract"});
   }
 
   extractGrade(grade: number, mv: Multivector<T>): Multivector<T> {
@@ -567,7 +581,7 @@ export class Algebra<T> {
           add(bitmap, value);
         }
       }
-    }, {nameHint: "plus"});
+    }, {named: "plus"});
   }
 
   /**
@@ -581,7 +595,7 @@ export class Algebra<T> {
       for (const [bitmap, value] of this.checkMine(neg)) {
         add(bitmap, this.scalarOp("unaryMinus", [value]));
       }
-    }, {nameHint: "minus"});
+    }, {named: "minus"});
   }
 
   /** The core functionality for all kinds of products */
@@ -595,13 +609,13 @@ export class Algebra<T> {
           if (include(bmA, bmB)) {
             const mf = this.metricFactors(bmA & bmB);
             const flip = productFlips(bmA, bmB) & 1;
-            add(bmA ^ bmB, this.flipIf(flip, this.times([mf, valA, valB], {inline: true})));
+            add(bmA ^ bmB, this.flipIf(flip, this.times([mf, valA, valB])));
           } else {
             skipped = true;
           }
         }
       }
-    }, {nameHint: include.name + "Prod"})
+    }, {named: include.name + "Prod"})
     .withSqNorm(
       skipped || a.knownSqNorm === undefined || b.knownSqNorm === undefined
       ? undefined
@@ -615,7 +629,7 @@ export class Algebra<T> {
   /** Like `product2`, but for an arbitrary number of multivectors */
   product(include: ProdInclusionTest, mvs: Multivector<T>[]): Multivector<T> {
     return mvs.length === 0
-      ? new Multivector(this, add => add(0, 1), {nameHint: include + "1"})
+      ? new Multivector(this, add => add(0, 1), {named: include + "1"})
         .withSqNorm(1)
       : mvs.reduce((acc, mv) => this.product2(include, acc, mv));
   }
@@ -657,9 +671,9 @@ export class Algebra<T> {
         const valB = b.value(bitmap);
         const mf = this.metricFactors(bitmap);
         // Notice that reverseFlips(bitmap) === productFlips(bitmap, bitmap) & 1:
-        return this.flipIf(reverseFlips(bitmap), this.times([mf, valA, valB], {inline: true}));
+        return this.flipIf(reverseFlips(bitmap), this.times([mf, valA, valB]));
       }),
-      {nameHint: "scalarProd"}
+      {named: "scalarProd"}
     )
   }
 
@@ -680,11 +694,11 @@ export class Algebra<T> {
             // The regressive product is non-metric (like the wedge product).
             // So we need no metric factors.
             const flip = productFlips(bmACompl, bmBCompl) & 1;
-            add(bmA & bmB, this.flipIf(flip, this.times([valA, valB], {inline: true})));
+            add(bmA & bmB, this.flipIf(flip, this.times([valA, valB])));
           }
         }
       }
-    }, {nameHint: "regrProd"});
+    }, {named: "regrProd"});
     // TODO Set knownSqNorm when possible
   }
 
@@ -697,7 +711,7 @@ export class Algebra<T> {
         const flips = productFlips(bm ^ fullBitmap, fullBitmap);
         add(bm ^ fullBitmap, this.flipIf(flips & 1, val));
       }
-    }, {nameHint: "dual"});
+    }, {named: "dual"});
   }
 
   /** like `.undual(mv)`, but pretending a Euclidean metric. */
@@ -736,28 +750,30 @@ export class Algebra<T> {
    */
   exp(A: Multivector<T>): Multivector<T> {
     // Notice that [DFM09] p. 185 use A**2, which is -norm2 for a 2-blade.
-    const norm2 = this.normSquared(A);
-    if (norm2 === 0) {
+    // TODO use this.norm(...) to make proper use of the "singleEuclidean"
+    // optimization.  (Currently a single Euclidean component is squared and
+    // then the square root is taken)
+    const alpha = this.norm(A);
+    if (alpha === 0) {
       return new Multivector(this, add => {
         add(0, 1);
         for (const [bitmap, value] of A) {
           add(bitmap, value);
         }
-      }, {nameHint: "expNull"})
+      }, {named: "expNull"})
       // TODO refine:
       .withSqNorm([...A].every(([_, value]) => value === 0) ? 1 : undefined);
     } else {
       // TODO detect and handle negative or zero norm2 at runtime
-      const alpha = this.scalarOp("sqrt", [norm2]);
       const cos = this.scalarOp("cos", [alpha]);
       const sin = this.scalarOp("sin", [alpha]);
-      const sinByAlpha = this.scalarOp("/", [sin, alpha]);
+      const sinByAlpha = this.scalarOp("/", [sin, alpha], {named: "sinByAlpha"});
       return new Multivector(this, add => {
         add(0, cos);
         for (const [bitmap, value] of A) {
-          add(bitmap, this.times([sinByAlpha, value], {inline: true}));
+          add(bitmap, this.times([sinByAlpha, value]));
         }
-      }, {nameHint: "exp"}).withSqNorm(1); // this is even correct with a non-Euclidean metric
+      }, {named: "exp"}).withSqNorm(1); // this is even correct with a non-Euclidean metric
     }
   }
 
@@ -778,7 +794,7 @@ export class Algebra<T> {
     const R2Norm = this.norm(R2) || fail("division by zero in log computation");
     // TODO optimize away atan2 call if R0 == 0.
     const atan = this.scalarOp("atan2", [R2Norm, R0]);
-    const scalarFactor = this.scalarOp("/", [atan, R2Norm]);
+    const scalarFactor = this.scalarOp("/", [atan, R2Norm], {named: "scaledAngle"});
     return this.scale(scalarFactor, R2);
   }
 
@@ -794,7 +810,7 @@ export class Algebra<T> {
     return this.scalarOp("atan2", [
       this.norm(this.wedgeProduct(a, b)),
       this.scalarProduct(a, b),
-    ]);
+    ], {named: "angle"});
   }
 
   /**
@@ -809,18 +825,23 @@ export class Algebra<T> {
    */
   slerp(a: Multivector<T>, b: Multivector<T>) {
     const Omega = this.getAngle(a, b);
-    const scale = this.scalarOp("/", [1, this.scalarOp("sin", [Omega])]);
-    // TODO add {inline: true} in various places
+    const scale = this.scalarOp("/", [1, this.scalarOp("sin", [Omega])], {named: "slerpScale"});
     return (t: Scalar<T>) => {
       const scaleA = this.times([scale,
         this.scalarOp("sin", [this.times([this.scalarOp("-", [1, t]), Omega])])
-      ]);
+      ], {named: "weight"});
       const scaleB = this.times([scale,
-        this.scalarOp("sin", [this.times([t                       , Omega])])
-      ]);
+        this.scalarOp("sin", [this.times([t                         , Omega])])
+      ], {named: "weight"});
       return (
-        this.plus(this.scale(scaleA, a), this.scale(scaleB, b))
-        // knownSqNorm is not necessarily propagated by the lower-level operations:
+        // We could use existing operations
+        //   this.plus(this.scale(scaleA, a), this.scale(scaleB, b))
+        // but a direct implementation generates more readable code:
+        new Multivector(this, add => {
+          for (const [bm, val] of a) add(bm, this.times([val, scaleA]));
+          for (const [bm, val] of b) add(bm, this.times([val, scaleB]));
+        }, {named: "slerp"})
+        // knownSqNorm is generally not propagated by the lower-level operations:
         .withSqNorm(
           a.knownSqNorm !== b.knownSqNorm
           ? undefined
@@ -851,7 +872,7 @@ export class Algebra<T> {
     const simplified: Scalar<T>[] =
       // TODO If num === -1, use unary minus?
       num !== 1 || sym.length === 0 ? [...sym, num] : sym;
-    if (optimize("timesSingle") && options?.inline && simplified.length === 1) {
+    if (optimize("timesSingle") && !options?.named && simplified.length === 1) {
       return simplified[0];
     }
     return this.scalarOp("*", simplified, options);
@@ -872,21 +893,21 @@ export class Algebra<T> {
     }
     const simplified: Scalar<T>[] =
       num !== 0 || sym.length === 0 ? [...sym, num] : sym;
-    if (optimize("sumSingle") && options?.inline && simplified.length === 1) {
+    if (optimize("sumSingle") && !options?.named && simplified.length === 1) {
       return simplified[0];
     }
     return this.scalarOp("+", simplified, options);
   }
 
   flipIf(condition: truth, value: Scalar<T>): Scalar<T> {
-    return condition ? this.scalarOp("unaryMinus", [value], {inline: true}) : value;
+    return condition ? this.scalarOp("unaryMinus", [value]) : value;
   }
 
-  scalarOp(name: string, args: Scalar<T>[], options?: ScalarOpOptions): Scalar<T> {
+  scalarOp(op: string, args: Scalar<T>[], options?: ScalarOpOptions): Scalar<T> {
     return (
       optimize("scalarOp") && args.every(arg => typeof arg === "number")
-      ? scalarOp(name, args)
-      : this.be.scalarOp(name, args, options)
+      ? scalarOp(op, args)
+      : this.be.scalarOp(op, args, options)
     );
   }
 
@@ -940,7 +961,7 @@ export class Algebra<T> {
 
         const lrKey = [lBitmap, rBitmap].sort((x, y) => x - y).join(",");
         const lrVal = lrVals[lrKey] ??=
-          lazy(() => this.times([lVal, lrMetric, rVal]));
+          lazy(() => this.times([lVal, lrMetric, rVal], {named: "lrVal"}));
 
         const lrBitmap = lBitmap ^ rBitmap;
         for (const iBitmap of componentBitmaps) {
@@ -954,7 +975,7 @@ export class Algebra<T> {
           const cache2 = cache1[lirBitmap] ??= {children: {}, entry: 0};
           const cache3 = cache2.children[lrKey] ??= {
             count: 0,
-            term: lazy(() => this.times([lrVal(), lr_iMetric], {inline: true})),
+            term: lazy(() => this.times([lrVal(), lr_iMetric])),
           };
 
           const flips =
@@ -976,10 +997,10 @@ export class Algebra<T> {
             !optimize("sandwichCancel1") || count != 0
             // TODO Construct an example where the laziness of term avoids
             // generating some superfluous code.  (Or remove the laziness.)
-            ? [this.times([count, term()], {inline: true})]
+            ? [this.times([count, term()])]
             : []
           ),
-          {nameHint: `matrix_${from}_${to}`}
+          {named: `matrix_${from}_${to}`}
         );
         if (!optimize("sandwichCancel2") || entry !== 0) {
           cache2.entry = entry;
@@ -997,10 +1018,10 @@ export class Algebra<T> {
             }" missing in component list`
           );
           cache1.forEach((cache2, lirBitmap) => {
-            add(lirBitmap, this.times([cache2.entry, iVal], {inline: true}));
+            add(lirBitmap, this.times([cache2.entry, iVal]));
           });
         }
-      }, {nameHint: "sandwich"}).withSqNorm(
+      }, {named: "sandwich"}).withSqNorm(
         operator.knownSqNorm === undefined || operand.knownSqNorm === undefined
         ? undefined
         : operator.knownSqNorm * operand.knownSqNorm

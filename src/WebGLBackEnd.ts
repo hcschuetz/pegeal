@@ -18,37 +18,36 @@ export default class WebGLBackEnd implements BackEnd<string> {
     this.text += newText + "\n";
   }
 
-  scalarOp(opName: string, args: Scalar<string>[], options?: ScalarOpOptions) {
-    const [baseName, expr, correctNArgs] =
-      opName === "unaryMinus" ? [
-        "minus",
+  scalarOp(op: string, args: Scalar<string>[], options?: ScalarOpOptions) {
+    const [expr, correctNArgs] =
+      op === "unaryMinus" ? [
         `- ${formatScalar(args[0])}`,
         args.length === 1,
       ] :
-      Object.hasOwn(multiOpLongName, opName) ? [
-        multiOpLongName[opName],
-        args.map(formatScalar).join(` ${opName} `),
+      Object.hasOwn(multiOpLongName, op) ? [
+        args.map(formatScalar).join(` ${op} `),
         args.length >= 1,
       ] :
-      Object.hasOwn(binopLongName, opName) ? [
-        binopLongName[opName],
-        `${formatScalar(args[0])} ${opName} ${formatScalar(args[1])}`,
+      Object.hasOwn(binopLongName, op) ? [
+        `${formatScalar(args[0])} ${op} ${formatScalar(args[1])}`,
         args.length === 2,
       ] :
       [
-        opName,
-        `${opName}(${args.map(formatScalar).join(", ")});`,
-        opName === "atan2" ? args.length === 2 :
-        opName === "max" ? args.length >= 1 :
+        `${op}(${args.map(formatScalar).join(", ")})`,
+        op === "atan2" ? args.length === 2 :
+        op === "max" ? args.length >= 1 :
         args.length === 1,
       ];
     if (!correctNArgs) {
-      fail(`Unexpected number of arguments for "${opName}": ${args.length}`);
+      fail(`Unexpected number of arguments for "${op}": ${args.length}`);
     }
-    if (options?.inline) return `(${expr})`;
-    const varName = `${options?.nameHint ?? baseName}_${this.count++}`;
-    this.emit(`float ${varName} = ${expr};`);
-    return varName;
+    if (options?.named) {
+      const varName = `${options.named}_${this.count++}`;
+      this.emit(`float ${varName} = ${expr};`);
+      return varName;
+    } else {
+      return `(${expr})`;
+    }
   }
 
   comment(text: string) {

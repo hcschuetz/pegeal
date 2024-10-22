@@ -65,10 +65,10 @@ try {
 
   // It is more convenient to construct (multi)vectors from objects.
   // Here we use a symbolic value for the w component.
-  const b = alg.mv({x: -2, y: 1, w: "my_symbolic_b_w"}, {nameHint: "b"});
+  const b = alg.mv({x: -2, y: 1, w: "my_symbolic_b_w"}, {named: "b"});
   output("b", b);
   // There is also a shortcut for 1-vectors.
-  const c = alg.vec([-2, 0, 1, "my_symbolic_b_w"], {nameHint: "c"});
+  const c = alg.vec([-2, 0, 1, "my_symbolic_b_w"], {named: "c"});
   output("c", c);
 
   // Up to this place no code was generated since everything could be computed

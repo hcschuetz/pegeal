@@ -30,7 +30,7 @@ function b2r(mv: Multivector<never>) {
     const i = 0.5 * B.normSquared(mv);
     add("m", i + 0.5);
     add("p", i - 0.5);
-  }, {nameHint: mv.name + "R"});
+  }, {named: mv.name + "R"});
 }
 
 /** Convert a representation-space 1-vector to a base-space 1-vector */
@@ -47,11 +47,11 @@ function r2b(mv: Multivector<never>) {
         fail("reprToBase: not a 1-vector");
       } // else ignore almost-zero non-grade-1 component
     }
-  }, {nameHint: mv.name + "B"});
+  }, {named: mv.name + "B"});
   return result;
 }
 
-const ei = R.mv({m: 1, p: 1}, {nameHint: "ei"}); // infinity
+const ei = R.mv({m: 1, p: 1}, {named: "ei"}); // infinity
 const eo = b2r(B.zero());     // origin
 
 // --------------------------------------------------------------

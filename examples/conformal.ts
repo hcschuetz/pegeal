@@ -35,7 +35,7 @@ function baseToRepr(mv: Multivector<never>) {
     const i = 0.5 * algB.normSquared(mv);
     add("m", i + 0.5);
     add("p", i - 0.5);
-  }, {nameHint: mv.name + "R"});
+  }, {named: mv.name + "R"});
 }
 
 /** Convert a representation-space 1-vector to a base-space 1-vector */
@@ -52,11 +52,11 @@ function reprToBase(mv: Multivector<never>) {
         fail("reprToBase: not a 1-vector");
       } // else ignore almost-zero non-grade-1 component
     }
-  }, {nameHint: mv.name + "B"});
+  }, {named: mv.name + "B"});
   return result;
 }
 
-const ei = algR.mv({m: 1, p: 1}, {nameHint: "ei"}); // infinity
+const ei = algR.mv({m: 1, p: 1}, {named: "ei"}); // infinity
 const eo = baseToRepr(algB.zero());     // origin
 
 const normalizeBivector = (bv: Multivector<never>) =>
@@ -88,10 +88,10 @@ const relativePoints = {
 
 // With the values above line (a,b) and plane (c,d,e) intersect at the origin.
 // We move all the points to get a "more interesting" intersection point.
-const offsetB = algB.vec([2, 5, -3], {nameHint: "offset"});
+const offsetB = algB.vec([2, 5, -3], {named: "offset"});
 
 const pointsB = mapEntries(relativePoints,
-  (val, key) => algB.plus(offsetB, algB.vec(val, {nameHint: key}))
+  (val, key) => algB.plus(offsetB, algB.vec(val, {named: key}))
 );
 
 // line and plane intersect in a conformal point pair consisting of ei and

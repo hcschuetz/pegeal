@@ -1,7 +1,7 @@
 
 export default
-function scalarOp(name: string, args: number[]): number {
-    switch (name) {
+function scalarOp(op: string, args: number[]): number {
+    switch (op) {
       case "+": return args.reduce((acc, arg) => acc + arg);
       case "-": return args[0] - args[1];
       case "*": return args.reduce((acc, arg) => acc * arg);
@@ -10,6 +10,6 @@ function scalarOp(name: string, args: number[]): number {
       case "unaryMinus": return -args[0];
       // TODO support more WebGL2 functions here
       // TODO apply nArgs(...)?
-      default: return (Math as any)[name](...args);
+      default: return (Math as any)[op](...args);
     }
   }

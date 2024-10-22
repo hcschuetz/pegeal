@@ -33,24 +33,23 @@ export default class WASMBackEnd implements BackEnd<Expression> {
     }
   }
 
-  scalarOp(name: string, args: Scalar<Expression>[], options?: ScalarOpOptions) {
+  scalarOp(op: string, args: Scalar<Expression>[], options?: ScalarOpOptions) {
     const {mod, convertScalar} = this;
     const generateExpr = () =>
-      name === "unaryMinus"
+      op === "unaryMinus"
       ? mod.f64.neg(convertScalar(args[0]))
-      : Object.hasOwn(binopName, name)
-      ? mod.f64[binopName[name]](convertScalar(args[0]), convertScalar(args[1]))
-      : Object.hasOwn(multiopName, name)
-      ? args.slice(1).reduce(
-          (acc: B.ExpressionRef, arg: Scalar<Expression>) =>
-            mod.f64[multiopName[name]](acc, convertScalar(arg)),
-          convertScalar(args[0]),
-        )
-      : mod.call(name, args.map(convertScalar), B.f64)
-    if (options?.inline) return new Expression(generateExpr);
-    const varNum = this.varCount++;
-    this.body.push(mod.local.set(varNum, generateExpr()));
-    return new Expression(() => this.mod.local.get(varNum, B.f64));
+      : Object.hasOwn(binopName, op)
+      ? mod.f64[binopName[op]](convertScalar(args[0]), convertScalar(args[1]))
+      : Object.hasOwn(multiopName, op)
+      ? args.map(convertScalar).reduce(mod.f64[multiopName[op]])
+      : mod.call(op, args.map(convertScalar), B.f64)
+    if (options?.named) {
+      const varNum = this.varCount++;
+      this.body.push(mod.local.set(varNum, generateExpr()));
+      return new Expression(() => this.mod.local.get(varNum, B.f64));
+    } else {
+      return new Expression(generateExpr);
+    }
   }
 }
 
