@@ -2,72 +2,36 @@ import alphabetic from "./alphabetic";
 import scalarOp from "./scalarOp";
 
 
-type Optimization =
-| "bitCount"
-| "checkScalarOp"
-| "knownNormSq"
-| "knownNormSqInInverse"
-| "knownNormSqInNorm"
-| "knownNormSqInNormalize"
-| "lazy"
-| "plusSingle"
-| "regressiveDirect"
-| "regressiveEuclidean"
-| "sandwich_lr_iMetric0"
-| "sandwich_lrMetric0"
-| "sandwichCancel1"
-| "sandwichCancel2"
-| "scalarOp"
-| "scale0"
-| "setKnownSqNorm"
-| "singleEuclideanNorm"
-| "singleEuclideanNormalize"
-| "singleInverse"
-| "skipZeroIter"
-| "skipZeroOM"
-| "sum"
-| "sumSingle"
-| "times"
-| "timesSingle"
-| "trustKnownSqNorm"
-
-| "default"
-;
-
-const optimizations: Partial<Record<Optimization, boolean>> = {
-  // bitCount: false,
-  // checkScalarOp: false,
-  // knownNormSq: false,
-  // knownNormSqInInverse: false,
-  // knownNormSqInNorm: false,
-  // knownNormSqInNormalize: false,
-  // lazy: false,
-  // plusSingle: false,
-  // regressiveDirect: false,
-  // regressiveEuclidean: false,
-  // sandwich_lr_iMetric0: false,
-  // sandwich_lrMetric0: false,
-  // sandwichCancel1: false,
-  // sandwichCancel2: false,
-  // scalarOp: false,
-  // scale0: false,
-  // setKnownSqNorm: false,
-  // singleEuclideanNorm: false,
-  // singleEuclideanNormalize: false,
-  // singleInverse: false,
-  // skipZeroIter: false,
-  // skipZeroOM: false,
-  // sum: false,
-  // sumSingle: false,
-  // times: false,
-  // timesSingle: false,
-  // trustKnownSqNorm: false,
-
-  default: true,
+const flagDefault = true;
+const config = {
+  beLazy: flagDefault,
+  bitCountMode: "kernighan" as "naive" | "kernighan",
+  checkScalarOp: flagDefault,
+  epsilon: 1e-10,
+  optimizeSingleArgPlus: flagDefault,
+  optimizeSingleArgumentSum: flagDefault,
+  optimizeSingleArgumentTimes: flagDefault,
+  optimizeSingleComponentInverse: flagDefault,
+  optimizeSingleEuclideanInNorm: flagDefault,
+  optimizeSingleEuclideanInNormalize: flagDefault,
+  optimizeSum: flagDefault,
+  optimizeTimes: flagDefault,
+  precomputeScalarOp: flagDefault,
+  regressive: "direct" as "direct" | "euclidean" | "dual",
+  setKnownSqNorm: flagDefault,
+  skipZeroInOM: flagDefault,
+  skipZeroIter: flagDefault,
+  skipZeroSandwich_lr_iMetric: flagDefault,
+  skipZeroSandwich_lrMetric: flagDefault,
+  skipZeroSandwichMatrix1: flagDefault,
+  skipZeroSandwichMatrix2: flagDefault,
+  slerpDirect: flagDefault,
+  trustKnownSqNorm: flagDefault,
+  useKnownNormSq: flagDefault,
+  useKnownNormSqInInverse: flagDefault,
+  useKnownNormSqInNorm: flagDefault,
+  useKnownNormSqInNormalize: flagDefault,
 };
-
-export const optimize = (opt: Optimization): boolean =>
-  optimizations[opt] ?? optimizations.default ?? false;
 
 /**
  * Semantically a boolean, but for convenience any value.
@@ -135,7 +99,7 @@ export class Multivector<T> implements Iterable<[number, Scalar<T>]> {
   *[Symbol.iterator](): Iterator<[number, Scalar<T>]> {
     for (const [bitmap, value] of this.#components.entries()) {
       if (value === undefined) continue;
-      if (optimize("skipZeroIter") && value === 0) continue;
+      if (config.skipZeroIter && value === 0) continue;
       yield [bitmap, value];
     }
   }
@@ -150,10 +114,10 @@ export class Multivector<T> implements Iterable<[number, Scalar<T>]> {
     return this.#knownSqNorm;
   }
   public set knownSqNorm(value) {
-    if (!optimize("setKnownSqNorm")) return;
+    if (!config.setKnownSqNorm) return;
 
     // Debug code looking for multivectors with wrong #knownSqNorm:
-    if (!optimize("trustKnownSqNorm") && value !== undefined) checkNormSq: {
+    if (!config.trustKnownSqNorm && value !== undefined) checkNormSq: {
       let n2 = 0;
       for (const [bm, val] of this) {
         const mf = this.alg.metricFactors(bm);
@@ -161,7 +125,7 @@ export class Multivector<T> implements Iterable<[number, Scalar<T>]> {
         if (typeof mf !== "number" || typeof val !== "number") break checkNormSq;
         n2 += mf * val * val;
       }
-      if (Math.abs(n2 - value) > 1e-10) {
+      if (Math.abs(n2 - value) > config.epsilon) {
         fail("Wrong knownSqNorm detected");
       }
     }
@@ -204,14 +168,12 @@ export function bitList(bm: number): number[] {
 // and subsequent solutions for alternative implementations.
 export function bitCount(bitmap: number) {
   let result = 0;
-  if (optimize("bitCount")) {
-    // Kernighan method:
+  if (config.bitCountMode === "kernighan") {
     while (bitmap) {
       bitmap &= bitmap - 1;
       result++;
     }
   } else {
-    // Naive version:
     forBitmap(bitmap, () => result++);
   }
   return result;
@@ -369,7 +331,7 @@ export class Algebra<T> {
               const jBit = 1 << j;
               if (jBit & bitmapOut) continue; // wedge prod with duplicate is 0
               const m_ij = (matrix[j] ?? [])[i] ?? 0;
-              if (optimize("skipZeroOM") && m_ij === 0) continue; // omit product with a factor 0
+              if (config.skipZeroInOM && m_ij === 0) continue; // omit product with a factor 0
               const newFlips = bitCount(bitmapOut & ~(jBit - 1));
               recur(
                 i + 1,
@@ -389,10 +351,8 @@ export class Algebra<T> {
   /** The scalar `alpha` should be given as a target-code expression. */
   scale(alpha: Scalar<T>, mv: Multivector<T>): Multivector<T> {
     return new Multivector(this, add => {
-      if (!optimize("scale0") || alpha !== 0) {
-        for (const [bitmap, value] of this.checkMine(mv)) {
-          add(bitmap, this.times([alpha, value]));
-        }
+      for (const [bitmap, value] of this.checkMine(mv)) {
+        add(bitmap, this.times([alpha, value]));
       }
     }, {named: "scale"}).withSqNorm(
       mv.knownSqNorm !== undefined && typeof alpha === "number"
@@ -444,7 +404,7 @@ export class Algebra<T> {
   // normSquared precisely for this purpose.)
   normSquared(mv: Multivector<T>, options?: ScalarOpOptions): Scalar<T> {
     this.checkMine(mv);
-    if (optimize("knownNormSq") && mv.knownSqNorm !== undefined) return mv.knownSqNorm;
+    if (config.useKnownNormSq && mv.knownSqNorm !== undefined) return mv.knownSqNorm;
 
     return this.sum(
       [...mv].map(([bitmap, value]) =>
@@ -482,15 +442,17 @@ export class Algebra<T> {
     this.checkMine(mv);
 
     let {knownSqNorm} = mv;
-    if (optimize("knownNormSqInNorm") && knownSqNorm !== undefined) {
+    if (config.useKnownNormSqInNorm && knownSqNorm !== undefined) {
       // A slightly negative value might actually be 0 with a roundoff error.
-      if (-1e8 < knownSqNorm && knownSqNorm < 0) knownSqNorm = 0;
+      if (-config.epsilon < knownSqNorm && knownSqNorm < 0) knownSqNorm = 0;
       return Math.sqrt(knownSqNorm);
     }
 
-    const se = this.singleEuclidean(mv);
-    if (optimize("singleEuclideanNorm") && se !== null) {
-      return this.scalarOp("abs", [mv.value(se)], {named: "normSE"});
+    if (config.optimizeSingleEuclideanInNorm) {
+      const se = this.singleEuclidean(mv);
+      if (se !== null) {
+        return this.scalarOp("abs", [mv.value(se)], {named: "normSE"});
+      }
     }
 
     return this.scalarOp("sqrt",
@@ -509,10 +471,10 @@ export class Algebra<T> {
   /** **This is only correct for versors!** */
   inverse(mv: Multivector<T>): Multivector<T> {
     this.checkMine(mv);
-    if (optimize("knownNormSqInInverse") && mv.knownSqNorm === 1) return this.reverse(mv);
+    if (config.useKnownNormSqInInverse && mv.knownSqNorm === 1) return this.reverse(mv);
 
     // TODO provide nicer check for number of components
-    if (optimize("singleInverse") && [...mv].length === 1) {
+    if (config.optimizeSingleComponentInverse && [...mv].length === 1) {
       return new Multivector(this, add => {
         for (const [bm, val] of mv) {
           const mf = this.metricFactors(bm) ||
@@ -531,13 +493,15 @@ export class Algebra<T> {
 
   /** **This is only correct for versors!** */
   normalize(mv: Multivector<T>): Multivector<T> {
-    if (optimize("knownNormSqInNormalize") && mv.knownSqNorm === 1) return mv;
+    if (config.useKnownNormSqInNormalize && mv.knownSqNorm === 1) return mv;
 
-    const se = this.singleEuclidean(mv);
-    if (optimize("singleEuclideanNormalize") && se !== null) {
-      return new Multivector(this, add => {
-        add(se, this.scalarOp("sign", [mv.value(se)]));
-      }, {named: "normalizeSE"}).withSqNorm(1);
+    if (config.optimizeSingleEuclideanInNormalize) {
+      const se = this.singleEuclidean(mv);
+      if (se !== null) {
+        return new Multivector(this, add => {
+          add(se, this.scalarOp("sign", [mv.value(se)]));
+        }, {named: "normalizeSE"}).withSqNorm(1);
+      }
     }
 
     const normSq = this.normSquared(mv) ||
@@ -574,7 +538,7 @@ export class Algebra<T> {
   }
 
   plus(...mvs: Multivector<T>[]): Multivector<T> {
-    if (optimize("plusSingle") && mvs.length === 1) {
+    if (config.optimizeSingleArgPlus && mvs.length === 1) {
       return this.checkMine(mvs[0]);
     }
     return new Multivector(this, add => {
@@ -725,23 +689,26 @@ export class Algebra<T> {
   }
 
   regressiveProduct(...mvs: Multivector<T>[]): Multivector<T> {
-    if (optimize("regressiveDirect")) {
-      return mvs.length === 0
+    switch (config.regressive) {
+      case "direct":
+        return mvs.length === 0
         ? this.pseudoScalar()
         : mvs.reduce((acc, mv) => this.regressiveProduct2(acc, mv));
-    } else if (optimize("regressiveEuclidean")) {
-      // If the pseudoscalar squares to 0 we cannot use `alg.dual(...)`, but
-      // the regressive product works in that case as well since it is
-      // actually non-metric.  So we can use a duality based on any metric.
-      // The most straight-forward choice is the Euclidean metric.
-      // (See also [DFM09], p. 135, last paragraph, where the same idea is
-      // explained for the `meet` operation, which is closely related to the
-      // regressive product.)
-      return this.euclideanUndual(this.wedgeProduct(
-        ...mvs.map(mv => this.euclideanDual(mv))
-      ));
-    } else {
-      return this.undual(this.wedgeProduct(...mvs.map(mv => this.dual(mv))));
+      case "euclidean":
+        // If the pseudoscalar squares to 0 we cannot use `alg.dual(...)`, but
+        // the regressive product works in that case as well since it is
+        // actually non-metric.  So we can use a duality based on any metric.
+        // The most straight-forward choice is the Euclidean metric.
+        // (See also [DFM09], p. 135, last paragraph, where the same idea is
+        // explained for the `meet` operation, which is closely related to the
+        // regressive product.)
+        return this.euclideanUndual(this.wedgeProduct(
+          ...mvs.map(mv => this.euclideanDual(mv))
+        ));
+      case "dual":
+        return this.undual(this.wedgeProduct(...mvs.map(mv => this.dual(mv))));
+      default:
+        fail("unexpected config for regressive product: " +  config.regressive);
     }
   }
 
@@ -836,26 +803,25 @@ export class Algebra<T> {
         this.scalarOp("sin", [this.times([t                         , Omega])])
       ], {named: "weight"});
       return (
-        // We could use existing operations
-        //   this.plus(this.scale(scaleA, a), this.scale(scaleB, b))
-        // but a direct implementation generates more readable code:
-        new Multivector(this, add => {
-          for (const [bm, val] of a) add(bm, this.times([val, scaleA]));
-          for (const [bm, val] of b) add(bm, this.times([val, scaleB]));
-        }, {named: "slerp"})
+        config.slerpDirect
+        ? new Multivector(this, add => {
+            for (const [bm, val] of a) add(bm, this.times([val, scaleA]));
+            for (const [bm, val] of b) add(bm, this.times([val, scaleB]));
+          }, {named: "slerp"})
+        : this.plus(this.scale(scaleA, a), this.scale(scaleB, b))
+        )
         // knownSqNorm is generally not propagated by the lower-level operations:
         .withSqNorm(
           a.knownSqNorm !== b.knownSqNorm
           ? undefined
           : a.knownSqNorm
-        )
-      );
+        );
     }
   }
 
   // TODO similar optimizations for other scalar operators/functions
   times(args: Scalar<T>[], options?: ScalarOpOptions): Scalar<T> {
-    if (!optimize("times")) {
+    if (!config.optimizeTimes) {
       return this.scalarOp("*", [1, ...args], options);
     }
     let num = 1;
@@ -874,14 +840,14 @@ export class Algebra<T> {
     const simplified: Scalar<T>[] =
       // TODO If num === -1, use unary minus?
       num !== 1 || sym.length === 0 ? [...sym, num] : sym;
-    if (optimize("timesSingle") && !options?.named && simplified.length === 1) {
+    if (config.optimizeSingleArgumentTimes && !options?.named && simplified.length === 1) {
       return simplified[0];
     }
     return this.scalarOp("*", simplified, options);
   }
 
   sum(args: Scalar<T>[], options?: ScalarOpOptions): Scalar<T> {
-    if (!optimize("sum")) {
+    if (!config.optimizeSum) {
       return this.scalarOp("+", [0, ...args], options);
     }
     let num = 0;
@@ -895,7 +861,7 @@ export class Algebra<T> {
     }
     const simplified: Scalar<T>[] =
       num !== 0 || sym.length === 0 ? [...sym, num] : sym;
-    if (optimize("sumSingle") && !options?.named && simplified.length === 1) {
+    if (config.optimizeSingleArgumentSum && !options?.named && simplified.length === 1) {
       return simplified[0];
     }
     return this.scalarOp("+", simplified, options);
@@ -906,9 +872,11 @@ export class Algebra<T> {
   }
 
   scalarOp(op: string, args: Scalar<T>[], options?: ScalarOpOptions): Scalar<T> {
-    if (optimize("checkScalarOp")) Algebra.checkScalarOp(op, args);
+    if (config.checkScalarOp) {
+      Algebra.checkScalarOp(op, args);
+    }
     return (
-      optimize("scalarOp") && args.every(arg => typeof arg === "number")
+      config.precomputeScalarOp && args.every(arg => typeof arg === "number")
       ? scalarOp(op, args)
       : this.be.scalarOp(op, args, options)
     );
@@ -996,7 +964,7 @@ export class Algebra<T> {
     for (const [lBitmap, lVal] of operator) {
       for (const [rBitmap, rVal] of operator) {
         const lrMetric = this.metricFactors(lBitmap & rBitmap);
-        if (optimize("sandwich_lrMetric0") && lrMetric === 0) continue;
+        if (config.skipZeroSandwich_lrMetric && lrMetric === 0) continue;
 
         const lrKey = [lBitmap, rBitmap].sort((x, y) => x - y).join(",");
         const lrVal = lrVals[lrKey] ??=
@@ -1005,7 +973,7 @@ export class Algebra<T> {
         const lrBitmap = lBitmap ^ rBitmap;
         for (const iBitmap of componentBitmaps) {
           const lr_iMetric = this.metricFactors(lrBitmap & iBitmap);
-          if (optimize("sandwich_lr_iMetric0") && lr_iMetric === 0) continue;
+          if (config.skipZeroSandwich_lr_iMetric && lr_iMetric === 0) continue;
 
           const liBitmap = lBitmap ^ iBitmap;
           const lirBitmap = liBitmap ^ rBitmap;
@@ -1033,7 +1001,7 @@ export class Algebra<T> {
         const to   = this.bitmapToString[lirBitmap];
         const entry = this.sum(
           Object.values(cache2.children).flatMap(({count, term}) =>
-            !optimize("sandwichCancel1") || count != 0
+            !config.skipZeroSandwichMatrix1 || count != 0
             // TODO Construct an example where the laziness of term avoids
             // generating some superfluous code.  (Or remove the laziness.)
             ? [this.times([count, term()])]
@@ -1041,7 +1009,7 @@ export class Algebra<T> {
           ),
           {named: `matrix_${from}_${to}`}
         );
-        if (!optimize("sandwichCancel2") || entry !== 0) {
+        if (!config.skipZeroSandwichMatrix2 || entry !== 0) {
           cache2.entry = entry;
         }
       });
@@ -1053,7 +1021,8 @@ export class Algebra<T> {
         // The remaining code is essentially a matrix/vector multiplication:
         for (const [iBitmap, iVal] of operand) {
           const cache1 = cache[iBitmap] ?? fail(
-            `sandwich-operand component "${this.bitmapToString[iBitmap]
+            `sandwich-operand component "${
+              this.bitmapToString[iBitmap]
             }" missing in component list`
           );
           cache1.forEach((cache2, lirBitmap) => {
@@ -1075,7 +1044,7 @@ function lazy<T>(exec: () => T): () => T {
   return () => {
     if (!done) {
       result = exec();
-      done = optimize("lazy") && true;
+      done = config.beLazy && true;
     }
     return result;
   }
