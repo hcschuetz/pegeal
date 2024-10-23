@@ -1,5 +1,5 @@
 import { expect, suite, test } from "vitest";
-import { expectNearby, forAlgebras, forData, makeVectors } from "./test-utils";
+import { expectNearby, expectUnit, forAlgebras, forData, makeVectors } from "./test-utils";
 
 
 // TODO test geometric and wedge product with 0/1/3 arguments
@@ -9,7 +9,7 @@ suite("geometric product - numeric back end", () => {
     forAlgebras(alg => {
       forData(alg, (a, b) => {
         const gp = alg.geometricProduct(alg.normalize(a), alg.normalize(b));
-        expect(alg.normSquared(gp)).toBeCloseTo(1);
+        expectUnit(alg.normSquared(gp));
         // TODO check knownSqNorm in various other situations
         // (But we do not have knownSqNorm if it is configured away.)
       });
@@ -19,11 +19,13 @@ suite("geometric product - numeric back end", () => {
   suite("commutes with norm(alization)", () => {
     forAlgebras(alg => {
       forData(alg, (a, b) => {
-        expect(alg.norm(alg.geometricProduct(a, b)))
-        .toBeCloseTo((alg.norm(a) * alg.norm(b)));
+        if (alg.normSquared(a) >= 0 && alg.normSquared(b) >= 0) {
+          expect(alg.norm(alg.geometricProduct(a, b)))
+          .toBeCloseTo(alg.norm(a) * alg.norm(b));
+        }
 
         expect(alg.normSquared(alg.geometricProduct(a, b)))
-        .toBeCloseTo((alg.normSquared(a) * alg.normSquared(b)));
+        .toBeCloseTo(alg.normSquared(a) * alg.normSquared(b));
 
         expectNearby(
           alg.normalize(alg.geometricProduct(a, b)),
@@ -37,9 +39,9 @@ suite("geometric product - numeric back end", () => {
 suite("normalization - numeric back end", () => {
   forAlgebras(alg => {
     forData(alg, (a, b) => {
-      expect(alg.normSquared(alg.normalize(a))).toBeCloseTo(1);
-      expect(alg.normSquared(alg.normalize(b))).toBeCloseTo(1);
-      expect(alg.normSquared(alg.normalize(alg.wedgeProduct(a, b)))).toBeCloseTo(1);
+      expectUnit(alg.normSquared(alg.normalize(a)));
+      expectUnit(alg.normSquared(alg.normalize(b)));
+      expectUnit(alg.normSquared(alg.normalize(alg.wedgeProduct(a, b))));
     });
   });
 })

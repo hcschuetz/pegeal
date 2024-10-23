@@ -1032,7 +1032,7 @@ export class Algebra<T> {
       }, {named: "sandwich"}).withSqNorm(
         operator.knownSqNorm === undefined || operand.knownSqNorm === undefined
         ? undefined
-        : operator.knownSqNorm * operand.knownSqNorm
+        : operator.knownSqNorm * operator.knownSqNorm * operand.knownSqNorm
       );
     };
   }
