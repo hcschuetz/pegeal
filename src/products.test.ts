@@ -1,5 +1,9 @@
 import { expect, suite, test } from "vitest";
 import { expectNearby, expectUnit, forAlgebras, forData, makeVectors } from "./test-utils";
+import scalarOp from "./scalarOp";
+import { Algebra } from "./Algebra";
+import NumericBackEnd from "./NumericBackEnd";
+import { makeLetterNames } from "./componentNaming";
 
 
 // TODO test geometric and wedge product with 0/1/3 arguments
@@ -221,14 +225,48 @@ suite("dual", () => {
 });
 
 suite("pseudoscalar", () => {
-  forAlgebras(alg => {
-    test("should be equal to product of basis vectors", () => {
+
+  function testPseudoScalars(alg: Algebra<never>) {
+    test("pseudoscalar and inverse", () => {
       expectNearby(
         alg.pseudoScalar(),
         alg.wedgeProduct(...alg.basisVectors()),
       );
+
+      const fullMetric = scalarOp("*", alg.metric);
+      expect(alg.normSquared(alg.pseudoScalar())).toBe(fullMetric);
+
+      if (fullMetric !== 0) {
+        expect(alg.normSquared(alg.pseudoScalarInv())).toBe(1 / fullMetric);
+        expectNearby(
+          alg.pseudoScalarInv(),
+          alg.inverse(alg.pseudoScalar()),
+        )
+        expectNearby(
+          alg.geometricProduct(alg.pseudoScalar(), alg.pseudoScalarInv()),
+          alg.one(),
+        );
+        expectNearby(
+          alg.geometricProduct(alg.pseudoScalarInv(), alg.pseudoScalar()),
+          alg.one(),
+        );
+      }
     });
-  });
+  }
+
+  forAlgebras(alg => testPseudoScalars(alg));
+
+  // Test pseudoscalars with various dimensionalities (not covered by forAlgebras):
+  for (const c of ["", "a", "ab", "abc", "abcd", "abcde"]) {
+    const metric = c.split("").map((_, i) => i+2);
+    suite(`with coords "${c}" and metric ${JSON.stringify(metric)}`, () => {
+      testPseudoScalars(new Algebra<never>(
+        metric,
+        new NumericBackEnd(),
+        makeLetterNames(c),
+      ));
+    });
+  }
 });
 
 // TODO test other kinds of products
