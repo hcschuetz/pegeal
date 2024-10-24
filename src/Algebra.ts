@@ -9,8 +9,11 @@ const config = {
   epsilon: 1e-10,
 
   // Select implementation variants:
+  // ("Direct" implementation are based directly on scalar operations,
+  // whereas "indirect" implementations are based on other multivector
+  // operations and thus indirectly on the scalar operations.)
   pseudoScalarInvImpl : "direct"     as "direct" | "indirect",
-  negateImpl          : "direct"     as "direct" | "scale",
+  negateImpl          : "direct"     as "direct" | "indirect",
   dualImpl            : "direct"     as "direct" | "contract" | "geometric",
   undualImpl          : "direct"     as "direct" | "contract" | "geometric",
   euclideanUndualImpl : "direct"     as "direct" | "indirect",
@@ -205,7 +208,7 @@ export class Multivector<T> implements Iterable<[number, Scalar<T>]> {
 }
 
 /** For each 1 bit in the bitmap, invoke the callback with the bit position. */
-export function forBitmap(bm: number, callback: (direction: number) => unknown): void {
+export function forBitmap(bm: number, callback: (index: number) => unknown): void {
   for (let i = 0, bit = 1; bit <= bm; i++, bit <<= 1) {
     if (bm & bit) {
       callback(i);
@@ -231,11 +234,13 @@ export function bitCount(bitmap: number) {
   switch (config.bitCountImpl) {
     case "naive":
       forBitmap(bitmap, () => result++);
+      break;
     case "wegner/kernighan":
       while (bitmap) {
         bitmap &= bitmap - 1;
         result++;
       }
+      break;
   }
   return result;
 }
@@ -501,7 +506,7 @@ export class Algebra<T> {
             add(bitmap, this.scalarOp("unaryMinus", [value]));
           }
         }, {named: "negate"}).withSqNorm(mv.knownSqNorm);
-      case "scale":
+      case "indirect":
         return this.scale(-1, mv, {named: "negated"});
     }
   }
