@@ -1,5 +1,5 @@
 import { expect, suite, test } from "vitest";
-import { expectNearby, expectUnit, forAlgebras, forData, makeVectors } from "./test-utils";
+import { expectNearby, expectUnit, forAlgebras, forData, forDimensionalities, makeVectors } from "./test-utils";
 import scalarOp from "./scalarOp";
 import { Algebra } from "./Algebra";
 import NumericBackEnd from "./NumericBackEnd";
@@ -222,6 +222,19 @@ suite("dual", () => {
       });
     });
   });
+
+  forDimensionalities(alg => {
+    const x = alg.vec(alg.metric.map((_, i) => 10 + i));
+
+    test("metric dual", () => {
+      expectNearby(alg.undual(alg.dual(x)), x);
+      expectNearby(alg.dual(alg.undual(x)), x);
+    });
+    test("euclidean dual", () => {
+      expectNearby(alg.euclideanUndual(alg.euclideanDual(x)), x);
+      expectNearby(alg.euclideanDual(alg.euclideanUndual(x)), x);
+    });
+  });
 });
 
 suite("pseudoscalar", () => {
@@ -254,7 +267,8 @@ suite("pseudoscalar", () => {
     });
   }
 
-  forAlgebras(alg => testPseudoScalars(alg));
+  forAlgebras(testPseudoScalars);
+  forDimensionalities(testPseudoScalars);
 
   // Test pseudoscalars with various dimensionalities (not covered by forAlgebras):
   for (const c of ["", "a", "ab", "abc", "abcd", "abcde"]) {

@@ -13,6 +13,7 @@ const config = {
   negateImpl          : "direct"     as "direct" | "scale",
   dualImpl            : "direct"     as "direct" | "contract" | "geometric",
   undualImpl          : "direct"     as "direct" | "contract" | "geometric",
+  euclideanUndualImpl : "direct"     as "direct" | "indirect",
   regressiveImpl      : "direct"     as "direct" | "euclidean" | "dual",
   normSquaredImpl     : "direct"     as "direct" | "indirect",
   slerpImpl           : "direct"     as "direct" | "indirect",
@@ -544,11 +545,11 @@ export class Algebra<T> {
       case "direct": {
         this.checkMine(mv);
         const {fullBitmap} = this;
-        const revFl = reverseFlips(fullBitmap);
+        const revFlips = this.nDimensions >> 1;
         return new Multivector(this, add => {
           for (const [bm, val] of mv) {
             const bmComplement = bm ^ fullBitmap;
-            const flips = productFlips(bm, fullBitmap) + revFl;
+            const flips = productFlips(bm, fullBitmap) + revFlips;
             const invMetric =
               this.scalarOp("/", [1, this.metricFactors(bmComplement)]);
             add(bmComplement,
@@ -887,20 +888,35 @@ export class Algebra<T> {
   euclideanDual(mv: Multivector<T>) {
     this.checkMine(mv);
     const {fullBitmap} = this;
+    const revFlips = this.nDimensions >> 1;
     return new Multivector(this, add => {
       for (const [bm, val] of mv) {
-        const flips = productFlips(bm ^ fullBitmap, fullBitmap);
+        const flips = productFlips(bm, fullBitmap) + revFlips;
         add(bm ^ fullBitmap, this.flipIf(flips & 1, val));
       }
-    }, {named: "dual"});
+    }, {named: "euclDual"});
   }
 
   /** like `.undual(mv)`, but pretending a Euclidean metric. */
   euclideanUndual(mv: Multivector<T>) {
-    // TODO negate only for certain values of mv.alg.nDimensions?
-    // (Perhaps only for 2, 3, 6, 7, 10, 11, ...?)
-    // We should actually run tests with several algebra dimensionalities.
-    return this.negate(this.euclideanDual(mv));
+    switch (config.euclideanUndualImpl) {
+      case "indirect":
+        return this.scale(
+          this.nDimensions & 2 ? -1 : +1,
+          this.euclideanDual(mv),
+          {named: "euclUndual"},
+        );
+      case "direct": {
+        this.checkMine(mv);
+        const {fullBitmap} = this;
+        return new Multivector(this, add => {
+          for (const [bm, val] of mv) {
+            const flips = productFlips(bm, fullBitmap);
+            add(bm ^ fullBitmap, this.flipIf(flips & 1, val));
+          }
+        }, {named: "euclUndual"});
+      }
+    }
   }
 
   regressiveProduct(...mvs: Multivector<T>[]): Multivector<T> {

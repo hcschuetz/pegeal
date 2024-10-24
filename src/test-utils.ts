@@ -18,6 +18,20 @@ export function forAlgebras(fn: (algebra: Algebra<never>) => void) {
   }
 }
 
+/** Run the function in a test body with algebras of different dimensionalities. */
+export function forDimensionalities(fn: (algebra: Algebra<never>) => void) {
+  for (const c of ["", "a", "ab", "abc", "abcd", "abcde"]) {
+    const metric = c.split("").map((_, i) => i+2);
+    suite(`with coords "${c}" and metric ${JSON.stringify(metric)}`, () => {
+      fn(new Algebra<never>(
+        metric,
+        new NumericBackEnd(),
+        makeLetterNames(c),
+      ));
+    });
+  }
+}
+
 
 // Provide a knownSqNorm to some input vectors to test its propagation.
 const withSqNorm = (mv: Multivector<never>) =>
